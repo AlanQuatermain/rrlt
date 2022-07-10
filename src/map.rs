@@ -68,6 +68,25 @@ impl Map {
             None
         }
     }
+
+    pub fn wall_mask(&self, idx: usize) -> u8 {
+        let pos = self.index_to_point2d(idx);
+        if pos.x < 1 || pos.x as usize > MAP_WIDTH-2 || pos.y < 1 || pos.y as usize > MAP_HEIGHT-2 {
+            return 35;
+        }
+
+        let mut mask = 0;
+        if self.is_revealed_and_wall(pos.x, pos.y-1) { mask |= 1; }
+        if self.is_revealed_and_wall(pos.x, pos.y+1) { mask |= 2; }
+        if self.is_revealed_and_wall(pos.x-1, pos.y) { mask |= 4; }
+        if self.is_revealed_and_wall(pos.x+1, pos.y) { mask |= 8; }
+        mask
+    }
+
+    fn is_revealed_and_wall(&self, x: i32, y: i32) -> bool {
+        let idx = self.point2d_to_index(Point::new(x, y));
+        self.revealed_tiles[idx] && self.tiles[idx] == TileType::Wall
+    }
 }
 
 impl BaseMap for Map {

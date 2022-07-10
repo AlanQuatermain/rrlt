@@ -27,7 +27,7 @@ pub fn map_render(
                     DARK_GRAY
                 };
 
-                let glyph = theme.tile_to_render(map.tiles[idx]);
+                let glyph = theme.tile_to_render(map.tiles[idx], map, idx);
                 draw_batch.set(
                     pt - offset,
                     ColorPair::new(tint, BLACK),
