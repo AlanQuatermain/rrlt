@@ -123,3 +123,13 @@ pub fn dungeon_map(ecs: &mut World, pos: Point) {
         )
     );
 }
+
+pub fn bear_trap(ecs: &mut World, pos: Point) {
+    ecs.push(
+        (
+            pos.clone(), Hidden, EntryTrigger, Damage(6), SingleActivation,
+            Render { color: ColorPair::new(RED, BLACK), glyph: to_cp437('^') },
+            Name("Bear Trap".to_string()), SerializeMe
+        )
+    );
+}

@@ -7,6 +7,7 @@ use super::name_for;
 #[write_component(Health)]
 #[read_component(Name)]
 #[read_component(Player)]
+#[read_component(SingleActivation)]
 pub fn damage(
     message: &Entity,
     command: &InflictDamage,
@@ -52,6 +53,13 @@ pub fn damage(
             gamelog.entries.push(log_for_destroyed_item(&user_name, &target_name.0));
         }
     };
+
+    if let Ok(user) = ecs.entry_ref(command.user_entity) {
+        if user.get_component::<SingleActivation>().is_ok() {
+            // one-shot trap, etc. Remove from game now.
+            commands.remove(command.user_entity);
+        }
+    }
 
     commands.remove(*message);
 }

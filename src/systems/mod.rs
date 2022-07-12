@@ -19,6 +19,7 @@ mod particles;
 mod hunger;
 mod damage;
 mod bury_dead;
+mod trigger;
 
 use crate::prelude::*;
 
@@ -57,6 +58,9 @@ pub fn build_player_scheduler() -> Schedule {
         .flush()
         .add_system(fov::fov_system())
         .flush()
+        .add_system(trigger::trigger_system())
+        .flush()
+        .add_system(damage::damage_system())
         .add_system(map_indexing::map_indexing_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
@@ -81,8 +85,10 @@ pub fn build_monster_scheduler() -> Schedule {
         .add_system(movement::movement_system())
         .flush()
         .add_system(fov::fov_system())
+        .add_system(trigger::trigger_system())
         .add_system(particles::particle_spawn_system())
         .flush()
+        .add_system(damage::damage_system())
         .add_system(map_indexing::map_indexing_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())

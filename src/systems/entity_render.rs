@@ -15,7 +15,7 @@ pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
     let player_fov = fov.iter(ecs).nth(0).unwrap();
 
     renderables
-        .filter(!component::<Player>())
+        .filter(!component::<Player>() & !component::<Hidden>())
         .iter(ecs)
         .filter(|(pos, _)| player_fov.visible_tiles.contains(&pos))
         .for_each(|(pos, render)| {

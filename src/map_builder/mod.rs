@@ -71,6 +71,7 @@ impl MapBuilder {
             .add("Shield", 3)
             .add("Longsword", self.depth - 1)
             .add("Tower Shield", self.depth - 1)
+            .add("Bear Trap", 200)
             .add("Rations", 10);
     }
 

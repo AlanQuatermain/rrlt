@@ -23,8 +23,7 @@ fn save_exists() -> bool {
 pub fn main_menu(
     ecs: &SubWorld,
     #[resource] turn_state: &mut TurnState,
-    #[resource] key: &mut Option<VirtualKeyCode>,
-    commands: &mut CommandBuffer
+    #[resource] key: &mut Option<VirtualKeyCode>
 ) {
     let selection = if let TurnState::MainMenu {selection} = *turn_state {
         selection
@@ -35,6 +34,15 @@ pub fn main_menu(
 
     let mut draw_batch = DrawBatch::new();
     draw_batch.target(0);
+
+    draw_batch.draw_double_box(Rect::with_size(24, 18, 31, 10),
+                               ColorPair::new(WHEAT, BLACK));
+    draw_batch.print_color_centered(20, "Rust Roguelike Tutorial",
+                                    ColorPair::new(YELLOW, BLACK));
+    draw_batch.print_color_centered(21, "by Herbert Wolverson",
+                                    ColorPair::new(CYAN, BLACK));
+    draw_batch.print_color_centered(22, "Use Up/Down Arrows and Enter",
+                                    ColorPair::new(GRAY, BLACK));
 
     let selected = ColorPair::new(MAGENTA, BLACK);
     let unselected = ColorPair::new(WHITE, BLACK);

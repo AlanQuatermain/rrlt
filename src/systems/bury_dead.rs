@@ -26,8 +26,9 @@ pub fn bury_dead(
             commands.remove(*entity);
         });
 
-    <Entity>::query().filter(component::<Consumed>()).for_each(ecs, |entity| {
-        commands.remove(*entity);
-    });
+    <Entity>::query().filter(component::<Consumed>())
+        .for_each(ecs, |entity| commands.remove(*entity));
 
+    <Entity>::query().filter(component::<EntityMoved>())
+        .for_each(ecs, |entity| commands.remove_component::<EntityMoved>(*entity));
 }

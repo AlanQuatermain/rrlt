@@ -7,6 +7,7 @@ use crate::systems::name_for;
 #[read_component(Confusion)]
 #[read_component(Name)]
 #[read_component(Point)]
+#[read_component(Hidden)]
 pub fn movement(
     entity: &Entity,
     want_move: &WantsToMove,
@@ -14,6 +15,7 @@ pub fn movement(
     #[resource] camera: &mut Camera,
     #[resource] gamelog: &mut Gamelog,
     #[resource] particle_builder: &mut ParticleBuilder,
+    #[resource] rng: &mut RandomNumberGenerator,
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer
 ) {
@@ -50,12 +52,24 @@ pub fn movement(
                     camera.on_player_move(want_move.destination);
                     fov.visible_tiles.iter().for_each(|pos| {
                         map.revealed_tiles[map_idx(pos.x, pos.y)] = true;
+
+                        // Chance to find hidden things.
+                        <(Entity, &Point, &Name)>::query().filter(component::<Hidden>())
+                            .iter(ecs)
+                            .filter(|(_, p, _)| *p == pos)
+                            .for_each(|(entity, _, name)| {
+                                if rng.roll_dice(1, 24) == 1 {
+                                    gamelog.entries.push(format!("You spotted a {}.", name.0));
+                                    commands.remove_component::<Hidden>(*entity);
+                                }
+                            });
                     });
                 }
             }
         }
         if will_move {
             commands.add_component(want_move.entity, want_move.destination);
+            commands.add_component(want_move.entity, EntityMoved);
         }
     }
     commands.remove(*entity);

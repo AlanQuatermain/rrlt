@@ -171,3 +171,15 @@ pub struct ProvidesFood;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Consumed;
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Hidden;
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct EntryTrigger;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct EntityMoved;
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SingleActivation;

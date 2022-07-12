@@ -7,6 +7,7 @@ mod map_builder;
 mod spawner;
 mod gamelog;
 mod random_table;
+mod rex_assets;
 
 mod prelude {
     pub use bracket_lib::prelude::*;
@@ -32,6 +33,7 @@ mod prelude {
     pub use crate::spawner::*;
     pub use crate::gamelog::*;
     pub use crate::random_table::*;
+    pub use crate::rex_assets::*;
 }
 
 use std::fs;
@@ -56,6 +58,7 @@ impl State {
         let mut resources = Resources::default();
 
         resources.insert(TurnState::MainMenu{selection: MainMenuSelection::NewGame});
+        resources.insert(RexAssets::new());
 
         Self {
             ecs, resources,
@@ -90,6 +93,7 @@ impl State {
         self.resources.insert(TurnState::AwaitingInput);
         self.resources.insert(map_builder.theme);
         self.resources.insert(gamelog);
+        self.resources.insert(RexAssets::new());
     }
 
     fn advance_level(&mut self) {
@@ -199,6 +203,9 @@ impl State {
         registry.register::<HungerState>("hunger_state".to_string());
         registry.register::<HungerClock>("hunger_clock".to_string());
         registry.register::<ProvidesFood>("provides_food".to_string());
+        registry.register::<Hidden>("hidden".to_string());
+        registry.register::<EntryTrigger>("entry_trigger".to_string());
+        registry.register::<SingleActivation>("one_shot".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -271,6 +278,7 @@ impl State {
         self.resources.insert(Camera::new(*player_pos));
         self.resources.insert(TurnState::AwaitingInput);
         self.resources.insert(gamelog);
+        self.resources.insert(RexAssets::new());
 
         // make all FOVs dirty
         <&mut FieldOfView>::query()
@@ -325,7 +333,14 @@ impl GameState for State {
             TurnState::ShowingInventory => self.popup_menu_systems.execute(&mut self.ecs, &mut self.resources),
             TurnState::ShowingDropItems => self.popup_menu_systems.execute(&mut self.ecs, &mut self.resources),
             TurnState::RangedTargeting { range, item } => self.ranged_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::MainMenu{selection} => self.menu_systems.execute(&mut self.ecs, &mut self.resources),
+            TurnState::MainMenu{selection} => {
+                {
+                    // Alas, there's no draw batch command to render a sprite.
+                    let assets = self.resources.get::<RexAssets>().unwrap();
+                    ctx.render_xp_sprite(&assets.menu, 0, 0);
+                }
+                self.menu_systems.execute(&mut self.ecs, &mut self.resources)
+            },
             TurnState::NewGame => self.make_new_game(),
             TurnState::SaveGame => self.save_game(),
             TurnState::LoadGame => self.load_game(),
@@ -353,7 +368,7 @@ fn main() -> BError {
         .with_simple_console_no_bg(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .build()?;
-    context.with_post_scanlines(true);
+    // context.with_post_scanlines(true);
 
     // let context = BTermBuilder::new()
     //     .with_title("Rouguelike Tutorial")

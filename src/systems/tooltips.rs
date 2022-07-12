@@ -23,6 +23,7 @@ pub fn tooltips(
     draw_batch.target(2);
 
     positions
+        .filter(!component::<Hidden>())
         .iter(ecs)
         .filter(|(_, pos, _)| **pos == map_pos && player_fov.visible_tiles.contains(&pos))
         .for_each(|(entity, _, name)| {

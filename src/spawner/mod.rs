@@ -46,6 +46,7 @@ pub fn spawn_mob(
         "Tower Shield" => tower_shield(ecs, pos),
         "Rations" => rations(ecs, pos),
         "Dungeon Map" => dungeon_map(ecs, pos),
+        "Bear Trap" => bear_trap(ecs, pos),
         _ => {}
     }
 }
