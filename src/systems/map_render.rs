@@ -27,10 +27,15 @@ pub fn map_render(
                     DARK_GRAY
                 };
 
+                let bg = if map.bloodstains.contains(&idx) {
+                    RGB::from_f32(0.75, 0.0, 0.0)
+                } else {
+                    RGB::named(BLACK)
+                };
                 let glyph = theme.tile_to_render(map.tiles[idx], map, idx);
                 draw_batch.set(
                     pt - offset,
-                    ColorPair::new(tint, BLACK),
+                    ColorPair::new(tint, bg),
                     glyph
                 );
             }

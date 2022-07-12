@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::collections::HashSet;
 
 pub const MAP_WIDTH: usize = 80;
 pub const MAP_HEIGHT: usize = 43;
@@ -15,7 +16,8 @@ pub enum TileType {
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
-    pub blocked: Vec<bool>
+    pub blocked: Vec<bool>,
+    pub bloodstains: HashSet<usize>
 }
 
 impl Map {
@@ -24,6 +26,7 @@ impl Map {
             tiles: vec![TileType::Floor; NUM_TILES],
             revealed_tiles: vec![false; NUM_TILES],
             blocked: vec![false; NUM_TILES],
+            bloodstains: HashSet::new()
         }
     }
 

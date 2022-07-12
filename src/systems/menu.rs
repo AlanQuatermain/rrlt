@@ -1,7 +1,5 @@
 use std::path::Path;
-use crate::MainMenuSelection::NewGame;
 use crate::prelude::*;
-use crate::TurnState::MainMenu;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MainMenuSelection {
@@ -12,7 +10,7 @@ pub enum MainMenuSelection {
 
 impl Default for MainMenuSelection {
     fn default() -> Self {
-        NewGame
+        Self::NewGame
     }
 }
 
@@ -52,7 +50,6 @@ pub fn main_menu(
     y_idx += 1;
     draw_batch.print_color_centered(y_idx, "Quit",
                                     if selection == MainMenuSelection::Quit { selected } else { unselected });
-    y_idx += 1;
 
     draw_batch.submit(10000)
         .expect("Batch render error");

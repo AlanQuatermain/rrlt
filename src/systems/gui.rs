@@ -6,7 +6,8 @@ use crate::prelude::*;
 #[read_component(Carried)]
 #[read_component(Name)]
 #[read_component(Health)]
-pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] turn_state: &mut TurnState) {
+#[read_component(HungerClock)]
+pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog) {
     let mut draw_batch = DrawBatch::new();
     draw_batch.target(2);
     draw_batch.draw_box(
@@ -22,9 +23,9 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] turn_state
         ColorPair::new(YELLOW, BLACK)
     );
 
-    let mut health_query = <&Health>::query()
+    let mut health_query = <(&Health, &HungerClock)>::query()
         .filter(component::<Player>());
-    let player_health = health_query
+    let (player_health, hunger_clock) = health_query
         .iter(ecs)
         .nth(0)
         .unwrap();
@@ -39,6 +40,22 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] turn_state
         player_health.current,
         player_health.max,
         ColorPair::new(RED, BLACK));
+
+    match hunger_clock.state {
+        HungerState::WellFed =>  {
+            draw_batch.print_color_right(Point::new(71, 42), "Well Fed",
+                                         ColorPair::new(GREEN, BLACK));
+        }
+        HungerState::Normal => {}
+        HungerState::Hungry => {
+            draw_batch.print_color_right(Point::new(71, 42), "Hungry",
+                                         ColorPair::new(ORANGE, BLACK));
+        }
+        HungerState::Starving => {
+            draw_batch.print_color_right(Point::new(71, 42), "Starving",
+                                         ColorPair::new(RED, BLACK));
+        }
+    }
 
     let mut y = 44;
     for s in gamelog.entries.iter().rev() {

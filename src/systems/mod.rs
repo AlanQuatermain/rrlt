@@ -15,16 +15,23 @@ mod use_items;
 mod drop_item;
 mod ranged_target;
 mod menu;
+mod particles;
+mod hunger;
+mod damage;
+mod bury_dead;
 
 use crate::prelude::*;
 
 pub use menu::MainMenuSelection;
+pub use particles::ParticleBuilder;
 
 pub fn build_input_scheduler() -> Schedule {
     Schedule::builder()
+        .add_system(particles::particle_cull_system())
         .add_system(player_input::player_input_system())
         .add_system(collect::collect_system())
         .add_system(fov::fov_system())
+        .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
@@ -37,9 +44,14 @@ pub fn build_input_scheduler() -> Schedule {
 
 pub fn build_player_scheduler() -> Schedule {
     Schedule::builder()
+        .add_system(particles::particle_cull_system())
         .add_system(use_items::use_items_system())
         .add_system(drop_item::drop_item_system())
         .add_system(combat::combat_system())
+        .add_system(hunger::hunger_system())
+        .flush()
+        .add_system(damage::damage_system())
+        .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(movement::movement_system())
         .flush()
@@ -49,34 +61,43 @@ pub fn build_player_scheduler() -> Schedule {
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())
+        .add_system(bury_dead::bury_dead_system())
         .add_system(end_turn::end_turn_system())
         .build()
 }
 
 pub fn build_monster_scheduler() -> Schedule {
     Schedule::builder()
+        .add_system(particles::particle_cull_system())
         .add_system(chasing::chasing_system())
         .flush()
         .add_system(use_items::use_items_system())
         .add_system(drop_item::drop_item_system())
         .add_system(combat::combat_system())
         .flush()
+        .add_system(hunger::hunger_system())
+        .add_system(damage::damage_system())
+        .flush()
         .add_system(movement::movement_system())
         .flush()
         .add_system(fov::fov_system())
+        .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(map_indexing::map_indexing_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())
+        .add_system(bury_dead::bury_dead_system())
         .add_system(end_turn::end_turn_system())
         .build()
 }
 
 pub fn build_ranged_scheduler() -> Schedule {
     Schedule::builder()
+        .add_system(particles::particle_cull_system())
         .add_system(ranged_target::ranged_target_system())
         .add_system(fov::fov_system())
+        .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
@@ -94,6 +115,9 @@ pub fn build_menu_scheduler() -> Schedule {
 
 pub fn build_popup_scheduler() -> Schedule {
     Schedule::builder()
+        .add_system(particles::particle_cull_system())
+        .add_system(particles::particle_spawn_system())
+        .flush()
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())

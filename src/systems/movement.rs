@@ -6,12 +6,14 @@ use crate::systems::name_for;
 #[read_component(FieldOfView)]
 #[read_component(Confusion)]
 #[read_component(Name)]
+#[read_component(Point)]
 pub fn movement(
     entity: &Entity,
     want_move: &WantsToMove,
     #[resource] map: &mut Map,
     #[resource] camera: &mut Camera,
     #[resource] gamelog: &mut Gamelog,
+    #[resource] particle_builder: &mut ParticleBuilder,
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer
 ) {
@@ -21,6 +23,14 @@ pub fn movement(
             if let Ok(confusion) = entry.get_component::<Confusion>() {
                 // entity is confused, and will not move
                 will_move = false;
+                if let Ok(current_pos) = entry.get_component::<Point>() {
+                    particle_builder.request(
+                        *current_pos,
+                        ColorPair::new(MAGENTA, BLACK),
+                        to_cp437('?'),
+                        200.0
+                    );
+                }
 
                 // decrement the confusion duration
                 let new_duration = confusion.0 - 1;

@@ -68,7 +68,7 @@ pub fn ranged_target(
         }
     }
 
-    draw_batch.submit(200).expect("Batch error");
+    draw_batch.submit(2000).expect("Batch error");
 
     if let Some(key) = *key {
         match key {

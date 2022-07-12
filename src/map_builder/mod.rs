@@ -3,9 +3,9 @@ mod rooms;
 mod themes;
 
 use crate::prelude::*;
-use empty::EmptyArchitect;
+// use empty::EmptyArchitect;
 use rooms::RoomsArchitect;
-use themes::*;
+// use themes::*;
 
 pub use themes::MapTheme;
 
@@ -67,7 +67,8 @@ impl MapBuilder {
             .add("Dagger", 3)
             .add("Shield", 3)
             .add("Longsword", self.depth - 1)
-            .add("Tower Shield", self.depth - 1);
+            .add("Tower Shield", self.depth - 1)
+            .add("Rations", 10);
     }
 
     fn fill(&mut self, tile: TileType) {
@@ -95,7 +96,7 @@ impl MapBuilder {
     }
 
     fn build_random_rooms(&mut self, rng: &mut RandomNumberGenerator) {
-        for i in 0..MAX_ROOMS {
+        for _ in 0..MAX_ROOMS {
             let w = rng.range(MIN_SIZE, MAX_SIZE);
             let h = rng.range(MIN_SIZE, MAX_SIZE);
             let room = Rect::with_size(
@@ -142,7 +143,7 @@ impl MapBuilder {
     }
 
     fn build_corridors(&mut self, rng: &mut RandomNumberGenerator) {
-        let mut rooms = self.rooms.clone();
+        let rooms = self.rooms.clone();
         // rooms.sort_by(|a, b| a.center().x.cmp(&b.center().x));
 
         for (i, room) in rooms.iter().enumerate().skip(1) {
@@ -160,7 +161,7 @@ impl MapBuilder {
         }
     }
 
-    fn spawn_monsters(
+    fn _spawn_monsters(
         &self,
         start: &Point,
         rng: &mut RandomNumberGenerator

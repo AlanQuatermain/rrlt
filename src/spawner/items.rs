@@ -103,3 +103,13 @@ pub fn tower_shield(ecs: &mut World, pos: Point) {
         )
     );
 }
+
+pub fn rations(ecs: &mut World, pos: Point) {
+    ecs.push(
+        (
+            Item, ProvidesFood, pos.clone(),
+            Render { color: ColorPair::new(GREEN, BLACK), glyph: to_cp437('%') },
+            Name("Rations".to_string()), SerializeMe, Consumable,
+        )
+    );
+}

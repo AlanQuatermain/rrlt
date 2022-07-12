@@ -1,0 +1,33 @@
+use crate::prelude::*;
+use super::name_for;
+
+#[system]
+#[read_component(Health)]
+#[read_component(Player)]
+#[read_component(Name)]
+pub fn bury_dead(
+    ecs: &mut SubWorld,
+    #[resource] gamelog: &mut Gamelog,
+    #[resource] turn_state: &mut TurnState,
+    commands: &mut CommandBuffer
+) {
+    let player_health = <&Health>::query().filter(component::<Player>())
+        .iter(ecs).nth(0).unwrap();
+    if player_health.current <= 0 {
+        *turn_state = TurnState::GameOver;
+        return;
+    }
+
+    <(&Health, &Name, Entity)>::query().filter(!component::<Player>())
+        .iter(ecs)
+        .filter(|(health, _, _)| health.current <= 0)
+        .for_each(|(_, name, entity)| {
+            gamelog.entries.push(format!("{} is dead!", name.0));
+            commands.remove(*entity);
+        });
+
+    <Entity>::query().filter(component::<Consumed>()).for_each(ecs, |entity| {
+        commands.remove(*entity);
+    });
+
+}

@@ -145,3 +145,29 @@ pub struct Equipped {
     pub owner: Entity,
     pub slot: EquipmentSlot
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ParticleLifetime(pub f32);
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum HungerState { WellFed, Normal, Hungry, Starving }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HungerClock {
+    pub state: HungerState,
+    pub duration: i32
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct InflictDamage {
+    pub target: Entity,
+    pub user_entity: Entity,
+    pub damage: i32,
+    pub item_entity: Option<Entity>
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ProvidesFood;
+
+#[derive(Copy, Clone, Debug)]
+pub struct Consumed;

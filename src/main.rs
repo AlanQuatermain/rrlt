@@ -34,12 +34,9 @@ mod prelude {
     pub use crate::random_table::*;
 }
 
-use std::borrow::Borrow;
 use std::fs;
 use std::fs::File;
-use std::io::{BufReader, Read};
 use legion::serialize::UnknownType::Ignore;
-use serde_json::Value;
 use prelude::*;
 
 struct State {
@@ -55,7 +52,7 @@ struct State {
 
 impl State {
     fn new() -> Self {
-        let mut ecs = World::default();
+        let ecs = World::default();
         let mut resources = Resources::default();
 
         resources.insert(TurnState::MainMenu{selection: MainMenuSelection::NewGame});
@@ -198,6 +195,10 @@ impl State {
         registry.register::<EquipmentSlot>("slot".to_string());
         registry.register::<Equippable>("equippable".to_string());
         registry.register::<Equipped>("equipped".to_string());
+        registry.register::<ParticleLifetime>("particle_lifetime".to_string());
+        registry.register::<HungerState>("hunger_state".to_string());
+        registry.register::<HungerClock>("hunger_clock".to_string());
+        registry.register::<ProvidesFood>("provides_food".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -238,7 +239,6 @@ impl State {
 
         let text = fs::read_to_string("./savegame.json").unwrap();
         let json = serde_json::from_str::<serde_json::Value>(text.as_str()).unwrap();
-        println!("{:#?}", json);
         self.ecs = registry
             .as_deserialize(&entity_serializer)
             .deserialize(json)
@@ -265,11 +265,9 @@ impl State {
             .nth(0)
             .unwrap();
 
-        let mut rng = RandomNumberGenerator::new();
         let mut gamelog = Gamelog::default();
         gamelog.entries.push("Loaded game.".to_string());
 
-        self.resources.insert(rng);
         self.resources.insert(Camera::new(*player_pos));
         self.resources.insert(TurnState::AwaitingInput);
         self.resources.insert(gamelog);
@@ -299,6 +297,8 @@ impl GameState for State {
         ctx.set_active_console(0);
         self.resources.insert(Point::from_tuple(ctx.mouse_pos()));
         self.resources.insert(ctx.left_click);
+        self.resources.insert(ctx.frame_time_ms);
+        self.resources.insert(ParticleBuilder::new());
 
         let current_state = self.resources.get::<TurnState>().unwrap().clone();
         match current_state {

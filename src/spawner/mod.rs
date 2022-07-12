@@ -20,6 +20,7 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             Armor(2),
             BlocksTile{},
             SerializeMe,
+            HungerClock { state: HungerState::WellFed, duration: 20 },
         )
     );
 }
@@ -43,6 +44,7 @@ pub fn spawn_mob(
         "Shield" => shield(ecs, pos),
         "Longsword" => longsword(ecs, pos),
         "Tower Shield" => tower_shield(ecs, pos),
+        "Rations" => rations(ecs, pos),
         _ => {}
     }
 }

@@ -9,6 +9,7 @@ use crate::prelude::*;
 #[read_component(Carried)]
 #[read_component(Weapon)]
 #[read_component(FieldOfView)]
+#[read_component(HungerClock)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -25,6 +26,7 @@ pub fn player_input(
         .filter(component::<Player>());
 
     if let Some(key) = *input_key {
+        let mut waiting = false;
         let delta = match key {
             VirtualKeyCode::Left => Point::new(-1, 0),
             VirtualKeyCode::Right => Point::new(1, 0),
@@ -86,6 +88,10 @@ pub fn player_input(
                 *input_key = None;
                 return
             },
+            VirtualKeyCode::Space => {
+                waiting = true;
+                Point::zero()
+            },
             _ => Point::zero()
         };
         *input_key = None; // prevent the key being processed twice
@@ -118,8 +124,14 @@ pub fn player_input(
                     }));
             }
         }
-        else {
-            // Player is standing still. If no monsters are visible, heal 1 hp.
+        else if waiting {
+            // Player is standing still.
+            // If well fed, we may heal.
+            let hunger_state = <&HungerClock>::query()
+                .filter(component::<Player>())
+                .iter(ecs).nth(0).map(|clock| clock.state);
+
+            // If no monsters are visible, heal 1 hp.
             let fov = <&FieldOfView>::query()
                 .filter(component::<Player>())
                 .iter(ecs)
@@ -132,8 +144,13 @@ pub fn player_input(
                 .filter(|pos| fov.visible_tiles.contains(pos))
                 .count();
 
-            if num_enemies == 0 {
-                let health = <&mut Health>::query()
+            let can_heal = num_enemies == 0 && match hunger_state {
+                Some(HungerState::WellFed) => true,
+                Some(HungerState::Normal) => true,
+                _ => false
+            };
+            if can_heal {
+                <&mut Health>::query()
                     .filter(component::<Player>())
                     .for_each_mut(ecs, |health| {
                         if health.current < health.max {

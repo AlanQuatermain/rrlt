@@ -18,6 +18,7 @@ enum Command {
     Damage { amount: i32 },
     Confuse { duration: i32 },
     Equip { slot: EquipmentSlot },
+    Eat
 }
 
 #[system]
@@ -36,11 +37,14 @@ enum Command {
 #[read_component(Enemy)]
 #[read_component(Equippable)]
 #[read_component(Equipped)]
+#[read_component(ProvidesFood)]
+#[write_component(HungerClock)]
 pub fn use_items(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
     #[resource] map: &mut Map,
-    #[resource] gamelog: &mut Gamelog
+    #[resource] gamelog: &mut Gamelog,
+    #[resource] particle_builder: &mut ParticleBuilder
 ) {
     let mut operations = Vec::new();
     <(Entity, &ActivateItem)>::query()
@@ -81,6 +85,16 @@ pub fn use_items(
                     used_item = true;
                 }
 
+                if item.get_component::<ProvidesFood>().is_ok() {
+                    operations.push(Operation {
+                        command: Command::Eat,
+                        user: activate.used_by,
+                        item: activate.item,
+                        target: activate.used_by
+                    });
+                    used_item = true;
+                }
+
                 if let Some(target) = activate.target {
                     if let Ok(damage) = item.get_component::<Damage>() {
                         let targets = find_all_targets(ecs, &item, &target, map);
@@ -110,7 +124,7 @@ pub fn use_items(
 
                 if used_item && item.get_component::<Consumable>().is_ok() {
                     // remove the item
-                    commands.remove(activate.item);
+                    commands.add_component(activate.item, Consumed{});
                 }
             }
 
@@ -120,22 +134,35 @@ pub fn use_items(
 
     operations.iter().for_each(|operation| match operation.command {
         Command::Heal{amount} => {
-            if let Some(logs) = apply_healing(ecs, operation.item, operation.target, operation.user, amount) {
+            if let Some(logs) = apply_healing(ecs, operation.item, operation.target, operation.user, amount, particle_builder) {
                 gamelog.entries.extend(logs);
             }
         },
         Command::Damage{amount} => {
-            if let Some(logs) = apply_damage(ecs, operation.item, operation.target, operation.user, commands, amount) {
-                gamelog.entries.extend(logs);
-            }
+            commands.push(
+                (
+                    (),
+                    InflictDamage {
+                        target: operation.target,
+                        user_entity: operation.user,
+                        damage: amount,
+                        item_entity: Some(operation.item)
+                    }
+                )
+            );
         },
         Command::Confuse{duration} => {
-            if let Some(logs) = apply_confusion(ecs, operation.target, commands, duration) {
+            if let Some(logs) = apply_confusion(ecs, operation.target, commands, duration, particle_builder) {
                 gamelog.entries.extend(logs);
             }
         },
         Command::Equip{slot} => {
             if let Some(logs) = equip_item(ecs, operation.item, operation.target, commands, slot) {
+                gamelog.entries.extend(logs);
+            }
+        },
+        Command::Eat => {
+            if let Some(logs) = eat(ecs, operation.item, operation.user, commands) {
                 gamelog.entries.extend(logs);
             }
         }
@@ -202,13 +229,17 @@ fn apply_healing(
     item_entity: Entity,
     target_entity: Entity,
     user_entity: Entity,
-    amount: i32
+    amount: i32,
+    particle_builder: &mut ParticleBuilder
 ) -> Option<Vec<String>> {
     let user_name = name_for(&user_entity, ecs);
     let target_name = name_for(&target_entity, ecs);
     let item_name = name_for(&item_entity, ecs).0;
 
-    if let  Ok(mut target) = ecs.entry_mut(target_entity) {
+    if let Ok(mut target) = ecs.entry_mut(target_entity) {
+        if let Ok(pos) = target.get_component::<Point>() {
+            particle_builder.request(*pos, ColorPair::new(GREEN, BLACK), to_cp437('♥'), 200.0);
+        }
         if let Ok(health) = target.get_component_mut::<Health>() {
             let amount_healed = i32::min(amount, health.max - health.current);
             health.current += amount_healed;
@@ -238,65 +269,12 @@ fn apply_healing(
     return None
 }
 
-fn apply_damage(
-    ecs: &mut SubWorld,
-    item_entity: Entity,
-    target_entity: Entity,
-    user_entity: Entity,
-    commands: &mut CommandBuffer,
-    damage_amount: i32
-) -> Option<Vec<String>> {
-    let user_name = name_for(&user_entity, ecs);
-    let target_name = name_for(&target_entity, ecs);
-    let item_name = name_for(&item_entity, ecs).0;
-
-    if let Ok(mut target) = ecs.entry_mut(target_entity) {
-        if let Ok(health) = target.get_component_mut::<Health>() {
-            let amount = i32::min(damage_amount, health.current);
-            health.current -= amount;
-            let mut logs = Vec::new();
-
-            if user_name.1 {
-                if target_name.1 {
-                    logs.push(format!("You inflicted {} damage on yourself with {}!", amount, item_name));
-                }
-                else {
-                    logs.push(format!("You used {} on {}, inflicting {} damage.", item_name, target_name.0, amount));
-                }
-            }
-            else if target_name.1 {
-                logs.push(format!("{} used {}, inflicting {} damage on you!", user_name.0, item_name, amount));
-            }
-            else {
-                logs.push(format!("{} used {} on {}, inflicting {} damage.", user_name.0, item_name, target_name.0, amount));
-            }
-
-            if health.current <= 0 {
-                logs.push(format!("{} is dead!", target_name.0));
-                commands.remove(target_entity);
-            }
-
-            return Some(logs);
-        }
-        else if target.get_component::<Item>().is_ok() {
-            // destroy the item outright
-            commands.remove(target_entity);
-            if user_name.1 {
-                return Some(vec![format!("You destroyed {}!", target_name.0)]);
-            }
-            else {
-                return Some(vec![format!("{} destroyed {}!", user_name.0, target_name.0)]);
-            }
-        }
-    };
-    None
-}
-
 fn apply_confusion(
     ecs: &mut SubWorld,
     target_entity: Entity,
     commands: &mut CommandBuffer,
-    duration: i32
+    duration: i32,
+    particle_builder: &mut ParticleBuilder
 ) -> Option<Vec<String>> {
     let target_name = name_for(&target_entity, ecs);
 
@@ -309,6 +287,9 @@ fn apply_confusion(
             else {
                 format!("{} is confused!", target_name.0)
             };
+            if let Ok(pos) = target.get_component::<Point>() {
+                particle_builder.request(*pos, ColorPair::new(MAGENTA, BLACK), to_cp437('?'), 200.0);
+            }
             return Some(vec![log]);
         }
     }
@@ -349,6 +330,31 @@ fn equip_item(
         commands.add_component(item_entity, Equipped { owner: target_entity, slot: slot });
         logs.push(format!("{} equipped {}.", user_name, item_name));
         return Some(logs);
+    }
+    None
+}
+
+fn eat(
+    ecs: &mut SubWorld,
+    item_entity: Entity,
+    user_entity: Entity,
+    commands: &mut CommandBuffer
+) -> Option<Vec<String>> {
+    let item_name = name_for(&item_entity, ecs).0;
+    let user_name = name_for(&user_entity, ecs);
+
+    if let Ok(mut user) = ecs.entry_mut(user_entity) {
+        if let Ok(mut clock) = user.get_component_mut::<HungerClock>() {
+            clock.state = HungerState::WellFed;
+            clock.duration = 20;
+            let log_line = if user_name.1 {
+                format!("You eat the {}.", item_name)
+            }
+            else {
+                format!("{} eats the {}.", user_name.0, item_name)
+            };
+            return Some(vec![log_line]);
+        }
     }
     None
 }
