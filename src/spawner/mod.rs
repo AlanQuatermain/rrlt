@@ -45,6 +45,7 @@ pub fn spawn_mob(
         "Longsword" => longsword(ecs, pos),
         "Tower Shield" => tower_shield(ecs, pos),
         "Rations" => rations(ecs, pos),
+        "Dungeon Map" => dungeon_map(ecs, pos),
         _ => {}
     }
 }

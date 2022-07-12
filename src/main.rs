@@ -282,6 +282,23 @@ impl State {
         fs::remove_file("./savegame.json")
             .expect("Save deletion failed");
     }
+
+    fn reveal_map(&mut self, row: i32) {
+        {
+            let mut map = self.resources.get_mut::<Map>().unwrap();
+            for x in 0..MAP_WIDTH {
+                let idx = map.point2d_to_index(Point::new(x, row as usize));
+                map.revealed_tiles[idx] = true;
+            }
+        }
+        if row as usize == MAP_HEIGHT-1 {
+            self.resources.insert(TurnState::MonsterTurn);
+        }
+        else {
+            self.resources.insert(TurnState::RevealMap { row: row+1 })
+        }
+        map_reveal_scheduler().execute(&mut self.ecs, &mut self.resources);
+    }
 }
 
 impl GameState for State {
@@ -313,7 +330,8 @@ impl GameState for State {
             TurnState::SaveGame => self.save_game(),
             TurnState::LoadGame => self.load_game(),
             TurnState::NextLevel => self.advance_level(),
-            TurnState::GameOver => self.game_over(ctx)
+            TurnState::GameOver => self.game_over(ctx),
+            TurnState::RevealMap{row} => self.reveal_map(row),
         }
 
         render_draw_buffer(ctx)

@@ -5,6 +5,7 @@ pub enum TurnState {
     AwaitingInput,
     PlayerTurn,
     MonsterTurn,
+    RevealMap { row: i32 },
 
     ShowingInventory,
     ShowingDropItems,

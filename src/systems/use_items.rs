@@ -44,6 +44,7 @@ pub fn use_items(
     commands: &mut CommandBuffer,
     #[resource] map: &mut Map,
     #[resource] gamelog: &mut Gamelog,
+    #[resource] turn_state: &mut TurnState,
     #[resource] particle_builder: &mut ParticleBuilder
 ) {
     let mut operations = Vec::new();
@@ -71,8 +72,10 @@ pub fn use_items(
                 }
 
                 if item.get_component::<ProvidesDungeonMap>().is_ok() {
-                    map.revealed_tiles.iter_mut().for_each(|t| *t = true);
+                    // map.revealed_tiles.iter_mut().for_each(|t| *t = true);
+                    gamelog.entries.push("The map is revealed to you!".to_string());
                     used_item = true;
+                    *turn_state = TurnState::RevealMap { row: 0 };
                 }
 
                 if let Ok(equippable) = item.get_component::<Equippable>() {

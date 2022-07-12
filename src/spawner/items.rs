@@ -113,3 +113,13 @@ pub fn rations(ecs: &mut World, pos: Point) {
         )
     );
 }
+
+pub fn dungeon_map(ecs: &mut World, pos: Point) {
+    ecs.push(
+        (
+            Item, ProvidesDungeonMap, pos.clone(),
+            Render { color: ColorPair::new(CYAN3, BLACK), glyph: to_cp437(')') },
+            Name("Dungeon Map".to_string()), SerializeMe, Consumable
+        )
+    );
+}

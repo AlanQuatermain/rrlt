@@ -125,6 +125,14 @@ pub fn build_popup_scheduler() -> Schedule {
         .build()
 }
 
+pub fn map_reveal_scheduler() -> Schedule {
+    Schedule::builder()
+        .add_system(map_render::map_render_system())
+        .add_system(entity_render::entity_render_system())
+        .add_system(gui::gui_system())
+        .build()
+}
+
 fn name_for(entity: &Entity, ecs: &SubWorld) -> (String, bool) {
     if let Ok(name) = ecs.entry_ref(*entity).unwrap().get_component::<Name>() {
         (name.0.clone(), false)
