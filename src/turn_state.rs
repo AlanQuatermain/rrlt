@@ -20,4 +20,6 @@ pub enum TurnState {
     GameOver,
 
     NextLevel,
+
+    MapBuilding { step: usize },
 }

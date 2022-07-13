@@ -22,6 +22,8 @@ mod prelude {
     pub const DISPLAY_WIDTH: i32 = SCREEN_WIDTH / 2;
     pub const DISPLAY_HEIGHT: i32 = SCREEN_HEIGHT / 2;
 
+    pub const SHOW_MAPGEN_VISUALIZER: bool = true;
+
     pub const FINAL_LEVEL: u32 = 2;
 
     pub use crate::components::*;
@@ -50,6 +52,9 @@ struct State {
     ranged_systems: Schedule,
     menu_systems: Schedule,
     popup_menu_systems: Schedule,
+
+    map_history: Vec<Map>,
+    real_map: Map,
 }
 
 impl State {
@@ -68,6 +73,8 @@ impl State {
             ranged_systems: build_ranged_scheduler(),
             menu_systems: build_menu_scheduler(),
             popup_menu_systems: build_popup_scheduler(),
+            map_history: Vec::default(),
+            real_map: Map::default(),
         }
     }
 
@@ -88,12 +95,18 @@ impl State {
         map_builder.map.tiles[goal_idx] = TileType::DownStairs;
 
         self.resources.insert(rng);
-        self.resources.insert(map_builder.map);
+        self.resources.insert(map_builder.map.clone());
         self.resources.insert(Camera::new(map_builder.player_start));
         self.resources.insert(TurnState::AwaitingInput);
         self.resources.insert(map_builder.theme);
         self.resources.insert(gamelog);
         self.resources.insert(RexAssets::new());
+
+        if SHOW_MAPGEN_VISUALIZER {
+            self.real_map = map_builder.map.clone();
+            self.map_history = map_builder.history;
+            self.resources.insert(TurnState::MapBuilding{step:0});
+        }
     }
 
     fn advance_level(&mut self) {
@@ -146,10 +159,16 @@ impl State {
             spawn_mob(&mut self.ecs, pos, &map_builder.random_table, &mut rng);
         }
 
-        self.resources.insert(map_builder.map);
+        self.resources.insert(map_builder.map.clone());
         self.resources.insert(Camera::new(map_builder.player_start));
         self.resources.insert(TurnState::AwaitingInput);
         self.resources.insert(map_builder.theme);
+
+        if SHOW_MAPGEN_VISUALIZER {
+            self.real_map = map_builder.map.clone();
+            self.map_history = map_builder.history;
+            self.resources.insert(TurnState::MapBuilding{step:0});
+        }
 
         self.resources.get_mut::<Gamelog>().unwrap()
             .entries.push("You descend to the next level, taking a moment to heal.".to_string());
@@ -161,7 +180,7 @@ impl State {
         ctx.print_color_centered(15, YELLOW, BLACK, "Your journey has ended!");
 
         ctx.print_color_centered(17, WHITE, BLACK, "One day, we'll tell you all about how you did.");
-        ctx.print_color_centered(18, WHITE, BLACK, "That day, sadly, is not int this chapter...");
+        ctx.print_color_centered(18, WHITE, BLACK, "That day, sadly, is not in this chapter...");
 
         ctx.print_color_centered(20, MAGENTA, BLACK, "Press any key to return to the menu.");
 
@@ -307,6 +326,31 @@ impl State {
         }
         map_reveal_scheduler().execute(&mut self.ecs, &mut self.resources);
     }
+
+    fn visualize_map_build(&mut self, step: usize, ctx: &BTerm) {
+        let mut continue_build = false;
+
+        if SHOW_MAPGEN_VISUALIZER {
+            if step < self.map_history.len() {
+                self.resources.insert(self.map_history[step].clone());
+                continue_build = true;
+            }
+            else if ctx.key.is_none() {
+                // wait for user to press a key
+                continue_build = true;
+            }
+        }
+
+        if continue_build {
+            map_reveal_scheduler().execute(&mut self.ecs, &mut self.resources);
+            self.resources.insert(TurnState::MapBuilding{step: step+1});
+        }
+        else {
+            self.map_history.clear();
+            self.resources.insert(self.real_map.clone());
+            self.resources.insert(TurnState::AwaitingInput);
+        }
+    }
 }
 
 impl GameState for State {
@@ -347,6 +391,7 @@ impl GameState for State {
             TurnState::NextLevel => self.advance_level(),
             TurnState::GameOver => self.game_over(ctx),
             TurnState::RevealMap{row} => self.reveal_map(row),
+            TurnState::MapBuilding{step} => self.visualize_map_build(step, ctx),
         }
 
         render_draw_buffer(ctx)

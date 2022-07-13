@@ -1,6 +1,7 @@
 mod empty;
 mod rooms;
 mod themes;
+mod bsp;
 
 use crate::prelude::*;
 // use empty::EmptyArchitect;
@@ -8,10 +9,13 @@ use rooms::RoomsArchitect;
 // use themes::*;
 
 pub use themes::MapTheme;
+use crate::map_builder::bsp::BSPArchitect;
 
 const MAX_ROOMS: usize = 30;
 const MIN_SIZE: usize = 6;
 const MAX_SIZE: usize = 10;
+
+const MAX_SPAWNS_PER_ROOM: i32 = 4;
 
 trait MapArchitect {
     fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder;
@@ -25,7 +29,9 @@ pub struct MapBuilder {
     pub player_start: Point,
     pub goal_start: Point,
     pub theme: MapTheme,
-    pub random_table: RandomTable
+    pub random_table: RandomTable,
+
+    pub history: Vec<Map>
 }
 impl Default for MapBuilder {
     fn default() -> Self {
@@ -37,15 +43,17 @@ impl Default for MapBuilder {
             player_start: Point::zero(),
             goal_start: Point::zero(),
             theme: MapTheme::default(),
-            random_table: RandomTable::default()
+            random_table: RandomTable::default(),
+            history: Vec::default()
         }
     }
 }
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.range(0, 3) {
-            _ => Box::new(RoomsArchitect{})
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 2) {
+            1 => Box::new(RoomsArchitect{}),
+            _ => Box::new(BSPArchitect::default()),
         };
         let mut mb = architect.new(rng, depth);
 
@@ -54,6 +62,14 @@ impl MapBuilder {
         };
 
         mb
+    }
+
+    fn take_snapshot(&mut self) {
+        if SHOW_MAPGEN_VISUALIZER {
+            let mut snapshot = self.map.clone();
+            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
+            self.history.push(snapshot);
+        }
     }
 
     fn generate_random_table(&mut self) {
@@ -71,7 +87,7 @@ impl MapBuilder {
             .add("Shield", 3)
             .add("Longsword", self.depth - 1)
             .add("Tower Shield", self.depth - 1)
-            .add("Bear Trap", 200)
+            .add("Bear Trap", 2)
             .add("Rations", 10);
     }
 
@@ -123,7 +139,8 @@ impl MapBuilder {
                     }
                 });
 
-                self.rooms.push(room)
+                self.rooms.push(room);
+                self.take_snapshot();
             }
         }
     }
@@ -147,21 +164,40 @@ impl MapBuilder {
     }
 
     fn build_corridors(&mut self, rng: &mut RandomNumberGenerator) {
-        let rooms = self.rooms.clone();
-        // rooms.sort_by(|a, b| a.center().x.cmp(&b.center().x));
+        let mut rooms = self.rooms.clone();
+        rooms.sort_by(|a, b| a.center().x.cmp(&b.center().x));
 
         for (i, room) in rooms.iter().enumerate().skip(1) {
             let prev = rooms[i-1].center();
             let new = room.center();
+            self.build_corridor(prev, new, rng);
+            self.take_snapshot();
+        }
+    }
 
-            if rng.range(0, 2) == 1 {
-                self.apply_horizontal_tunnel(prev.x, new.x, prev.y);
-                self.apply_vertical_tunnel(prev.y, new.y, new.x);
+    fn build_corridor(&mut self, start: Point, end: Point, rng: &mut RandomNumberGenerator) {
+        if rng.range(0, 2) == 1 {
+            self.apply_horizontal_tunnel(start.x, end.x, start.y);
+            self.apply_vertical_tunnel(start.y, end.y, end.x);
+        }
+        else {
+            self.apply_vertical_tunnel(start.y, end.y, start.x);
+            self.apply_horizontal_tunnel(start.x, end.x, end.y);
+        }
+    }
+
+    fn spawn_room(&mut self, room: &Rect, rng: &mut RandomNumberGenerator) {
+        let num_spawns = rng.roll_dice(1, MAX_SPAWNS_PER_ROOM + 3) + self.depth - 3;
+        let mut spawnable_tiles = Vec::from_iter(room.point_set());
+
+        for _ in 0 .. num_spawns {
+            if spawnable_tiles.is_empty() {
+                break;
             }
-            else {
-                self.apply_vertical_tunnel(prev.y, new.y, prev.x);
-                self.apply_horizontal_tunnel(prev.x, new.x, new.y);
-            }
+            let target_index = rng.random_slice_index(&spawnable_tiles)
+                .unwrap();
+            self.spawns.push(spawnable_tiles[target_index].clone());
+            spawnable_tiles.remove(target_index);
         }
     }
 
