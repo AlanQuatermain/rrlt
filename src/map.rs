@@ -86,6 +86,19 @@ impl Map {
         mask
     }
 
+    pub fn closest_floor(&self, pos: Point) -> Point {
+        let closest_point = self.tiles.iter().enumerate()
+            .filter(|(_, t)| **t == TileType::Floor)
+            .map(|(idx, _)| (idx, DistanceAlg::Pythagoras.distance2d(
+                pos, self.index_to_point2d(idx))))
+            .min_by(|(_, distance), (_, distance2)| {
+                distance.partial_cmp(&distance2).unwrap()
+            })
+            .map(|(idx, _)| idx)
+            .unwrap();
+        self.index_to_point2d(closest_point)
+    }
+
     fn is_revealed_and_wall(&self, x: i32, y: i32) -> bool {
         let idx = self.point2d_to_index(Point::new(x, y));
         self.revealed_tiles[idx] && self.tiles[idx] == TileType::Wall

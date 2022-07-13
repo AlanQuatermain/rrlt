@@ -8,6 +8,7 @@ mod drunkard;
 mod maze;
 mod dla;
 mod common;
+mod voronoi;
 
 use std::collections::HashMap;
 use crate::prelude::*;
@@ -23,6 +24,7 @@ use crate::map_builder::bsp_interior::BSPInteriorArchitect;
 use crate::map_builder::dla::DLAArchitect;
 use crate::map_builder::drunkard::DrunkardsWalkArchitect;
 use crate::map_builder::maze::MazeArchitect;
+use crate::map_builder::voronoi::VoronoiArchitect;
 
 const MAX_ROOMS: usize = 30;
 const MIN_SIZE: usize = 6;
@@ -64,7 +66,7 @@ impl Default for MapBuilder {
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 14) {
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 17) {
             1 => Box::new(RoomsArchitect::default()),
             2 => Box::new(BSPArchitect::default()),
             3 => Box::new(BSPInteriorArchitect::default()),
@@ -78,8 +80,11 @@ impl MapBuilder {
             11 => Box::new(DLAArchitect::walk_inwards()),
             12 => Box::new(DLAArchitect::walk_outwards()),
             13 => Box::new(DLAArchitect::central_attractor()),
-            _ => Box::new(DLAArchitect::rorschach()),
-            // _ => Box::new(DrunkardsWalkArchitect::fearful_symmetry())
+            14 => Box::new(DLAArchitect::rorschach()),
+            15 => Box::new(VoronoiArchitect::pythagoras()),
+            16 => Box::new(VoronoiArchitect::manhattan()),
+            _ => Box::new(VoronoiArchitect::chebyshev())
+            // _ => Box::new(VoronoiArchitect::chebyshev())
         };
         let mut mb = architect.new(rng, depth);
 
