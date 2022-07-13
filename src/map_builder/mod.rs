@@ -6,6 +6,7 @@ mod bsp_interior;
 mod automata;
 mod drunkard;
 mod maze;
+mod dla;
 
 use std::collections::HashMap;
 use crate::prelude::*;
@@ -17,6 +18,7 @@ pub use themes::MapTheme;
 use crate::map_builder::automata::CellularAutomataArchitect;
 use crate::map_builder::bsp::BSPArchitect;
 use crate::map_builder::bsp_interior::BSPInteriorArchitect;
+use crate::map_builder::dla::DLAArchitect;
 use crate::map_builder::drunkard::DrunkardsWalkArchitect;
 use crate::map_builder::maze::MazeArchitect;
 
@@ -60,15 +62,19 @@ impl Default for MapBuilder {
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 8) {
-            1 => Box::new(RoomsArchitect{}),
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 12) {
+            1 => Box::new(RoomsArchitect::default()),
             2 => Box::new(BSPArchitect::default()),
             3 => Box::new(BSPInteriorArchitect::default()),
             4 => Box::new(CellularAutomataArchitect::default()),
             5 => Box::new(DrunkardsWalkArchitect::open_area()),
             6 => Box::new(DrunkardsWalkArchitect::open_halls()),
             7 => Box::new(DrunkardsWalkArchitect::winding_passages()),
-            _ => Box::new(MazeArchitect::default()),
+            8 => Box::new(MazeArchitect::default()),
+            9 => Box::new(DLAArchitect::walk_inwards()),
+            10 => Box::new(DLAArchitect::walk_outwards()),
+            11 => Box::new(DLAArchitect::central_attractor()),
+            _ => Box::new(DLAArchitect::rorschach()),
         };
         let mut mb = architect.new(rng, depth);
 
