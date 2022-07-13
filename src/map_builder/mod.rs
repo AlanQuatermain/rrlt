@@ -4,7 +4,9 @@ mod themes;
 mod bsp;
 mod bsp_interior;
 mod automata;
+mod drunkard;
 
+use std::collections::HashMap;
 use crate::prelude::*;
 // use empty::EmptyArchitect;
 use rooms::RoomsArchitect;
@@ -14,6 +16,7 @@ pub use themes::MapTheme;
 use crate::map_builder::automata::CellularAutomataArchitect;
 use crate::map_builder::bsp::BSPArchitect;
 use crate::map_builder::bsp_interior::BSPInteriorArchitect;
+use crate::map_builder::drunkard::DrunkardsWalkArchitect;
 
 const MAX_ROOMS: usize = 30;
 const MIN_SIZE: usize = 6;
@@ -55,11 +58,14 @@ impl Default for MapBuilder {
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 4) {
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 7) {
             1 => Box::new(RoomsArchitect{}),
             2 => Box::new(BSPArchitect::default()),
             3 => Box::new(BSPInteriorArchitect::default()),
-            _ => Box::new(CellularAutomataArchitect::default()),
+            4 => Box::new(CellularAutomataArchitect::default()),
+            5 => Box::new(DrunkardsWalkArchitect::open_area()),
+            6 => Box::new(DrunkardsWalkArchitect::open_halls()),
+            _ => Box::new(DrunkardsWalkArchitect::winding_passages()),
         };
         let mut mb = architect.new(rng, depth);
 
@@ -234,5 +240,57 @@ impl MapBuilder {
         }
 
         spawns
+    }
+
+    fn spawn_voronoi_regions(&mut self, rng: &mut RandomNumberGenerator) {
+        let mut noise_areas: HashMap<i32, Vec<usize>> = HashMap::new();
+        let mut noise  = FastNoise::seeded(rng.next_u64());
+        noise.set_noise_type(NoiseType::Cellular);
+        noise.set_frequency(0.08);
+        noise.set_cellular_distance_function(CellularDistanceFunction::Manhattan);
+
+        for y in 1 .. MAP_HEIGHT as i32 - 1 {
+            for x in 1 .. MAP_WIDTH as i32 - 1 {
+                let idx = map_idx(x, y);
+                if self.map.tiles[idx] == TileType::Floor {
+                    let cell_value_f = noise.get_noise(x as f32, y as f32) * 10240.0;
+                    let cell_value = cell_value_f as i32;
+
+                    if noise_areas.contains_key(&cell_value) {
+                        noise_areas.get_mut(&cell_value).unwrap().push(idx);
+                    }
+                    else {
+                        noise_areas.insert(cell_value, vec![idx]);
+                    }
+                }
+            }
+        }
+
+        for area in noise_areas.iter() {
+            let num_spawns = i32::min(area.1.len() as i32, rng.roll_dice(1, MAX_SPAWNS_PER_ROOM + 3) + (self.depth) - 3);
+            if num_spawns == 0 { continue; }
+
+            let mut values = area.1.clone();
+            for _ in 0 .. num_spawns {
+                let idx = rng.random_slice_index(values.as_slice()).unwrap();
+                self.spawns.push(self.map.index_to_point2d(values[idx]));
+                values.remove(idx);
+            }
+        }
+    }
+
+    fn prune_unreachable_regions(&mut self, start: Point) {
+        let start_idx = self.map.point2d_to_index(start);
+        let dijkstra_map = DijkstraMap::new(
+            MAP_WIDTH, MAP_HEIGHT,
+            &vec![start_idx],
+            &self.map,
+            1024.0
+        );
+        dijkstra_map.map
+            .iter()
+            .enumerate()
+            .filter(|(_, distance)| *distance > &2000.0)
+            .for_each(|(idx, _)| self.map.tiles[idx] = TileType::Wall);
     }
 }

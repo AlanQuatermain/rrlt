@@ -2,38 +2,12 @@ use std::collections::HashMap;
 use crate::prelude::*;
 use super::MapArchitect;
 use itertools::Itertools;
-use crate::map_builder::MAX_SPAWNS_PER_ROOM;
+use super::MAX_SPAWNS_PER_ROOM;
 
 #[derive(Default)]
-pub struct CellularAutomataArchitect {
-    noise_areas: HashMap<i32, Vec<usize>>
-}
+pub struct CellularAutomataArchitect {}
 
 impl CellularAutomataArchitect {
-    fn build_noise_areas(&mut self, rng: &mut RandomNumberGenerator, map: &Map) {
-        let mut noise  = FastNoise::seeded(rng.next_u64());
-        noise.set_noise_type(NoiseType::Cellular);
-        noise.set_frequency(0.08);
-        noise.set_cellular_distance_function(CellularDistanceFunction::Manhattan);
-
-        for y in 1 .. MAP_HEIGHT as i32 - 1 {
-            for x in 1 .. MAP_WIDTH as i32 - 1 {
-                let idx = map_idx(x, y);
-                if map.tiles[idx] == TileType::Floor {
-                    let cell_value_f = noise.get_noise(x as f32, y as f32) * 10240.0;
-                    let cell_value = cell_value_f as i32;
-
-                    if self.noise_areas.contains_key(&cell_value) {
-                        self.noise_areas.get_mut(&cell_value).unwrap().push(idx);
-                    }
-                    else {
-                        self.noise_areas.insert(cell_value, vec![idx]);
-                    }
-                }
-            }
-        }
-    }
-
     fn random_noise_map(&self, rng: &mut RandomNumberGenerator, map: &mut Map) {
         for y in 1 .. MAP_HEIGHT as i32 - 1 {
             for x in 1 .. MAP_WIDTH as i32 - 1 {
@@ -106,25 +80,14 @@ impl MapArchitect for CellularAutomataArchitect {
             mb.take_snapshot();
         }
 
-        self.build_noise_areas(rng, &mb.map);
-        mb.map.populate_blocked();
-
         let start = self.find_start(&mb.map);
         mb.player_start = start;
+
+        mb.prune_unreachable_regions(start);
+        mb.take_snapshot();
+        mb.map.populate_blocked();
         mb.goal_start = mb.find_most_distant();
-        println!("Goal start: {:?}", mb.goal_start);
-
-        for area in self.noise_areas.iter() {
-            let num_spawns = i32::min(area.1.len() as i32, rng.roll_dice(1, MAX_SPAWNS_PER_ROOM + 3) + (depth) - 3);
-            if num_spawns == 0 { continue; }
-
-            let mut values = area.1.clone();
-            for _ in 0 .. num_spawns {
-                let idx = rng.random_slice_index(values.as_slice()).unwrap();
-                mb.spawns.push(mb.map.index_to_point2d(values[idx]));
-                values.remove(idx);
-            }
-        }
+        mb.spawn_voronoi_regions(rng);
 
         mb
     }

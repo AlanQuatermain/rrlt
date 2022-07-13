@@ -57,6 +57,7 @@ struct State {
 
     map_history: Vec<Map>,
     real_map: Map,
+    mapgen_timer: f32,
 }
 
 impl State {
@@ -77,6 +78,7 @@ impl State {
             popup_menu_systems: build_popup_scheduler(),
             map_history: Vec::default(),
             real_map: Map::default(),
+            mapgen_timer: 0.0,
         }
     }
 
@@ -333,6 +335,8 @@ impl State {
         let mut continue_build = false;
 
         if SHOW_MAPGEN_VISUALIZER {
+            self.mapgen_timer += ctx.frame_time_ms;
+
             if step < self.map_history.len() {
                 self.resources.insert(self.map_history[step].clone());
                 continue_build = true;
@@ -345,6 +349,10 @@ impl State {
 
         if continue_build {
             map_reveal_scheduler().execute(&mut self.ecs, &mut self.resources);
+
+            self.mapgen_timer += ctx.frame_time_ms;
+            if self.mapgen_timer < 300.0 { return; }
+            self.mapgen_timer = 0.0;
             self.resources.insert(TurnState::MapBuilding{step: step+1});
         }
         else {
