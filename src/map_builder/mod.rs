@@ -5,6 +5,7 @@ mod bsp;
 mod bsp_interior;
 mod automata;
 mod drunkard;
+mod maze;
 
 use std::collections::HashMap;
 use crate::prelude::*;
@@ -17,6 +18,7 @@ use crate::map_builder::automata::CellularAutomataArchitect;
 use crate::map_builder::bsp::BSPArchitect;
 use crate::map_builder::bsp_interior::BSPInteriorArchitect;
 use crate::map_builder::drunkard::DrunkardsWalkArchitect;
+use crate::map_builder::maze::MazeArchitect;
 
 const MAX_ROOMS: usize = 30;
 const MIN_SIZE: usize = 6;
@@ -58,14 +60,15 @@ impl Default for MapBuilder {
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 7) {
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 8) {
             1 => Box::new(RoomsArchitect{}),
             2 => Box::new(BSPArchitect::default()),
             3 => Box::new(BSPInteriorArchitect::default()),
             4 => Box::new(CellularAutomataArchitect::default()),
             5 => Box::new(DrunkardsWalkArchitect::open_area()),
             6 => Box::new(DrunkardsWalkArchitect::open_halls()),
-            _ => Box::new(DrunkardsWalkArchitect::winding_passages()),
+            7 => Box::new(DrunkardsWalkArchitect::winding_passages()),
+            _ => Box::new(MazeArchitect::default()),
         };
         let mut mb = architect.new(rng, depth);
 
