@@ -3,6 +3,7 @@ mod rooms;
 mod themes;
 mod bsp;
 mod bsp_interior;
+mod automata;
 
 use crate::prelude::*;
 // use empty::EmptyArchitect;
@@ -10,6 +11,7 @@ use rooms::RoomsArchitect;
 // use themes::*;
 
 pub use themes::MapTheme;
+use crate::map_builder::automata::CellularAutomataArchitect;
 use crate::map_builder::bsp::BSPArchitect;
 use crate::map_builder::bsp_interior::BSPInteriorArchitect;
 
@@ -53,10 +55,11 @@ impl Default for MapBuilder {
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 3) {
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 4) {
             1 => Box::new(RoomsArchitect{}),
             2 => Box::new(BSPArchitect::default()),
-            _ => Box::new(BSPInteriorArchitect::default()),
+            3 => Box::new(BSPInteriorArchitect::default()),
+            _ => Box::new(CellularAutomataArchitect::default()),
         };
         let mut mb = architect.new(rng, depth);
 
@@ -204,7 +207,7 @@ impl MapBuilder {
         }
     }
 
-    fn _spawn_monsters(
+    fn spawn_entities(
         &self,
         start: &Point,
         rng: &mut RandomNumberGenerator

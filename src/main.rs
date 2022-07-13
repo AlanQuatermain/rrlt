@@ -1,3 +1,5 @@
+extern crate core;
+
 mod components;
 mod systems;
 mod turn_state;

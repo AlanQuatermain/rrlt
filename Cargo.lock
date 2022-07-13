@@ -1481,6 +1481,7 @@ name = "rrlt"
 version = "0.1.0"
 dependencies = [
  "bracket-lib",
+ "itertools",
  "legion",
  "ron",
  "serde",
