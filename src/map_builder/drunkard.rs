@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::map_builder::common::{paint, Symmetry};
 use crate::prelude::*;
 use super::MapArchitect;
 use super::MAX_SPAWNS_PER_ROOM;
@@ -11,7 +12,9 @@ pub enum DrunkSpawnMode { Center, Random }
 pub struct DrunkardsWalkArchitect {
     pub spawn_mode: DrunkSpawnMode,
     pub lifetime: usize,
-    pub floor_percent: f32
+    pub floor_percent: f32,
+    pub brush_size: i32,
+    pub symmetry: Symmetry
 }
 
 impl Default for DrunkardsWalkArchitect {
@@ -19,7 +22,9 @@ impl Default for DrunkardsWalkArchitect {
         Self {
             spawn_mode: DrunkSpawnMode::Center,
             lifetime: 400,
-            floor_percent: 0.5
+            floor_percent: 0.5,
+            brush_size: 1,
+            symmetry: Symmetry::None
         }
     }
 }
@@ -33,7 +38,9 @@ impl DrunkardsWalkArchitect {
         Self {
             spawn_mode: DrunkSpawnMode::Random,
             lifetime: 400,
-            floor_percent: 0.5
+            floor_percent: 0.5,
+            brush_size: 1,
+            symmetry: Symmetry::None
         }
     }
 
@@ -41,18 +48,40 @@ impl DrunkardsWalkArchitect {
         Self {
             spawn_mode: DrunkSpawnMode::Random,
             lifetime: 100,
-            floor_percent: 0.4
+            floor_percent: 0.4,
+            brush_size: 1,
+            symmetry: Symmetry::None
+        }
+    }
+
+    pub fn fat_passages() -> Self {
+        Self {
+            spawn_mode: DrunkSpawnMode::Random,
+            lifetime: 100,
+            floor_percent: 0.4,
+            brush_size: 2,
+            symmetry: Symmetry::None
+        }
+    }
+
+    pub fn fearful_symmetry() -> Self {
+        Self {
+            spawn_mode: DrunkSpawnMode::Random,
+            lifetime: 100,
+            floor_percent: 0.4,
+            brush_size: 1,
+            symmetry: Symmetry::Both
         }
     }
 
     fn drunkard(&self, start: &Point, rng: &mut RandomNumberGenerator, mb: &mut MapBuilder) {
         let mut drunkard_pos = start.clone();
         let mut distance_staggered = 0;
-        let mut tiles: Vec<usize> = Vec::new();
+        let mut tiles: Vec<Point> = Vec::new();
 
         loop {
             let drunk_idx = mb.map.point2d_to_index(drunkard_pos);
-            tiles.push(drunk_idx);
+            tiles.push(drunkard_pos.clone());
             match rng.roll_dice(1, 4) {
                 1 => drunkard_pos.x -= 1,
                 2 => drunkard_pos.x += 1,
@@ -79,12 +108,22 @@ impl DrunkardsWalkArchitect {
 
         if SHOW_MAPGEN_VISUALIZER {
             for tile in &tiles {
-                mb.map.tiles[*tile] = TileType::DownStairs;
+                let idx = mb.map.point2d_to_index(*tile);
+                mb.map.tiles[idx] = TileType::DownStairs;
             }
             mb.take_snapshot();
         }
         for tile in tiles {
-            mb.map.tiles[tile] = TileType::Floor;
+            paint(&mut mb.map, self.symmetry, self.brush_size, tile);
+        }
+
+        if SHOW_MAPGEN_VISUALIZER {
+            // The visualizer sometimes leaves spurious items behind.
+            for tile in mb.map.tiles.iter_mut() {
+                if *tile == TileType::DownStairs {
+                    *tile = TileType::Wall;
+                }
+            }
         }
     }
 }
