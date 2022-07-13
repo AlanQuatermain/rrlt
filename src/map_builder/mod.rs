@@ -2,6 +2,7 @@ mod empty;
 mod rooms;
 mod themes;
 mod bsp;
+mod bsp_interior;
 
 use crate::prelude::*;
 // use empty::EmptyArchitect;
@@ -10,6 +11,7 @@ use rooms::RoomsArchitect;
 
 pub use themes::MapTheme;
 use crate::map_builder::bsp::BSPArchitect;
+use crate::map_builder::bsp_interior::BSPInteriorArchitect;
 
 const MAX_ROOMS: usize = 30;
 const MIN_SIZE: usize = 6;
@@ -51,9 +53,10 @@ impl Default for MapBuilder {
 
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 2) {
+        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 3) {
             1 => Box::new(RoomsArchitect{}),
-            _ => Box::new(BSPArchitect::default()),
+            2 => Box::new(BSPArchitect::default()),
+            _ => Box::new(BSPInteriorArchitect::default()),
         };
         let mut mb = architect.new(rng, depth);
 
