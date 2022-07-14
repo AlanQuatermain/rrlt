@@ -4,7 +4,7 @@ use crate::prelude::*;
 #[read_component(Player)]
 #[read_component(Point)]
 pub fn end_turn(
-    ecs: &SubWorld,
+    _ecs: &SubWorld,
     #[resource] turn_state: &mut TurnState
 ) {
     let current_state = turn_state.clone();

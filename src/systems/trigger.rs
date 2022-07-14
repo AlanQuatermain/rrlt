@@ -10,7 +10,6 @@ use crate::prelude::*;
 pub fn trigger(
     ecs: &SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] map: &Map,
     #[resource] gamelog: &mut Gamelog
 ) {
     let moved_entities: Vec<(Entity, Point)> = <(Entity, &Point)>::query()
@@ -20,7 +19,7 @@ pub fn trigger(
         .collect();
 
     for (entity, pos) in moved_entities {
-        let triggers = <(Entity, &Point, &Name, &Damage)>::query()
+        <(Entity, &Point, &Name, &Damage)>::query()
             .filter(component::<EntryTrigger>())
             .iter(ecs)
             .filter(|(_, p, _, _)| pos == **p)

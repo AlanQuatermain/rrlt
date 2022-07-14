@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+#[allow(dead_code)]
 pub fn spawn_amulet_of_yala(ecs: &mut World, pos: Point) {
     ecs.push(
         (
@@ -10,6 +11,7 @@ pub fn spawn_amulet_of_yala(ecs: &mut World, pos: Point) {
     );
 }
 
+#[allow(dead_code)]
 pub fn spawn_random_item(ecs: &mut World, rng: &mut RandomNumberGenerator, pos: Point) {
     match rng.roll_dice(1, 4) {
         1 => health_potion(ecs, 8, pos),

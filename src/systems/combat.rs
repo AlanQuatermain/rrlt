@@ -20,8 +20,6 @@ pub fn combat(
     commands: &mut CommandBuffer,
 ) {
     let (attacker, victim) = (wants_attack.attacker, wants_attack.victim);
-    let is_player = ecs.entry_ref(victim)
-        .unwrap().get_component::<Player>().is_ok();
     let attacker_name = name_for(&attacker, ecs).0;
     let victim_name = name_for(&victim, ecs).0;
 

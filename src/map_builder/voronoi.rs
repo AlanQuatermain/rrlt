@@ -47,10 +47,10 @@ impl MapArchitect for VoronoiArchitect {
         }
 
         mb.player_start = mb.map.closest_floor(Point::new(MAP_WIDTH/2, MAP_HEIGHT/2));
+        mb.map.populate_blocked();
         mb.prune_unreachable_regions(mb.player_start);
         mb.take_snapshot();
 
-        mb.map.populate_blocked();
         mb.goal_start = mb.find_most_distant();
         mb.spawn_voronoi_regions(rng);
 

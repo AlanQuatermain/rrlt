@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use super::name_for;
 
 #[system]
 #[read_component(Health)]

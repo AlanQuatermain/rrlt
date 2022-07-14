@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+#[allow(dead_code)]
 #[derive(PartialEq, Copy, Clone)]
 pub enum Symmetry { None, Horizontal, Vertical, Both }
 

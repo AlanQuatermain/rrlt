@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use crate::map_builder::common::{paint, Symmetry};
 use crate::prelude::*;
 use super::MapArchitect;
-use super::MAX_SPAWNS_PER_ROOM;
 
 const NUM_TILES: usize = MAP_WIDTH * MAP_HEIGHT;
 
@@ -80,7 +78,6 @@ impl DrunkardsWalkArchitect {
         let mut tiles: Vec<Point> = Vec::new();
 
         loop {
-            let drunk_idx = mb.map.point2d_to_index(drunkard_pos);
             tiles.push(drunkard_pos.clone());
             match rng.roll_dice(1, 4) {
                 1 => drunkard_pos.x -= 1,

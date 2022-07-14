@@ -9,12 +9,12 @@ mod maze;
 mod dla;
 mod common;
 mod voronoi;
+mod waveform_collapse;
 
 use std::collections::HashMap;
 use crate::prelude::*;
 // use empty::EmptyArchitect;
 use rooms::RoomsArchitect;
-use common::*;
 // use themes::*;
 
 pub use themes::MapTheme;
@@ -25,6 +25,7 @@ use crate::map_builder::dla::DLAArchitect;
 use crate::map_builder::drunkard::DrunkardsWalkArchitect;
 use crate::map_builder::maze::MazeArchitect;
 use crate::map_builder::voronoi::VoronoiArchitect;
+use crate::map_builder::waveform_collapse::WaveformCollapseArchitect;
 
 const MAX_ROOMS: usize = 30;
 const MIN_SIZE: usize = 6;
@@ -64,28 +65,37 @@ impl Default for MapBuilder {
     }
 }
 
+fn random_architect(rng: &mut RandomNumberGenerator) -> Box<dyn MapArchitect> {
+    let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 17) {
+        1 => Box::new(RoomsArchitect::default()),
+        2 => Box::new(BSPArchitect::default()),
+        3 => Box::new(BSPInteriorArchitect::default()),
+        4 => Box::new(CellularAutomataArchitect::default()),
+        5 => Box::new(DrunkardsWalkArchitect::open_area()),
+        6 => Box::new(DrunkardsWalkArchitect::open_halls()),
+        7 => Box::new(DrunkardsWalkArchitect::winding_passages()),
+        8 => Box::new(DrunkardsWalkArchitect::fat_passages()),
+        9 => Box::new(DrunkardsWalkArchitect::fearful_symmetry()),
+        10 => Box::new(MazeArchitect::default()),
+        11 => Box::new(DLAArchitect::walk_inwards()),
+        12 => Box::new(DLAArchitect::walk_outwards()),
+        13 => Box::new(DLAArchitect::central_attractor()),
+        14 => Box::new(DLAArchitect::rorschach()),
+        15 => Box::new(VoronoiArchitect::pythagoras()),
+        16 => Box::new(VoronoiArchitect::manhattan()),
+        _ => Box::new(VoronoiArchitect::chebyshev())
+    };
+
+    if rng.roll_dice(1, 3) == 1 {
+        architect = Box::new(WaveformCollapseArchitect::derived_map(architect));
+    }
+
+    architect
+}
+
 impl MapBuilder {
     pub fn new(rng: &mut RandomNumberGenerator, depth: i32) -> Self {
-        let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 17) {
-            1 => Box::new(RoomsArchitect::default()),
-            2 => Box::new(BSPArchitect::default()),
-            3 => Box::new(BSPInteriorArchitect::default()),
-            4 => Box::new(CellularAutomataArchitect::default()),
-            5 => Box::new(DrunkardsWalkArchitect::open_area()),
-            6 => Box::new(DrunkardsWalkArchitect::open_halls()),
-            7 => Box::new(DrunkardsWalkArchitect::winding_passages()),
-            8 => Box::new(DrunkardsWalkArchitect::fat_passages()),
-            9 => Box::new(DrunkardsWalkArchitect::fearful_symmetry()),
-            10 => Box::new(MazeArchitect::default()),
-            11 => Box::new(DLAArchitect::walk_inwards()),
-            12 => Box::new(DLAArchitect::walk_outwards()),
-            13 => Box::new(DLAArchitect::central_attractor()),
-            14 => Box::new(DLAArchitect::rorschach()),
-            15 => Box::new(VoronoiArchitect::pythagoras()),
-            16 => Box::new(VoronoiArchitect::manhattan()),
-            _ => Box::new(VoronoiArchitect::chebyshev())
-            // _ => Box::new(VoronoiArchitect::chebyshev())
-        };
+        let mut architect = random_architect(rng);
         let mut mb = architect.new(rng, depth);
 
         mb.theme = match rng.range(0, 2) {
@@ -232,6 +242,7 @@ impl MapBuilder {
         }
     }
 
+    #[allow(dead_code)]
     fn spawn_entities(
         &self,
         start: &Point,

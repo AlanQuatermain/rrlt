@@ -1,8 +1,5 @@
-use std::collections::HashMap;
 use crate::prelude::*;
 use super::MapArchitect;
-use itertools::Itertools;
-use super::MAX_SPAWNS_PER_ROOM;
 
 #[derive(Default)]
 pub struct CellularAutomataArchitect {}

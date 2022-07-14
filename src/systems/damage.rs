@@ -14,7 +14,6 @@ pub fn damage(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
     #[resource] map: &mut Map,
-    #[resource] turn_state: &mut TurnState,
     #[resource] particle_builder: &mut ParticleBuilder,
     #[resource] gamelog: &mut Gamelog
 ) {
@@ -22,8 +21,6 @@ pub fn damage(
     let target_name = name_for(&command.target, ecs);
     let item_name = command.item_entity.map(|item| name_for(&item, ecs).0);
 
-    let target_is_user = ecs.entry_ref(command.target)
-        .unwrap().get_component::<Player>().is_ok();
     if let Ok(mut target) = ecs.entry_mut(command.target) {
         if let Ok(pos) = target.get_component::<Point>() {
             // Only leave bloodstains when something hurts itself with an item

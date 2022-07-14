@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+#[allow(dead_code)]
 pub fn spawn_monster(ecs: &mut World, rng: &mut RandomNumberGenerator, pos: Point) {
     match rng.roll_dice(1, 16) {
         1..=12 => goblin(ecs, pos),

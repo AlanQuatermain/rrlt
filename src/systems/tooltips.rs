@@ -12,7 +12,7 @@ pub fn tooltips(
     #[resource] mouse_pos: &Point,
     #[resource] camera: &Camera
 ) {
-    let mut positions = <(Entity, &Point, &Name)>::query();
+    let positions = <(Entity, &Point, &Name)>::query();
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
 
     let offset = Point::new(camera.left_x, camera.top_y);

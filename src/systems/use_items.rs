@@ -165,7 +165,7 @@ pub fn use_items(
             }
         },
         Command::Eat => {
-            if let Some(logs) = eat(ecs, operation.item, operation.user, commands) {
+            if let Some(logs) = eat(ecs, operation.item, operation.user) {
                 gamelog.entries.extend(logs);
             }
         }
@@ -180,7 +180,7 @@ fn find_targets<T: Component>(
 ) -> Vec<Entity> {
     if let Ok(area_of_effect) = item.get_component::<AreaOfEffect>() {
         // Area target -- can aim anywhere
-        let mut blast_tiles = field_of_view_set(
+        let blast_tiles = field_of_view_set(
             *target, area_of_effect.0, map);
         return <(&Point, Entity)>::query()
             .filter(component::<T>())
@@ -209,7 +209,7 @@ fn find_all_targets(
 ) -> Vec<Entity> {
     if let Ok(area_of_effect) = item.get_component::<AreaOfEffect>() {
         // Area target -- can aim anywhere
-        let mut blast_tiles = field_of_view_set(
+        let blast_tiles = field_of_view_set(
             *target, area_of_effect.0, map);
         return <(&Point, Entity)>::query()
             .iter(ecs)
@@ -318,7 +318,7 @@ fn equip_item(
         }
     }
 
-    if let Ok(target) = ecs.entry_ref(target_entity) {
+    if ecs.entry_ref(target_entity).is_ok() {
         let mut logs = Vec::new();
         // Remove anything currently equipped in the same slot
         <(Entity, &Equipped, &Name)>::query()
@@ -340,8 +340,7 @@ fn equip_item(
 fn eat(
     ecs: &mut SubWorld,
     item_entity: Entity,
-    user_entity: Entity,
-    commands: &mut CommandBuffer
+    user_entity: Entity
 ) -> Option<Vec<String>> {
     let item_name = name_for(&item_entity, ecs).0;
     let user_name = name_for(&user_entity, ecs);

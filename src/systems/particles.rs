@@ -20,9 +20,7 @@ pub fn particle_cull(
 #[system]
 #[read_component(Point)]
 pub fn particle_spawn(
-    ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] map: &Map,
     #[resource] builder: &mut ParticleBuilder
 ) {
     for request in &builder.requests {

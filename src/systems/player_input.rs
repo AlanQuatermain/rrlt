@@ -49,7 +49,7 @@ pub fn player_input(
                 Point::zero()
             },
             VirtualKeyCode::Period => {
-                let (player, player_pos) = players
+                let (_player, player_pos) = players
                     .iter(ecs)
                     .find_map(|(entity, pos)| Some((*entity, *pos)))
                     .unwrap();

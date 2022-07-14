@@ -10,7 +10,7 @@ pub fn hunger(
     #[resource] gamelog: &mut Gamelog,
     commands: &mut CommandBuffer
 ) {
-    let mut query = <(&mut HungerClock, Entity)>::query();
+    let query = <(&mut HungerClock, Entity)>::query();
     if *turn_state == TurnState::PlayerTurn {
         query.filter(component::<Player>()).for_each_mut(ecs, |(clock, entity)| {
             update_hunger(true, clock, entity, gamelog, commands);

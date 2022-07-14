@@ -11,7 +11,6 @@ pub fn drop_item(
     entity: &Entity,
     want_drop: &WantsToDrop,
     ecs: &SubWorld,
-    #[resource] map: &Map,
     #[resource] gamelog: &mut Gamelog,
     commands: &mut CommandBuffer
 ) {

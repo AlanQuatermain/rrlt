@@ -55,6 +55,7 @@ pub fn chasing(
                                 attacker: *entity,
                                 victim: *victim
                             }));
+                        attacked = true;
                     }
                 });
 

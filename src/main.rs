@@ -1,5 +1,3 @@
-extern crate core;
-
 mod components;
 mod systems;
 mod turn_state;
@@ -11,6 +9,7 @@ mod gamelog;
 mod random_table;
 mod rex_assets;
 
+#[allow(dead_code)]
 mod prelude {
     pub use bracket_lib::prelude::*;
     pub use legion::*;
@@ -363,7 +362,9 @@ impl State {
     }
 }
 
+#[allow(dead_code)]
 impl GameState for State {
+    #[allow(dead_code)]
     fn tick(&mut self, ctx: &mut BTerm) {
         ctx.set_active_console(0);
         ctx.cls();
@@ -386,8 +387,8 @@ impl GameState for State {
             TurnState::MonsterTurn => self.monster_systems.execute(&mut self.ecs, &mut self.resources),
             TurnState::ShowingInventory => self.popup_menu_systems.execute(&mut self.ecs, &mut self.resources),
             TurnState::ShowingDropItems => self.popup_menu_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::RangedTargeting { range, item } => self.ranged_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::MainMenu{selection} => {
+            TurnState::RangedTargeting { range: _, item: _ } => self.ranged_systems.execute(&mut self.ecs, &mut self.resources),
+            TurnState::MainMenu{selection: _} => {
                 {
                     // Alas, there's no draw batch command to render a sprite.
                     let assets = self.resources.get::<RexAssets>().unwrap();
@@ -423,7 +424,7 @@ fn main() -> BError {
         .with_simple_console_no_bg(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .build()?;
-    // context.with_post_scanlines(true);
+    context.with_post_scanlines(true);
 
     // let context = BTermBuilder::new()
     //     .with_title("Rouguelike Tutorial")

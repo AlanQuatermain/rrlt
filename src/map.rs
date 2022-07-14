@@ -5,7 +5,7 @@ pub const MAP_WIDTH: usize = 80;
 pub const MAP_HEIGHT: usize = 43;
 pub const NUM_TILES: usize = (MAP_WIDTH * MAP_HEIGHT) as usize;
 
-#[derive(Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Hash, Eq)]
 pub enum TileType {
     Wall,
     Floor,

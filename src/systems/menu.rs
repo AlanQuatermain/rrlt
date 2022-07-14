@@ -21,7 +21,6 @@ fn save_exists() -> bool {
 #[system]
 #[read_component(Player)]
 pub fn main_menu(
-    ecs: &SubWorld,
     #[resource] turn_state: &mut TurnState,
     #[resource] key: &mut Option<VirtualKeyCode>
 ) {
