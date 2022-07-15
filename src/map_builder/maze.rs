@@ -1,12 +1,10 @@
-use crate::prelude::*;
 use super::MapArchitect;
+use crate::prelude::*;
 
 #[derive(Default)]
 pub struct MazeArchitect {}
 
-impl MazeArchitect {
-
-}
+impl MazeArchitect {}
 
 impl MapArchitect for MazeArchitect {
     fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
@@ -15,17 +13,19 @@ impl MapArchitect for MazeArchitect {
         mb.generate_random_table();
         mb.take_snapshot();
 
-        let mut grid = Grid::new((MAP_WIDTH as i32/2)-1, (MAP_HEIGHT as i32/2)-1, rng);
+        let mut grid = Grid::new((MAP_WIDTH as i32 / 2) - 1, (MAP_HEIGHT as i32 / 2) - 1, rng);
         grid.generate_maze(&mut mb);
         mb.map.populate_blocked();
 
         mb.player_start = Point::new(2, 2);
         mb.goal_start = mb.find_most_distant();
-
         mb.take_snapshot();
-        mb.spawn_voronoi_regions(rng);
 
         mb
+    }
+
+    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
+        mb.spawn_voronoi_regions(rng);
     }
 }
 
@@ -46,9 +46,11 @@ struct Cell {
 
 impl Cell {
     fn new(row: i32, column: i32) -> Cell {
-        Cell{
-            row, column, walls: [true; 4],
-            visited: false
+        Cell {
+            row,
+            column,
+            walls: [true; 4],
+            visited: false,
         }
     }
 
@@ -59,16 +61,13 @@ impl Cell {
         if x == 1 {
             self.walls[LEFT] = false;
             next.walls[RIGHT] = false;
-        }
-        else if x == -1 {
+        } else if x == -1 {
             self.walls[RIGHT] = false;
             next.walls[LEFT] = false;
-        }
-        else if y == 1 {
+        } else if y == 1 {
             self.walls[TOP] = false;
             next.walls[BOTTOM] = false;
-        }
-        else if y == -1 {
+        } else if y == -1 {
             self.walls[BOTTOM] = false;
             next.walls[TOP] = false;
         }
@@ -81,15 +80,18 @@ struct Grid<'a> {
     cells: Vec<Cell>,
     backtrace: Vec<usize>,
     current: usize,
-    rng: &'a mut RandomNumberGenerator
+    rng: &'a mut RandomNumberGenerator,
 }
 
 impl<'a> Grid<'a> {
     fn new(width: i32, height: i32, rng: &mut RandomNumberGenerator) -> Grid {
         let mut grid = Grid {
-            width, height, cells: Vec::new(),
+            width,
+            height,
+            cells: Vec::new(),
             backtrace: Vec::new(),
-            current: 0, rng
+            current: 0,
+            rng,
         };
 
         for row in 0..height {
@@ -102,10 +104,9 @@ impl<'a> Grid<'a> {
     }
 
     fn calculate_index(&self, row: i32, column: i32) -> i32 {
-        if row < 0 || column < 0 || column > self.width-1 || row > self.height-1 {
+        if row < 0 || column < 0 || column > self.width - 1 || row > self.height - 1 {
             -1
-        }
-        else {
+        } else {
             column + (row * self.width)
         }
     }
@@ -117,10 +118,10 @@ impl<'a> Grid<'a> {
         let current_column = self.cells[self.current].column;
 
         let neighbor_indices: [i32; 4] = [
-            self.calculate_index(current_row-1, current_column),
-            self.calculate_index(current_row, current_column+1),
-            self.calculate_index(current_row+1, current_column),
-            self.calculate_index(current_row, current_column-1)
+            self.calculate_index(current_row - 1, current_column),
+            self.calculate_index(current_row, current_column + 1),
+            self.calculate_index(current_row + 1, current_column),
+            self.calculate_index(current_row, current_column - 1),
         ];
 
         for i in neighbor_indices {
@@ -137,9 +138,10 @@ impl<'a> Grid<'a> {
         if !neighbors.is_empty() {
             if neighbors.len() == 1 {
                 return Some(neighbors[0]);
-            }
-            else {
-                return Some(neighbors[self.rng.random_slice_index(neighbors.as_slice()).unwrap()] as usize);
+            } else {
+                return Some(
+                    neighbors[self.rng.random_slice_index(neighbors.as_slice()).unwrap()] as usize,
+                );
             }
         }
         None
@@ -169,8 +171,7 @@ impl<'a> Grid<'a> {
                     if !self.backtrace.is_empty() {
                         self.current = self.backtrace[0];
                         self.backtrace.remove(0);
-                    }
-                    else {
+                    } else {
                         break;
                     }
                 }
@@ -186,18 +187,28 @@ impl<'a> Grid<'a> {
 
     fn copy_to_map(&self, map: &mut Map) {
         // Clear the map.
-        for i in map.tiles.iter_mut() { *i = TileType::Wall; }
+        for i in map.tiles.iter_mut() {
+            *i = TileType::Wall;
+        }
 
         for cell in self.cells.iter() {
             let x = cell.column + 1;
             let y = cell.row + 1;
-            let idx = map.point2d_to_index(Point::new(x*2, y*2));
+            let idx = map.point2d_to_index(Point::new(x * 2, y * 2));
 
             map.tiles[idx] = TileType::Floor;
-            if !cell.walls[TOP] { map.tiles[idx - MAP_WIDTH] = TileType::Floor }
-            if !cell.walls[RIGHT] { map.tiles[idx + 1] = TileType::Floor }
-            if !cell.walls[BOTTOM] { map.tiles[idx + MAP_WIDTH] = TileType::Floor }
-            if !cell.walls[LEFT] { map.tiles[idx - 1] = TileType::Floor }
+            if !cell.walls[TOP] {
+                map.tiles[idx - MAP_WIDTH] = TileType::Floor
+            }
+            if !cell.walls[RIGHT] {
+                map.tiles[idx + 1] = TileType::Floor
+            }
+            if !cell.walls[BOTTOM] {
+                map.tiles[idx + MAP_WIDTH] = TileType::Floor
+            }
+            if !cell.walls[LEFT] {
+                map.tiles[idx - 1] = TileType::Floor
+            }
         }
     }
 }

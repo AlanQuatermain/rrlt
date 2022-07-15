@@ -1,21 +1,21 @@
-mod components;
-mod systems;
-mod turn_state;
-mod map;
 mod camera;
-mod map_builder;
-mod spawner;
+mod components;
 mod gamelog;
+mod map;
+mod map_builder;
 mod random_table;
 mod rex_assets;
+mod spawner;
+mod systems;
+mod turn_state;
 
 #[allow(dead_code)]
 mod prelude {
     pub use bracket_lib::prelude::*;
-    pub use legion::*;
     pub use legion::serialize::*;
-    pub use legion::world::SubWorld;
     pub use legion::systems::CommandBuffer;
+    pub use legion::world::SubWorld;
+    pub use legion::*;
     pub use serde::*;
 
     pub const SCREEN_WIDTH: i32 = 80;
@@ -27,22 +27,22 @@ mod prelude {
 
     pub const FINAL_LEVEL: u32 = 2;
 
-    pub use crate::components::*;
-    pub use crate::systems::*;
-    pub use crate::turn_state::*;
-    pub use crate::map::*;
     pub use crate::camera::*;
-    pub use crate::map_builder::*;
-    pub use crate::spawner::*;
+    pub use crate::components::*;
     pub use crate::gamelog::*;
+    pub use crate::map::*;
+    pub use crate::map_builder::*;
     pub use crate::random_table::*;
     pub use crate::rex_assets::*;
+    pub use crate::spawner::*;
+    pub use crate::systems::*;
+    pub use crate::turn_state::*;
 }
 
-use std::fs;
-use std::fs::File;
 use legion::serialize::UnknownType::Ignore;
 use prelude::*;
+use std::fs;
+use std::fs::File;
 
 struct State {
     ecs: World,
@@ -64,11 +64,14 @@ impl State {
         let ecs = World::default();
         let mut resources = Resources::default();
 
-        resources.insert(TurnState::MainMenu{selection: MainMenuSelection::NewGame});
+        resources.insert(TurnState::MainMenu {
+            selection: MainMenuSelection::NewGame,
+        });
         resources.insert(RexAssets::new());
 
         Self {
-            ecs, resources,
+            ecs,
+            resources,
             input_systems: build_input_scheduler(),
             player_systems: build_player_scheduler(),
             monster_systems: build_monster_scheduler(),
@@ -86,9 +89,11 @@ impl State {
         self.resources = Resources::default();
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = MapBuilder::new(&mut rng, 0);
+        let mut map_builder = MapBuilder::new(&mut self.ecs, &mut rng, 0);
         let mut gamelog = Gamelog::default();
-        gamelog.entries.push("Welcome to Rusty Roguelike".to_string());
+        gamelog
+            .entries
+            .push("Welcome to Rusty Roguelike".to_string());
 
         spawn_player(&mut self.ecs, map_builder.player_start);
         for pos in map_builder.spawns {
@@ -108,7 +113,7 @@ impl State {
         if SHOW_MAPGEN_VISUALIZER {
             self.real_map = map_builder.map.clone();
             self.map_history = map_builder.history;
-            self.resources.insert(TurnState::MapBuilding{step:0});
+            self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
     }
 
@@ -126,7 +131,9 @@ impl State {
             .iter(&self.ecs)
             .filter(|(_, carry)| carry.0 == player_entity)
             .map(|(e, _)| *e)
-            .for_each(|e| { entities_to_keep.insert(e); });
+            .for_each(|e| {
+                entities_to_keep.insert(e);
+            });
 
         let mut cb = CommandBuffer::new(&mut self.ecs);
         for e in Entity::query().iter(&self.ecs) {
@@ -140,20 +147,18 @@ impl State {
             .iter_mut(&mut self.ecs)
             .for_each(|fov| fov.is_dirty = true);
 
-        let map_level = <&Player>::query()
-            .iter(&self.ecs)
-            .nth(0)
-            .unwrap()
-            .map_level as i32 + 1;
+        let map_level = <&Player>::query().iter(&self.ecs).nth(0).unwrap().map_level as i32 + 1;
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = MapBuilder::new(&mut rng, map_level);
-        <(&mut Player, &mut Point, &mut Health)>::query()
-            .for_each_mut(&mut self.ecs, |(player, pos, health)| {
+        let mut map_builder = MapBuilder::new(&mut self.ecs, &mut rng, map_level);
+        <(&mut Player, &mut Point, &mut Health)>::query().for_each_mut(
+            &mut self.ecs,
+            |(player, pos, health)| {
                 player.map_level = map_level as u32;
                 *pos = map_builder.player_start;
-                health.current = i32::max(health.current, health.max/2);
-            });
+                health.current = i32::max(health.current, health.max / 2);
+            },
+        );
 
         let exit_idx = map_builder.map.point2d_to_index(map_builder.goal_start);
         map_builder.map.tiles[exit_idx] = TileType::DownStairs;
@@ -170,11 +175,14 @@ impl State {
         if SHOW_MAPGEN_VISUALIZER {
             self.real_map = map_builder.map.clone();
             self.map_history = map_builder.history;
-            self.resources.insert(TurnState::MapBuilding{step:0});
+            self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
 
-        self.resources.get_mut::<Gamelog>().unwrap()
-            .entries.push("You descend to the next level, taking a moment to heal.".to_string());
+        self.resources
+            .get_mut::<Gamelog>()
+            .unwrap()
+            .entries
+            .push("You descend to the next level, taking a moment to heal.".to_string());
     }
 
     fn game_over(&mut self, ctx: &mut BTerm) {
@@ -182,14 +190,26 @@ impl State {
 
         ctx.print_color_centered(15, YELLOW, BLACK, "Your journey has ended!");
 
-        ctx.print_color_centered(17, WHITE, BLACK, "One day, we'll tell you all about how you did.");
-        ctx.print_color_centered(18, WHITE, BLACK, "That day, sadly, is not in this chapter...");
+        ctx.print_color_centered(
+            17,
+            WHITE,
+            BLACK,
+            "One day, we'll tell you all about how you did.",
+        );
+        ctx.print_color_centered(
+            18,
+            WHITE,
+            BLACK,
+            "That day, sadly, is not in this chapter...",
+        );
 
         ctx.print_color_centered(20, MAGENTA, BLACK, "Press any key to return to the menu.");
 
         if ctx.key.is_some() {
             ctx.key = None;
-            self.resources.insert(TurnState::MainMenu{selection: MainMenuSelection::NewGame});
+            self.resources.insert(TurnState::MainMenu {
+                selection: MainMenuSelection::NewGame,
+            });
         }
     }
 
@@ -236,27 +256,29 @@ impl State {
         self.configure_registry(&mut registry);
 
         // Temporarily add the map to get it included
-        let map_entity = self.ecs.push(
-            (
-                self.resources.get::<Map>().unwrap().clone(),
-                self.resources.get::<MapTheme>().unwrap().clone(),
-                SerializeMe,
-            )
-        );
+        let map_entity = self.ecs.push((
+            self.resources.get::<Map>().unwrap().clone(),
+            self.resources.get::<MapTheme>().unwrap().clone(),
+            SerializeMe,
+        ));
 
         let writer = File::create("./savegame.json").unwrap();
         let entity_serializer = Canon::default();
-        serde_json::to_writer(writer,&self.ecs.as_serializable(
-            component::<SerializeMe>(),
-            &registry,
-            &entity_serializer
-        )).expect("Error saving game");
+        serde_json::to_writer(
+            writer,
+            &self
+                .ecs
+                .as_serializable(component::<SerializeMe>(), &registry, &entity_serializer),
+        )
+        .expect("Error saving game");
 
         // remove the map now
         self.ecs.remove(map_entity);
 
         // Show the main menu.
-        self.resources.insert(TurnState::MainMenu{ selection: MainMenuSelection::LoadGame });
+        self.resources.insert(TurnState::MainMenu {
+            selection: MainMenuSelection::LoadGame,
+        });
     }
 
     fn load_game(&mut self) {
@@ -303,14 +325,12 @@ impl State {
         self.resources.insert(RexAssets::new());
 
         // make all FOVs dirty
-        <&mut FieldOfView>::query()
-            .for_each_mut(&mut self.ecs, |mut fov| {
-                fov.is_dirty = true;
-            });
+        <&mut FieldOfView>::query().for_each_mut(&mut self.ecs, |mut fov| {
+            fov.is_dirty = true;
+        });
 
         // Permadeath: DELETE THE SAVED GAME!
-        fs::remove_file("./savegame.json")
-            .expect("Save deletion failed");
+        fs::remove_file("./savegame.json").expect("Save deletion failed");
     }
 
     fn reveal_map(&mut self, row: i32) {
@@ -321,11 +341,10 @@ impl State {
                 map.revealed_tiles[idx] = true;
             }
         }
-        if row as usize == MAP_HEIGHT-1 {
+        if row as usize == MAP_HEIGHT - 1 {
             self.resources.insert(TurnState::MonsterTurn);
-        }
-        else {
-            self.resources.insert(TurnState::RevealMap { row: row+1 })
+        } else {
+            self.resources.insert(TurnState::RevealMap { row: row + 1 })
         }
         map_reveal_scheduler().execute(&mut self.ecs, &mut self.resources);
     }
@@ -339,8 +358,7 @@ impl State {
             if step < self.map_history.len() {
                 self.resources.insert(self.map_history[step].clone());
                 continue_build = true;
-            }
-            else if ctx.key.is_none() {
+            } else if ctx.key.is_none() {
                 // wait for user to press a key
                 continue_build = true;
             }
@@ -350,11 +368,13 @@ impl State {
             map_reveal_scheduler().execute(&mut self.ecs, &mut self.resources);
 
             self.mapgen_timer += ctx.frame_time_ms;
-            if self.mapgen_timer < 300.0 { return; }
+            if self.mapgen_timer < 300.0 {
+                return;
+            }
             self.mapgen_timer = 0.0;
-            self.resources.insert(TurnState::MapBuilding{step: step+1});
-        }
-        else {
+            self.resources
+                .insert(TurnState::MapBuilding { step: step + 1 });
+        } else {
             self.map_history.clear();
             self.resources.insert(self.real_map.clone());
             self.resources.insert(TurnState::AwaitingInput);
@@ -382,31 +402,43 @@ impl GameState for State {
 
         let current_state = self.resources.get::<TurnState>().unwrap().clone();
         match current_state {
-            TurnState::AwaitingInput => self.input_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::PlayerTurn => self.player_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::MonsterTurn => self.monster_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::ShowingInventory => self.popup_menu_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::ShowingDropItems => self.popup_menu_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::RangedTargeting { range: _, item: _ } => self.ranged_systems.execute(&mut self.ecs, &mut self.resources),
-            TurnState::MainMenu{selection: _} => {
+            TurnState::AwaitingInput => self
+                .input_systems
+                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::PlayerTurn => self
+                .player_systems
+                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::MonsterTurn => self
+                .monster_systems
+                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::ShowingInventory => self
+                .popup_menu_systems
+                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::ShowingDropItems => self
+                .popup_menu_systems
+                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::RangedTargeting { range: _, item: _ } => self
+                .ranged_systems
+                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::MainMenu { selection: _ } => {
                 {
                     // Alas, there's no draw batch command to render a sprite.
                     let assets = self.resources.get::<RexAssets>().unwrap();
                     ctx.render_xp_sprite(&assets.menu, 0, 0);
                 }
-                self.menu_systems.execute(&mut self.ecs, &mut self.resources)
-            },
+                self.menu_systems
+                    .execute(&mut self.ecs, &mut self.resources)
+            }
             TurnState::NewGame => self.make_new_game(),
             TurnState::SaveGame => self.save_game(),
             TurnState::LoadGame => self.load_game(),
             TurnState::NextLevel => self.advance_level(),
             TurnState::GameOver => self.game_over(ctx),
-            TurnState::RevealMap{row} => self.reveal_map(row),
-            TurnState::MapBuilding{step} => self.visualize_map_build(step, ctx),
+            TurnState::RevealMap { row } => self.reveal_map(row),
+            TurnState::MapBuilding { step } => self.visualize_map_build(step, ctx),
         }
 
-        render_draw_buffer(ctx)
-            .expect("Render error");
+        render_draw_buffer(ctx).expect("Render error");
     }
 }
 

@@ -1,18 +1,17 @@
-use crate::prelude::*;
 use super::MapArchitect;
+use crate::prelude::*;
 
 #[derive(Default)]
 pub struct CellularAutomataArchitect {}
 
 impl CellularAutomataArchitect {
     fn random_noise_map(&self, rng: &mut RandomNumberGenerator, map: &mut Map) {
-        for y in 1 .. MAP_HEIGHT as i32 - 1 {
-            for x in 1 .. MAP_WIDTH as i32 - 1 {
+        for y in 1..MAP_HEIGHT as i32 - 1 {
+            for x in 1..MAP_WIDTH as i32 - 1 {
                 let roll = rng.roll_dice(1, 100);
                 if roll > 55 {
                     map.tiles[map_idx(x, y)] = TileType::Floor;
-                }
-                else {
+                } else {
                     map.tiles[map_idx(x, y)] = TileType::Wall;
                 }
             }
@@ -23,7 +22,7 @@ impl CellularAutomataArchitect {
         let mut neighbors = 0;
         for iy in -1..=1 {
             for ix in -1..=1 {
-                if !(ix == 0 && iy == 0) && map.tiles[map_idx(x+ix, y+iy)] == TileType::Wall {
+                if !(ix == 0 && iy == 0) && map.tiles[map_idx(x + ix, y + iy)] == TileType::Wall {
                     neighbors += 1;
                 }
             }
@@ -33,14 +32,13 @@ impl CellularAutomataArchitect {
 
     fn iteration(&self, map: &mut Map) {
         let mut new_tiles = map.tiles.clone();
-        for y in 1 .. MAP_HEIGHT as i32 - 1 {
-            for x in 1 .. MAP_WIDTH as i32 - 1 {
+        for y in 1..MAP_HEIGHT as i32 - 1 {
+            for x in 1..MAP_WIDTH as i32 - 1 {
                 let neighbors = self.count_neighbors(x, y, map);
                 let idx = map_idx(x, y);
                 if neighbors > 4 || neighbors == 0 {
                     new_tiles[idx] = TileType::Wall;
-                }
-                else {
+                } else {
                     new_tiles[idx] = TileType::Floor;
                 }
             }
@@ -49,7 +47,7 @@ impl CellularAutomataArchitect {
     }
 
     fn find_start(&self, map: &Map) -> Point {
-        map.closest_floor(Point::new(MAP_WIDTH/2, MAP_HEIGHT/2))
+        map.closest_floor(Point::new(MAP_WIDTH / 2, MAP_HEIGHT / 2))
     }
 }
 
@@ -62,7 +60,7 @@ impl MapArchitect for CellularAutomataArchitect {
 
         self.random_noise_map(rng, &mut mb.map);
         mb.take_snapshot();
-        for _ in 0 .. 10 {
+        for _ in 0..10 {
             self.iteration(&mut mb.map);
             mb.take_snapshot();
         }
@@ -74,8 +72,11 @@ impl MapArchitect for CellularAutomataArchitect {
         mb.take_snapshot();
         mb.map.populate_blocked();
         mb.goal_start = mb.find_most_distant();
-        mb.spawn_voronoi_regions(rng);
 
         mb
+    }
+
+    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
+        mb.spawn_voronoi_regions(rng);
     }
 }

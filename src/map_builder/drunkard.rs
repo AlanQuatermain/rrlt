@@ -1,18 +1,21 @@
+use super::MapArchitect;
 use crate::map_builder::common::{paint, Symmetry};
 use crate::prelude::*;
-use super::MapArchitect;
 
 const NUM_TILES: usize = MAP_WIDTH * MAP_HEIGHT;
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum DrunkSpawnMode { Center, Random }
+pub enum DrunkSpawnMode {
+    Center,
+    Random,
+}
 
 pub struct DrunkardsWalkArchitect {
     pub spawn_mode: DrunkSpawnMode,
     pub lifetime: usize,
     pub floor_percent: f32,
     pub brush_size: i32,
-    pub symmetry: Symmetry
+    pub symmetry: Symmetry,
 }
 
 impl Default for DrunkardsWalkArchitect {
@@ -22,7 +25,7 @@ impl Default for DrunkardsWalkArchitect {
             lifetime: 400,
             floor_percent: 0.5,
             brush_size: 1,
-            symmetry: Symmetry::None
+            symmetry: Symmetry::None,
         }
     }
 }
@@ -38,7 +41,7 @@ impl DrunkardsWalkArchitect {
             lifetime: 400,
             floor_percent: 0.5,
             brush_size: 1,
-            symmetry: Symmetry::None
+            symmetry: Symmetry::None,
         }
     }
 
@@ -48,7 +51,7 @@ impl DrunkardsWalkArchitect {
             lifetime: 100,
             floor_percent: 0.4,
             brush_size: 1,
-            symmetry: Symmetry::None
+            symmetry: Symmetry::None,
         }
     }
 
@@ -58,7 +61,7 @@ impl DrunkardsWalkArchitect {
             lifetime: 100,
             floor_percent: 0.4,
             brush_size: 2,
-            symmetry: Symmetry::None
+            symmetry: Symmetry::None,
         }
     }
 
@@ -68,7 +71,7 @@ impl DrunkardsWalkArchitect {
             lifetime: 100,
             floor_percent: 0.4,
             brush_size: 1,
-            symmetry: Symmetry::Both
+            symmetry: Symmetry::Both,
         }
     }
 
@@ -83,7 +86,7 @@ impl DrunkardsWalkArchitect {
                 1 => drunkard_pos.x -= 1,
                 2 => drunkard_pos.x += 1,
                 3 => drunkard_pos.y -= 1,
-                _ => drunkard_pos.y += 1
+                _ => drunkard_pos.y += 1,
             }
 
             if !mb.map.in_bounds(drunkard_pos) {
@@ -93,7 +96,8 @@ impl DrunkardsWalkArchitect {
             if drunkard_pos.x == 0 || drunkard_pos.y == 0 {
                 break;
             }
-            if drunkard_pos.x as usize == MAP_WIDTH-1 || drunkard_pos.y as usize == MAP_HEIGHT-1 {
+            if drunkard_pos.x as usize == MAP_WIDTH - 1 || drunkard_pos.y as usize == MAP_HEIGHT - 1
+            {
                 break;
             }
 
@@ -133,33 +137,45 @@ impl MapArchitect for DrunkardsWalkArchitect {
         mb.fill(TileType::Wall);
         mb.take_snapshot();
 
-        let center = Point::new(MAP_WIDTH/2, MAP_HEIGHT/2);
+        let center = Point::new(MAP_WIDTH / 2, MAP_HEIGHT / 2);
         self.drunkard(&center, rng, &mut mb);
         mb.take_snapshot();
 
         let desired_floor = ((NUM_TILES as f32) * self.floor_percent) as usize;
 
         loop {
-            while mb.map.tiles.iter().filter(|t| **t == TileType::Floor).count() < desired_floor {
+            while mb
+                .map
+                .tiles
+                .iter()
+                .filter(|t| **t == TileType::Floor)
+                .count()
+                < desired_floor
+            {
                 let start = if self.spawn_mode == DrunkSpawnMode::Center {
                     center
                 } else {
                     Point::new(
                         rng.roll_dice(1, MAP_WIDTH as i32 - 2),
-                        rng.roll_dice(1, MAP_HEIGHT as i32 - 2)
+                        rng.roll_dice(1, MAP_HEIGHT as i32 - 2),
                     )
                 };
 
-                self.drunkard(
-                    &start,
-                    rng, &mut mb);
+                self.drunkard(&start, rng, &mut mb);
                 mb.take_snapshot();
             }
 
             mb.map.populate_blocked();
             mb.prune_unreachable_regions(center);
             mb.take_snapshot();
-            if mb.map.tiles.iter().filter(|t| **t == TileType::Floor).count() >= desired_floor {
+            if mb
+                .map
+                .tiles
+                .iter()
+                .filter(|t| **t == TileType::Floor)
+                .count()
+                >= desired_floor
+            {
                 break;
             }
         }
@@ -168,9 +184,10 @@ impl MapArchitect for DrunkardsWalkArchitect {
         mb.map.populate_blocked();
         mb.goal_start = mb.find_most_distant();
 
-        mb.spawn_voronoi_regions(rng);
-
         mb
     }
-}
 
+    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
+        mb.spawn_voronoi_regions(rng);
+    }
+}

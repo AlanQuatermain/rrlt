@@ -9,15 +9,15 @@ pub const NUM_TILES: usize = (MAP_WIDTH * MAP_HEIGHT) as usize;
 pub enum TileType {
     Wall,
     Floor,
-    DownStairs
+    DownStairs,
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
-    pub bloodstains: HashSet<usize>
+    pub bloodstains: HashSet<usize>,
 }
 
 impl Map {
@@ -26,26 +26,22 @@ impl Map {
             tiles: vec![TileType::Floor; NUM_TILES],
             revealed_tiles: vec![false; NUM_TILES],
             blocked: vec![false; NUM_TILES],
-            bloodstains: HashSet::new()
+            bloodstains: HashSet::new(),
         }
     }
 
     pub fn in_bounds(&self, point: Point) -> bool {
-        point.x >= 0 && point.x < MAP_WIDTH as i32
-            && point.y >= 0 && point.y < MAP_HEIGHT as i32
+        point.x >= 0 && point.x < MAP_WIDTH as i32 && point.y >= 0 && point.y < MAP_HEIGHT as i32
     }
 
     pub fn can_enter_tile(&self, point: Point) -> bool {
-        self.in_bounds(point) && (
-            self.blocked[map_idx(point.x, point.y)] == false
-        )
+        self.in_bounds(point) && (self.blocked[map_idx(point.x, point.y)] == false)
     }
 
     pub fn try_idx(&self, point: Point) -> Option<usize> {
         if !self.in_bounds(point) {
             None
-        }
-        else {
+        } else {
             Some(map_idx(point.x, point.y))
         }
     }
@@ -62,38 +58,53 @@ impl Map {
             if self.can_enter_tile(destination) {
                 let idx = self.point2d_to_index(destination);
                 Some(idx)
-            }
-            else {
+            } else {
                 None
             }
-        }
-        else {
+        } else {
             None
         }
     }
 
     pub fn wall_mask(&self, idx: usize) -> u8 {
         let pos = self.index_to_point2d(idx);
-        if pos.x < 1 || pos.x as usize > MAP_WIDTH-2 || pos.y < 1 || pos.y as usize > MAP_HEIGHT-2 {
+        if pos.x < 1
+            || pos.x as usize > MAP_WIDTH - 2
+            || pos.y < 1
+            || pos.y as usize > MAP_HEIGHT - 2
+        {
             return 35;
         }
 
         let mut mask = 0;
-        if self.is_revealed_and_wall(pos.x, pos.y-1) { mask |= 1; }
-        if self.is_revealed_and_wall(pos.x, pos.y+1) { mask |= 2; }
-        if self.is_revealed_and_wall(pos.x-1, pos.y) { mask |= 4; }
-        if self.is_revealed_and_wall(pos.x+1, pos.y) { mask |= 8; }
+        if self.is_revealed_and_wall(pos.x, pos.y - 1) {
+            mask |= 1;
+        }
+        if self.is_revealed_and_wall(pos.x, pos.y + 1) {
+            mask |= 2;
+        }
+        if self.is_revealed_and_wall(pos.x - 1, pos.y) {
+            mask |= 4;
+        }
+        if self.is_revealed_and_wall(pos.x + 1, pos.y) {
+            mask |= 8;
+        }
         mask
     }
 
     pub fn closest_floor(&self, pos: Point) -> Point {
-        let closest_point = self.tiles.iter().enumerate()
+        let closest_point = self
+            .tiles
+            .iter()
+            .enumerate()
             .filter(|(_, t)| **t == TileType::Floor)
-            .map(|(idx, _)| (idx, DistanceAlg::Pythagoras.distance2d(
-                pos, self.index_to_point2d(idx))))
-            .min_by(|(_, distance), (_, distance2)| {
-                distance.partial_cmp(&distance2).unwrap()
+            .map(|(idx, _)| {
+                (
+                    idx,
+                    DistanceAlg::Pythagoras.distance2d(pos, self.index_to_point2d(idx)),
+                )
             })
+            .min_by(|(_, distance), (_, distance2)| distance.partial_cmp(&distance2).unwrap())
             .map(|(idx, _)| idx)
             .unwrap();
         self.index_to_point2d(closest_point)
@@ -126,11 +137,7 @@ impl BaseMap for Map {
     }
 
     fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
-        DistanceAlg::Pythagoras
-            .distance2d(
-                self.index_to_point2d(idx1),
-                self.index_to_point2d(idx2)
-            )
+        DistanceAlg::Pythagoras.distance2d(self.index_to_point2d(idx1), self.index_to_point2d(idx2))
     }
 
     fn is_opaque(&self, idx: usize) -> bool {
