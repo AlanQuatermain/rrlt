@@ -37,21 +37,19 @@ impl MapArchitect for WaveformCollapseArchitect {
         mb.depth = depth;
         mb.generate_random_table();
 
-        if let Some(mut src_map) = self
-            .derive_from
-            .as_mut()
-            .map(|a| a.new(rng, depth).map.clone())
+        if let Some(mut src_builder) = self.derive_from.as_mut().map(|a| a.new(rng, depth).clone())
         {
-            for t in src_map.tiles.iter_mut() {
+            mb.history = src_builder.history.clone();
+            for t in src_builder.map.tiles.iter_mut() {
                 if *t == TileType::DownStairs {
                     *t = TileType::Floor;
                 }
             }
-            mb.map = src_map;
+            mb.map = src_builder.map;
         } else {
-            mb.map = super::CellularAutomataArchitect::default()
-                .new(rng, depth)
-                .map
+            let base = super::CellularAutomataArchitect::default().new(rng, depth);
+            mb.history = base.history.clone();
+            mb.map = base.map;
         }
 
         let patterns = build_patterns(&mb.map, CHUNK_SIZE, true, true);
@@ -60,7 +58,6 @@ impl MapArchitect for WaveformCollapseArchitect {
 
         loop {
             mb.map = Map::new();
-            mb.history.clear();
             self.render_tile_gallery(&mut mb, &constraints, CHUNK_SIZE);
             mb.take_snapshot();
 

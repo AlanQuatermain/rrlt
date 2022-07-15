@@ -16,14 +16,13 @@ pub fn player_input(
     #[resource] map: &Map,
     #[resource] gamelog: &mut Gamelog,
     #[resource] input_key: &mut Option<VirtualKeyCode>,
-    #[resource] turn_state: &mut TurnState
+    #[resource] turn_state: &mut TurnState,
 ) {
     // don't process input here if we're in inventory mode.
     if *turn_state != TurnState::AwaitingInput {
         return;
     }
-    let mut players = <(Entity, &Point)>::query()
-        .filter(component::<Player>());
+    let mut players = <(Entity, &Point)>::query().filter(component::<Player>());
 
     if let Some(key) = *input_key {
         let mut waiting = false;
@@ -32,22 +31,30 @@ pub fn player_input(
             VirtualKeyCode::Right => Point::new(1, 0),
             VirtualKeyCode::Up => Point::new(0, -1),
             VirtualKeyCode::Down => Point::new(0, 1),
+            VirtualKeyCode::Q => Point::new(-1, -1),
+            VirtualKeyCode::F => Point::new(1, -1),
+            VirtualKeyCode::Z => Point::new(-1, 1),
+            VirtualKeyCode::C => Point::new(1, 1),
             VirtualKeyCode::G => {
                 let (player, player_pos) = players
                     .iter(ecs)
                     .find_map(|(entity, pos)| Some((*entity, *pos)))
                     .unwrap();
                 let mut items = <(Entity, &Item, &Point)>::query();
-                items.iter(ecs)
+                items
+                    .iter(ecs)
                     .filter(|(_, _, &item_pos)| item_pos == player_pos)
                     .for_each(|(entity, _, _)| {
-                        commands.push(((), WantsToCollect {
-                            who: player,
-                            what: *entity
-                        }));
+                        commands.push((
+                            (),
+                            WantsToCollect {
+                                who: player,
+                                what: *entity,
+                            },
+                        ));
                     });
                 Point::zero()
-            },
+            }
             VirtualKeyCode::Period => {
                 let (_player, player_pos) = players
                     .iter(ecs)
@@ -60,39 +67,39 @@ pub fn player_input(
                     return;
                 }
 
-                gamelog.entries.push("There is no way down from here.".to_string());
+                gamelog
+                    .entries
+                    .push("There is no way down from here.".to_string());
                 Point::zero()
             }
             VirtualKeyCode::I => {
                 *turn_state = if *turn_state != TurnState::ShowingInventory {
                     TurnState::ShowingInventory
-                }
-                else {
+                } else {
                     TurnState::AwaitingInput
                 };
                 *input_key = None;
-                return
-            },
+                return;
+            }
             VirtualKeyCode::D => {
                 *turn_state = if *turn_state != TurnState::ShowingDropItems {
                     TurnState::ShowingDropItems
-                }
-                else {
+                } else {
                     TurnState::AwaitingInput
                 };
                 *input_key = None;
-                return
-            },
+                return;
+            }
             VirtualKeyCode::Escape => {
                 *turn_state = TurnState::SaveGame;
                 *input_key = None;
-                return
-            },
+                return;
+            }
             VirtualKeyCode::Space => {
                 waiting = true;
                 Point::zero()
-            },
-            _ => Point::zero()
+            }
+            _ => Point::zero(),
         };
         *input_key = None; // prevent the key being processed twice
 
@@ -109,27 +116,32 @@ pub fn player_input(
                 .filter(|(_, pos)| **pos == destination)
                 .for_each(|(entity, _)| {
                     attacked = true;
-                    commands
-                        .push(((), WantsToAttack {
-                                attacker: player_entity,
-                                victim: *entity
-                            }));
+                    commands.push((
+                        (),
+                        WantsToAttack {
+                            attacker: player_entity,
+                            victim: *entity,
+                        },
+                    ));
                 });
 
             if !attacked {
-                commands
-                    .push(((), WantsToMove {
+                commands.push((
+                    (),
+                    WantsToMove {
                         entity: player_entity,
-                        destination
-                    }));
+                        destination,
+                    },
+                ));
             }
-        }
-        else if waiting {
+        } else if waiting {
             // Player is standing still.
             // If well fed, we may heal.
             let hunger_state = <&HungerClock>::query()
                 .filter(component::<Player>())
-                .iter(ecs).nth(0).map(|clock| clock.state);
+                .iter(ecs)
+                .nth(0)
+                .map(|clock| clock.state);
 
             // If no monsters are visible, heal 1 hp.
             let fov = <&FieldOfView>::query()
@@ -144,11 +156,12 @@ pub fn player_input(
                 .filter(|pos| fov.visible_tiles.contains(pos))
                 .count();
 
-            let can_heal = num_enemies == 0 && match hunger_state {
-                Some(HungerState::WellFed) => true,
-                Some(HungerState::Normal) => true,
-                _ => false
-            };
+            let can_heal = num_enemies == 0
+                && match hunger_state {
+                    Some(HungerState::WellFed) => true,
+                    Some(HungerState::Normal) => true,
+                    _ => false,
+                };
             if can_heal {
                 <&mut Health>::query()
                     .filter(component::<Player>())

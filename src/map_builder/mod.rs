@@ -74,36 +74,43 @@ fn random_architect(
     rng: &mut RandomNumberGenerator,
     depth: i32,
 ) -> Box<dyn MapArchitect> {
-    let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 17) {
-        // 1 => Box::new(RoomsArchitect::default()),
-        // 2 => Box::new(BSPArchitect::default()),
-        // 3 => Box::new(BSPInteriorArchitect::default()),
-        // 4 => Box::new(CellularAutomataArchitect::default()),
-        // 5 => Box::new(DrunkardsWalkArchitect::open_area()),
-        // 6 => Box::new(DrunkardsWalkArchitect::open_halls()),
-        // 7 => Box::new(DrunkardsWalkArchitect::winding_passages()),
-        // 8 => Box::new(DrunkardsWalkArchitect::fat_passages()),
-        // 9 => Box::new(DrunkardsWalkArchitect::fearful_symmetry()),
-        // 10 => Box::new(MazeArchitect::default()),
-        // 11 => Box::new(DLAArchitect::walk_inwards()),
-        // 12 => Box::new(DLAArchitect::walk_outwards()),
-        // 13 => Box::new(DLAArchitect::central_attractor()),
-        // 14 => Box::new(DLAArchitect::rorschach()),
-        // 15 => Box::new(VoronoiArchitect::pythagoras()),
-        // 16 => Box::new(VoronoiArchitect::manhattan()),
-        // _ => Box::new(VoronoiArchitect::chebyshev()),
-        // _ => Box::new(PrefabArchitect::default()),
-        _ => {
-            let mut base_architect = CellularAutomataArchitect::default();
-            let mut mb = base_architect.new(rng, depth);
-            base_architect.spawn(ecs, &mut mb, rng);
-            Box::new(PrefabArchitect::sectional(prefab::UNDERGROUND_FORT, &mb))
-        }
+    let mut architect: Box<dyn MapArchitect> = match rng.roll_dice(1, 18) {
+        1 => Box::new(RoomsArchitect::default()),
+        2 => Box::new(BSPArchitect::default()),
+        3 => Box::new(BSPInteriorArchitect::default()),
+        4 => Box::new(CellularAutomataArchitect::default()),
+        5 => Box::new(DrunkardsWalkArchitect::open_area()),
+        6 => Box::new(DrunkardsWalkArchitect::open_halls()),
+        7 => Box::new(DrunkardsWalkArchitect::winding_passages()),
+        8 => Box::new(DrunkardsWalkArchitect::fat_passages()),
+        9 => Box::new(DrunkardsWalkArchitect::fearful_symmetry()),
+        10 => Box::new(MazeArchitect::default()),
+        11 => Box::new(DLAArchitect::walk_inwards()),
+        12 => Box::new(DLAArchitect::walk_outwards()),
+        13 => Box::new(DLAArchitect::central_attractor()),
+        14 => Box::new(DLAArchitect::rorschach()),
+        15 => Box::new(VoronoiArchitect::pythagoras()),
+        16 => Box::new(VoronoiArchitect::manhattan()),
+        17 => Box::new(VoronoiArchitect::chebyshev()),
+        _ => Box::new(PrefabArchitect::constant(prefab::levels::WFC_POPULATED)),
     };
 
-    // if rng.roll_dice(1, 3) == 1 {
-    //     architect = Box::new(WaveformCollapseArchitect::derived_map(architect));
-    // }
+    if rng.roll_dice(1, 3) == 1 {
+        architect = Box::new(WaveformCollapseArchitect::derived_map(architect));
+    }
+
+    if rng.roll_dice(1, 20) == 1 {
+        let mut builder = architect.new(rng, depth);
+        architect.spawn(ecs, &mut builder, rng);
+        architect = Box::new(PrefabArchitect::sectional(
+            prefab::sections::UNDERGROUND_FORT,
+            &builder,
+        ));
+    }
+
+    let mut vault_builder = architect.new(rng, depth);
+    architect.spawn(ecs, &mut vault_builder, rng);
+    architect = Box::new(PrefabArchitect::vaults(&vault_builder));
 
     architect
 }

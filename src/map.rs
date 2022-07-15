@@ -121,18 +121,14 @@ impl BaseMap for Map {
         let mut exits = SmallVec::new();
         let location = self.index_to_point2d(idx);
 
-        if let Some(idx) = self.valid_exit(location, Point::new(-1, 0)) {
-            exits.push((idx, 1.0))
+        for tx in -1..=1 {
+            for ty in -1..=1 {
+                if let Some(idx) = self.valid_exit(location, Point::new(tx, ty)) {
+                    exits.push((idx, 1.0));
+                }
+            }
         }
-        if let Some(idx) = self.valid_exit(location, Point::new(1, 0)) {
-            exits.push((idx, 1.0))
-        }
-        if let Some(idx) = self.valid_exit(location, Point::new(0, -1)) {
-            exits.push((idx, 1.0))
-        }
-        if let Some(idx) = self.valid_exit(location, Point::new(0, 1)) {
-            exits.push((idx, 1.0))
-        }
+
         exits
     }
 
