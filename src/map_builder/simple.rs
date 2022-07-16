@@ -1,10 +1,5 @@
 use super::{BuilderMap, InitialMapBuilder};
-use crate::{
-    map_builder::common::{
-        apply_horizontal_tunnel, apply_room_to_map, apply_vertical_tunnel, build_corridor,
-    },
-    prelude::*,
-};
+use crate::{map_builder::common::apply_room_to_map, prelude::*};
 
 #[derive(Default)]
 pub struct SimpleMapBuilder {}
@@ -13,7 +8,7 @@ impl InitialMapBuilder for SimpleMapBuilder {
     #[allow(dead_code)]
     fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         build_data.map.fill(TileType::Wall);
-        self.rooms_and_corridors(rng, build_data);
+        self.build_rooms(rng, build_data);
     }
 }
 
@@ -22,11 +17,7 @@ impl SimpleMapBuilder {
         Box::new(SimpleMapBuilder::default())
     }
 
-    fn rooms_and_corridors(
-        &mut self,
-        rng: &mut RandomNumberGenerator,
-        build_data: &mut BuilderMap,
-    ) {
+    fn build_rooms(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         const MAX_ROOMS: i32 = 30;
         const MIN_SIZE: i32 = 6;
         const MAX_SIZE: i32 = 10;
@@ -48,14 +39,6 @@ impl SimpleMapBuilder {
             }
             if ok {
                 apply_room_to_map(&mut build_data.map, &new_room);
-                build_data.take_snapshot();
-
-                if !rooms.is_empty() {
-                    let new = new_room.center();
-                    let prev = rooms.last().unwrap().center();
-                    build_corridor(&mut build_data.map, rng, prev, new);
-                }
-
                 rooms.push(new_room);
                 build_data.take_snapshot();
             }

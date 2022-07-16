@@ -34,7 +34,6 @@ impl RoomCornerRounder {
         }
 
         if neighbor_walls == 2 {
-            println!("Rounding {:#?}", build_data.map.index_to_point2d(idx));
             build_data.map.tiles[idx] = TileType::Wall;
         }
     }

@@ -7,11 +7,31 @@ pub enum XStart {
     Right,
 }
 
+impl XStart {
+    pub fn random(rng: &mut RandomNumberGenerator) -> Self {
+        match rng.roll_dice(1, 3) {
+            1 => Self::Left,
+            2 => Self::Center,
+            _ => Self::Right,
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub enum YStart {
     Top,
     Center,
     Bottom,
+}
+
+impl YStart {
+    pub fn random(rng: &mut RandomNumberGenerator) -> Self {
+        match rng.roll_dice(1, 3) {
+            1 => Self::Top,
+            2 => Self::Center,
+            _ => Self::Bottom,
+        }
+    }
 }
 
 pub struct AreaStartingPosition {

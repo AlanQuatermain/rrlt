@@ -49,8 +49,6 @@ impl BSPDungeonBuilder {
                 build_data.take_snapshot();
             }
         }
-
-        self.build_corridors(rng, &mut rooms, build_data);
         build_data.rooms = Some(rooms);
     }
 
@@ -129,31 +127,5 @@ impl BSPDungeonBuilder {
         }
 
         can_build
-    }
-
-    fn build_corridors(
-        &self,
-        rng: &mut RandomNumberGenerator,
-        rooms: &Vec<Rect>,
-        build_data: &mut BuilderMap,
-    ) {
-        let mut rooms = rooms.clone();
-        rooms.sort_by(|a, b| a.x1.cmp(&b.x1));
-
-        for i in 0..rooms.len() - 1 {
-            let room = rooms[i];
-            let next_room = rooms[i + 1];
-            let start = Point::new(
-                room.x1 + (rng.roll_dice(1, i32::abs(room.x1 - room.x2)) - 1),
-                room.y1 + (rng.roll_dice(1, i32::abs(room.y1 - room.y2)) - 1),
-            );
-            let end = Point::new(
-                next_room.x1 + (rng.roll_dice(1, i32::abs(next_room.x1 - next_room.x2)) - 1),
-                next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1),
-            );
-
-            build_corridor(&mut build_data.map, rng, start, end);
-            build_data.take_snapshot();
-        }
     }
 }
