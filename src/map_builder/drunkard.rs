@@ -1,8 +1,6 @@
 use crate::map_builder::common::{paint, Symmetry};
 use crate::prelude::*;
 
-const NUM_TILES: usize = MAP_WIDTH * MAP_HEIGHT;
-
 #[derive(PartialEq, Copy, Clone)]
 pub enum DrunkSpawnMode {
     StartingPoint,
@@ -20,6 +18,12 @@ pub struct DrunkardsWalkBuilder {
 impl InitialMapBuilder for DrunkardsWalkBuilder {
     fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         build_data.map.fill(TileType::Wall);
+        self.build(rng, build_data);
+    }
+}
+
+impl MetaMapBuilder for DrunkardsWalkBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(rng, build_data);
     }
 }

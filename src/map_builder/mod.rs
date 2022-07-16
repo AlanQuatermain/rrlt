@@ -14,6 +14,8 @@ use self::{
     room_based_spawner::RoomBasedSpawner,
     room_based_stairs::RoomBasedStairs,
     room_based_starting_position::RoomBasedStartingPosition,
+    room_corner_rounding::RoomCornerRounder,
+    room_exploder::RoomExploder,
     simple::SimpleMapBuilder,
     voronoi::VoronoiCellBuilder,
     voronoi_spawning::VoronoiSpawning,
@@ -34,6 +36,8 @@ mod prefab;
 mod room_based_spawner;
 mod room_based_stairs;
 mod room_based_starting_position;
+mod room_corner_rounding;
+mod room_exploder;
 mod simple;
 mod themes;
 mod voronoi;
@@ -167,28 +171,36 @@ fn random_initial_builder(rng: &mut RandomNumberGenerator) -> (Box<dyn InitialMa
 }
 
 pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> BuilderChain {
-    let (random_starter, has_rooms) = random_initial_builder(rng);
-    let mut builder = BuilderChain::start_with(random_starter, new_depth);
-    if has_rooms {
-        builder.push(RoomBasedSpawner::new());
-        builder.push(RoomBasedStairs::new());
-        builder.push(RoomBasedStartingPosition::new());
-    } else {
-        builder.push(AreaStartingPosition::new(XStart::Center, YStart::Center));
-        builder.push(CullUnreachable::new());
-        builder.push(VoronoiSpawning::new());
-        builder.push(DistantExit::new());
-    }
+    // let (random_starter, has_rooms) = random_initial_builder(rng);
+    // let mut builder = BuilderChain::start_with(random_starter, new_depth);
+    // if has_rooms {
+    //     builder.push(RoomBasedSpawner::new());
+    //     builder.push(RoomBasedStairs::new());
+    //     builder.push(RoomBasedStartingPosition::new());
+    // } else {
+    //     builder.push(AreaStartingPosition::new(XStart::Center, YStart::Center));
+    //     builder.push(CullUnreachable::new());
+    //     builder.push(VoronoiSpawning::new());
+    //     builder.push(DistantExit::new());
+    // }
 
-    if rng.roll_dice(1, 3) == 1 {
-        builder.push(WaveformCollapseBuilder::new());
-    }
+    // if rng.roll_dice(1, 3) == 1 {
+    //     builder.push(WaveformCollapseBuilder::new());
+    // }
 
-    if rng.roll_dice(1, 20) == 1 {
-        builder.push(PrefabBuilder::sectional(prefab::sections::UNDERGROUND_FORT));
-    }
+    // if rng.roll_dice(1, 20) == 1 {
+    //     builder.push(PrefabBuilder::sectional(prefab::sections::UNDERGROUND_FORT));
+    // }
 
-    builder.push(PrefabBuilder::vaults());
+    // builder.push(PrefabBuilder::vaults());
 
+    // builder
+
+    let mut builder = BuilderChain::start_with(BSPDungeonBuilder::new(), new_depth);
+    builder.push(RoomCornerRounder::new());
+    builder.push(AreaStartingPosition::new(XStart::Center, YStart::Center));
+    builder.push(CullUnreachable::new());
+    builder.push(VoronoiSpawning::new());
+    builder.push(DistantExit::new());
     builder
 }

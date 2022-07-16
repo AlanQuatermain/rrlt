@@ -10,6 +10,14 @@ impl InitialMapBuilder for CellularAutomataBuilder {
     }
 }
 
+impl MetaMapBuilder for CellularAutomataBuilder {
+    #[allow(dead_code)]
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        self.iteration(&mut build_data.map);
+        build_data.take_snapshot();
+    }
+}
+
 impl CellularAutomataBuilder {
     #[allow(dead_code)]
     pub fn new() -> Box<CellularAutomataBuilder> {

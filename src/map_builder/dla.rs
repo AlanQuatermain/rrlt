@@ -34,6 +34,12 @@ impl InitialMapBuilder for DLABuilder {
     }
 }
 
+impl MetaMapBuilder for DLABuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        self.build(rng, build_data);
+    }
+}
+
 impl DLABuilder {
     pub fn walk_inwards() -> Box<DLABuilder> {
         Box::new(DLABuilder {
@@ -68,6 +74,15 @@ impl DLABuilder {
             brush_size: 2,
             symmetry: Symmetry::Horizontal,
             floor_percent: 0.25,
+        })
+    }
+
+    pub fn heavy_erosion() -> Box<DLABuilder> {
+        Box::new(DLABuilder {
+            algorithm: DLAAlgorithm::WalkInwards,
+            brush_size: 2,
+            symmetry: Symmetry::None,
+            floor_percent: 0.35,
         })
     }
 
