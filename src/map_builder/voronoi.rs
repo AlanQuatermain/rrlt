@@ -1,4 +1,3 @@
-use super::MapArchitect;
 use crate::prelude::*;
 
 #[derive(PartialEq, Copy, Clone)]
@@ -9,34 +8,52 @@ pub enum DistanceAlgorithm {
     Chebyshev,
 }
 
-pub struct VoronoiArchitect {
+pub struct VoronoiCellBuilder {
     algorithm: DistanceAlgorithm,
     num_seeds: usize,
 }
 
-impl Default for VoronoiArchitect {
-    fn default() -> Self {
-        Self {
-            algorithm: DistanceAlgorithm::Pythagoras,
-            num_seeds: 64,
-        }
+impl InitialMapBuilder for VoronoiCellBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        build_data.map.fill(TileType::Wall);
+        self.build(rng, build_data);
     }
 }
 
-impl MapArchitect for VoronoiArchitect {
-    fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
-        let mut mb = MapBuilder::default();
-        mb.depth = depth;
-        mb.generate_random_table();
-        mb.fill(TileType::Wall);
+impl VoronoiCellBuilder {
+    pub fn pythagoras() -> Box<VoronoiCellBuilder> {
+        Box::new(VoronoiCellBuilder {
+            algorithm: DistanceAlgorithm::Pythagoras,
+            num_seeds: 64,
+        })
+    }
 
-        let seeds = self.generate_seeds(MAP_WIDTH as i32, MAP_HEIGHT as i32, rng);
+    pub fn manhattan() -> Box<VoronoiCellBuilder> {
+        Box::new(VoronoiCellBuilder {
+            algorithm: DistanceAlgorithm::Manhattan,
+            num_seeds: 64,
+        })
+    }
+
+    pub fn chebyshev() -> Box<VoronoiCellBuilder> {
+        Box::new(VoronoiCellBuilder {
+            algorithm: DistanceAlgorithm::Chebyshev,
+            num_seeds: 64,
+        })
+    }
+
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        let seeds = self.generate_seeds(
+            build_data.map.width as i32,
+            build_data.map.height as i32,
+            rng,
+        );
         let membership = self.calculate_membership(&seeds);
-        for y in 1..MAP_HEIGHT - 1 {
-            for x in 1..MAP_WIDTH - 1 {
+        for y in 1..build_data.map.height - 1 {
+            for x in 1..build_data.map.width - 1 {
                 let mut neighbors = 0;
                 let pos = Point::new(x, y);
-                let my_idx = mb.map.point2d_to_index(pos);
+                let my_idx = build_data.map.point2d_to_index(pos);
                 let my_seed = membership[my_idx];
                 if membership[map_idx(pos.x - 1, pos.y)] != my_seed {
                     neighbors += 1
@@ -52,48 +69,10 @@ impl MapArchitect for VoronoiArchitect {
                 }
 
                 if neighbors < 2 {
-                    mb.map.tiles[my_idx] = TileType::Floor;
+                    build_data.map.tiles[my_idx] = TileType::Floor;
                 }
             }
-            mb.take_snapshot();
-        }
-
-        mb.player_start = mb
-            .map
-            .closest_floor(Point::new(MAP_WIDTH / 2, MAP_HEIGHT / 2));
-        mb.map.populate_blocked();
-        mb.prune_unreachable_regions(mb.player_start);
-        mb.take_snapshot();
-
-        mb.goal_start = mb.find_most_distant();
-
-        mb
-    }
-
-    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        mb.spawn_voronoi_regions(rng);
-    }
-}
-
-impl VoronoiArchitect {
-    pub fn pythagoras() -> VoronoiArchitect {
-        Self {
-            algorithm: DistanceAlgorithm::Pythagoras,
-            num_seeds: 64,
-        }
-    }
-
-    pub fn manhattan() -> VoronoiArchitect {
-        Self {
-            algorithm: DistanceAlgorithm::Manhattan,
-            num_seeds: 64,
-        }
-    }
-
-    pub fn chebyshev() -> VoronoiArchitect {
-        Self {
-            algorithm: DistanceAlgorithm::Chebyshev,
-            num_seeds: 64,
+            build_data.take_snapshot();
         }
     }
 

@@ -89,35 +89,35 @@ impl State {
         self.resources = Resources::default();
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = MapBuilder::new(&mut self.ecs, &mut rng, 0);
+        let mut map_builder = random_builder(0, &mut rng);
         let mut gamelog = Gamelog::default();
         gamelog
             .entries
             .push("Welcome to Rusty Roguelike".to_string());
 
-        spawn_player(&mut self.ecs, map_builder.player_start);
-        for pos in map_builder.spawns {
-            spawn_mob(&mut self.ecs, pos, &map_builder.random_table, &mut rng);
-        }
-        let goal_idx = map_builder.map.point2d_to_index(map_builder.goal_start);
-        map_builder.map.tiles[goal_idx] = TileType::DownStairs;
+        map_builder.build_map(&mut rng);
+        map_builder.spawn_entities(&mut self.ecs);
+
+        let player_start = map_builder.build_data.starting_position.unwrap();
+        spawn_player(&mut self.ecs, player_start);
 
         self.resources.insert(rng);
-        self.resources.insert(map_builder.map.clone());
-        self.resources.insert(Camera::new(map_builder.player_start));
+        self.resources.insert(map_builder.build_data.map.clone());
+        self.resources.insert(Camera::new(player_start));
         self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(map_builder.theme);
+        self.resources.insert(MapTheme::Dungeon);
         self.resources.insert(gamelog);
         self.resources.insert(RexAssets::new());
 
         if SHOW_MAPGEN_VISUALIZER {
-            self.real_map = map_builder.map.clone();
-            self.map_history = map_builder.history;
+            self.real_map = map_builder.build_data.map.clone();
+            self.map_history = map_builder.build_data.history;
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
     }
 
     fn advance_level(&mut self) {
+        let map_level = self.resources.get::<Map>().unwrap().depth;
         let player_entity = *<Entity>::query()
             .filter(component::<Player>())
             .iter(&mut self.ecs)
@@ -147,34 +147,30 @@ impl State {
             .iter_mut(&mut self.ecs)
             .for_each(|fov| fov.is_dirty = true);
 
-        let map_level = <&Player>::query().iter(&self.ecs).nth(0).unwrap().map_level as i32 + 1;
-
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = MapBuilder::new(&mut self.ecs, &mut rng, map_level);
+        let mut map_builder = random_builder(map_level + 1, &mut rng);
+        map_builder.build_map(&mut rng);
+        map_builder.spawn_entities(&mut self.ecs);
+
+        let player_pos = map_builder.build_data.starting_position.unwrap();
+
         <(&mut Player, &mut Point, &mut Health)>::query().for_each_mut(
             &mut self.ecs,
             |(player, pos, health)| {
-                player.map_level = map_level as u32;
-                *pos = map_builder.player_start;
+                player.map_level = (map_level + 1) as u32;
+                *pos = player_pos;
                 health.current = i32::max(health.current, health.max / 2);
             },
         );
 
-        let exit_idx = map_builder.map.point2d_to_index(map_builder.goal_start);
-        map_builder.map.tiles[exit_idx] = TileType::DownStairs;
-
-        for pos in map_builder.spawns {
-            spawn_mob(&mut self.ecs, pos, &map_builder.random_table, &mut rng);
-        }
-
-        self.resources.insert(map_builder.map.clone());
-        self.resources.insert(Camera::new(map_builder.player_start));
+        self.resources.insert(map_builder.build_data.map.clone());
+        self.resources.insert(Camera::new(player_pos));
         self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(map_builder.theme);
+        self.resources.insert(MapTheme::Dungeon);
 
         if SHOW_MAPGEN_VISUALIZER {
-            self.real_map = map_builder.map.clone();
-            self.map_history = map_builder.history;
+            self.real_map = map_builder.build_data.map.clone();
+            self.map_history = map_builder.build_data.history;
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
 

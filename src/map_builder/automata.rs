@@ -1,10 +1,31 @@
-use super::MapArchitect;
 use crate::prelude::*;
 
 #[derive(Default)]
-pub struct CellularAutomataArchitect {}
+pub struct CellularAutomataBuilder {}
 
-impl CellularAutomataArchitect {
+impl InitialMapBuilder for CellularAutomataBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        build_data.map.fill(TileType::Wall);
+        self.build(rng, build_data);
+    }
+}
+
+impl CellularAutomataBuilder {
+    #[allow(dead_code)]
+    pub fn new() -> Box<CellularAutomataBuilder> {
+        Box::new(CellularAutomataBuilder::default())
+    }
+
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        self.random_noise_map(rng, &mut build_data.map);
+        build_data.take_snapshot();
+
+        for _ in 0..15 {
+            self.iteration(&mut build_data.map);
+            build_data.take_snapshot();
+        }
+    }
+
     fn random_noise_map(&self, rng: &mut RandomNumberGenerator, map: &mut Map) {
         for y in 1..MAP_HEIGHT as i32 - 1 {
             for x in 1..MAP_WIDTH as i32 - 1 {
@@ -32,8 +53,8 @@ impl CellularAutomataArchitect {
 
     fn iteration(&self, map: &mut Map) {
         let mut new_tiles = map.tiles.clone();
-        for y in 1..MAP_HEIGHT as i32 - 1 {
-            for x in 1..MAP_WIDTH as i32 - 1 {
+        for y in 1..map.height as i32 - 1 {
+            for x in 1..map.width as i32 - 1 {
                 let neighbors = self.count_neighbors(x, y, map);
                 let idx = map_idx(x, y);
                 if neighbors > 4 || neighbors == 0 {
@@ -47,36 +68,6 @@ impl CellularAutomataArchitect {
     }
 
     fn find_start(&self, map: &Map) -> Point {
-        map.closest_floor(Point::new(MAP_WIDTH / 2, MAP_HEIGHT / 2))
-    }
-}
-
-impl MapArchitect for CellularAutomataArchitect {
-    fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
-        let mut mb = MapBuilder::default();
-        mb.depth = depth;
-        mb.generate_random_table();
-        mb.fill(TileType::Wall);
-
-        self.random_noise_map(rng, &mut mb.map);
-        mb.take_snapshot();
-        for _ in 0..10 {
-            self.iteration(&mut mb.map);
-            mb.take_snapshot();
-        }
-
-        let start = self.find_start(&mb.map);
-        mb.player_start = start;
-
-        mb.prune_unreachable_regions(start);
-        mb.take_snapshot();
-        mb.map.populate_blocked();
-        mb.goal_start = mb.find_most_distant();
-
-        mb
-    }
-
-    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        mb.spawn_voronoi_regions(rng);
+        map.closest_floor(Point::new(map.width / 2, map.height / 2))
     }
 }

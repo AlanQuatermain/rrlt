@@ -1,16 +1,35 @@
-use super::MapArchitect;
 use crate::prelude::*;
 
+use super::common::build_corridor;
+
 #[derive(Default)]
-pub struct BSPArchitect {
+pub struct BSPDungeonBuilder {
     rects: Vec<Rect>,
 }
 
-impl BSPArchitect {
-    fn build_rooms(&mut self, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
+impl InitialMapBuilder for BSPDungeonBuilder {
+    #[allow(dead_code)]
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        build_data.map.fill(TileType::Wall);
+        self.build_rooms(rng, build_data);
+    }
+}
+
+impl BSPDungeonBuilder {
+    #[allow(dead_code)]
+    pub fn new() -> Box<BSPDungeonBuilder> {
+        Box::new(BSPDungeonBuilder::default())
+    }
+
+    fn build_rooms(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        let mut rooms: Vec<Rect> = Vec::new();
         self.rects.clear();
-        self.rects
-            .push(Rect::with_size(2, 2, MAP_WIDTH - 4, MAP_HEIGHT - 4));
+        self.rects.push(Rect::with_size(
+            2,
+            2,
+            build_data.map.width - 4,
+            build_data.map.height - 4,
+        ));
         let first_room = self.rects[0];
         self.add_subrects(first_room); // Divide the first room.
 
@@ -20,16 +39,19 @@ impl BSPArchitect {
             let rect = self.get_random_rect(rng);
             let candidate = self.get_random_sub_rect(rect, rng);
 
-            if self.is_possible(candidate, &mb.map) {
+            if self.is_possible(candidate, &build_data.map) {
                 candidate.for_each(|pos| {
-                    let idx = mb.map.point2d_to_index(pos);
-                    mb.map.tiles[idx] = TileType::Floor;
+                    let idx = build_data.map.point2d_to_index(pos);
+                    build_data.map.tiles[idx] = TileType::Floor;
                 });
-                mb.rooms.push(candidate);
+                rooms.push(candidate);
                 self.add_subrects(rect);
-                mb.take_snapshot();
+                build_data.take_snapshot();
             }
         }
+
+        self.build_corridors(rng, &mut rooms, build_data);
+        build_data.rooms = Some(rooms);
     }
 
     fn add_subrects(&mut self, rect: Rect) {
@@ -109,46 +131,29 @@ impl BSPArchitect {
         can_build
     }
 
-    fn build_corridors(&self, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        let mut rooms = mb.rooms.clone();
+    fn build_corridors(
+        &self,
+        rng: &mut RandomNumberGenerator,
+        rooms: &Vec<Rect>,
+        build_data: &mut BuilderMap,
+    ) {
+        let mut rooms = rooms.clone();
         rooms.sort_by(|a, b| a.x1.cmp(&b.x1));
 
         for i in 0..rooms.len() - 1 {
             let room = rooms[i];
             let next_room = rooms[i + 1];
-            let start_x = room.x1 + (rng.roll_dice(1, i32::abs(room.x1 - room.x2)) - 1);
-            let start_y = room.y1 + (rng.roll_dice(1, i32::abs(room.y1 - room.y2)) - 1);
-            let end_x =
-                next_room.x1 + (rng.roll_dice(1, i32::abs(next_room.x1 - next_room.x2)) - 1);
-            let end_y =
-                next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1);
+            let start = Point::new(
+                room.x1 + (rng.roll_dice(1, i32::abs(room.x1 - room.x2)) - 1),
+                room.y1 + (rng.roll_dice(1, i32::abs(room.y1 - room.y2)) - 1),
+            );
+            let end = Point::new(
+                next_room.x1 + (rng.roll_dice(1, i32::abs(next_room.x1 - next_room.x2)) - 1),
+                next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1),
+            );
 
-            mb.build_corridor(Point::new(start_x, start_y), Point::new(end_x, end_y), rng);
-            mb.take_snapshot();
-        }
-    }
-}
-
-impl MapArchitect for BSPArchitect {
-    fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
-        let mut mb = MapBuilder::default();
-        mb.depth = depth;
-        mb.fill(TileType::Wall);
-        mb.take_snapshot();
-
-        self.build_rooms(&mut mb, rng);
-        self.build_corridors(&mut mb, rng);
-
-        mb.generate_random_table();
-        mb.player_start = mb.rooms[0].center();
-        mb.goal_start = mb.rooms.last().unwrap().center();
-
-        mb
-    }
-
-    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        for room in mb.rooms.clone().iter().skip(1) {
-            mb.spawn_room(room, rng);
+            build_corridor(&mut build_data.map, rng, start, end);
+            build_data.take_snapshot();
         }
     }
 }

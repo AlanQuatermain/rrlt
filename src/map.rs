@@ -14,6 +14,10 @@ pub enum TileType {
 
 #[derive(Default, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Map {
+    pub width: usize,
+    pub height: usize,
+    pub depth: i32,
+
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
@@ -21,8 +25,11 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new() -> Self {
+    pub fn new(depth: i32) -> Self {
         Self {
+            width: MAP_WIDTH,
+            height: MAP_HEIGHT,
+            depth,
             tiles: vec![TileType::Floor; NUM_TILES],
             revealed_tiles: vec![false; NUM_TILES],
             blocked: vec![false; NUM_TILES],
@@ -30,8 +37,12 @@ impl Map {
         }
     }
 
+    pub fn fill(&mut self, tile: TileType) {
+        self.tiles.iter_mut().for_each(|t| *t = tile);
+    }
+
     pub fn in_bounds(&self, point: Point) -> bool {
-        point.x >= 0 && point.x < MAP_WIDTH as i32 && point.y >= 0 && point.y < MAP_HEIGHT as i32
+        point.x >= 0 && point.x < self.width as i32 && point.y >= 0 && point.y < self.height as i32
     }
 
     pub fn can_enter_tile(&self, point: Point) -> bool {
@@ -69,9 +80,9 @@ impl Map {
     pub fn wall_mask(&self, idx: usize) -> u8 {
         let pos = self.index_to_point2d(idx);
         if pos.x < 1
-            || pos.x as usize > MAP_WIDTH - 2
+            || pos.x as usize > self.width - 2
             || pos.y < 1
-            || pos.y as usize > MAP_HEIGHT - 2
+            || pos.y as usize > self.height - 2
         {
             return 35;
         }
@@ -143,7 +154,7 @@ impl BaseMap for Map {
 
 impl Algorithm2D for Map {
     fn dimensions(&self) -> Point {
-        Point::new(MAP_WIDTH, MAP_HEIGHT)
+        Point::new(self.width, self.height)
     }
 
     fn in_bounds(&self, pos: Point) -> bool {

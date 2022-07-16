@@ -1,43 +1,65 @@
-use super::MapArchitect;
 use crate::prelude::*;
+
+use super::common::build_corridor;
 
 const MIN_ROOM_SIZE: i32 = 8;
 
 #[derive(Default)]
-pub struct BSPInteriorArchitect {
+pub struct BSPInteriorBuilder {
     rects: Vec<Rect>,
 }
 
-impl BSPInteriorArchitect {
-    fn build_rooms(&mut self, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
+impl InitialMapBuilder for BSPInteriorBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        build_data.map.fill(TileType::Wall);
+        self.build_rooms(rng, build_data);
+    }
+}
+
+impl BSPInteriorBuilder {
+    #[allow(dead_code)]
+    pub fn new() -> Box<BSPInteriorBuilder> {
+        Box::new(BSPInteriorBuilder::default())
+    }
+
+    fn build_rooms(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.rects.clear();
-        self.rects
-            .push(Rect::with_size(1, 1, MAP_WIDTH - 2, MAP_HEIGHT - 2));
+        self.rects.push(Rect::with_size(
+            1,
+            1,
+            build_data.map.width - 2,
+            build_data.map.height - 2,
+        ));
         let first_room = self.rects[0];
         self.add_subrects(first_room, rng);
 
         let rooms = self.rects.clone();
         for r in rooms.iter() {
-            let room = *r;
-            mb.rooms.push(room);
-            room.for_each(|pos| {
-                if let Some(idx) = mb.map.try_idx(pos) {
-                    mb.map.tiles[idx] = TileType::Floor;
+            r.for_each(|pos| {
+                if let Some(idx) = build_data.map.try_idx(pos) {
+                    build_data.map.tiles[idx] = TileType::Floor;
                 }
             });
-            mb.take_snapshot();
+            build_data.take_snapshot();
         }
 
-        for i in 0..mb.rooms.len() - 1 {
-            let room = mb.rooms[i];
-            let next = mb.rooms[i + 1];
-            let start_x = rng.range(room.x1, room.x2 - 1);
-            let start_y = rng.range(room.y1, room.y2 - 1);
-            let end_x = rng.range(next.x1, next.x2 - 1);
-            let end_y = rng.range(next.y1, next.y2 - 1);
-            mb.build_corridor(Point::new(start_x, start_y), Point::new(end_x, end_y), rng);
-            mb.take_snapshot();
+        for i in 0..rooms.len() - 1 {
+            let room = rooms[i];
+            let next = rooms[i + 1];
+            let start = Point::new(
+                rng.range(room.x1, room.x2 - 1),
+                rng.range(room.y1, room.y2 - 1),
+            );
+            let end = Point::new(
+                rng.range(next.x1, next.x2 - 1),
+                rng.range(next.y1, next.y2 - 1),
+            );
+
+            build_corridor(&mut build_data.map, rng, start, end);
+            build_data.take_snapshot();
         }
+
+        build_data.rooms = Some(rooms);
     }
 
     fn add_subrects(&mut self, rect: Rect, rng: &mut RandomNumberGenerator) {
@@ -76,29 +98,6 @@ impl BSPInteriorArchitect {
             if half_height > MIN_ROOM_SIZE {
                 self.add_subrects(v2, rng);
             }
-        }
-    }
-}
-
-impl MapArchitect for BSPInteriorArchitect {
-    fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
-        let mut mb = MapBuilder::default();
-        mb.depth = depth;
-        mb.fill(TileType::Wall);
-        mb.take_snapshot();
-
-        self.build_rooms(&mut mb, rng);
-
-        mb.generate_random_table();
-        mb.player_start = mb.rooms[0].center();
-        mb.goal_start = mb.rooms.last().unwrap().center();
-
-        mb
-    }
-
-    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        for room in mb.rooms.clone().iter().skip(1) {
-            mb.spawn_room(room, rng);
         }
     }
 }

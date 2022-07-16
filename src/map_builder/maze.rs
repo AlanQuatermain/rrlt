@@ -1,31 +1,27 @@
-use super::MapArchitect;
 use crate::prelude::*;
 
 #[derive(Default)]
-pub struct MazeArchitect {}
+pub struct MazeBuilder {}
 
-impl MazeArchitect {}
+impl InitialMapBuilder for MazeBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        self.build(rng, build_data);
+    }
+}
 
-impl MapArchitect for MazeArchitect {
-    fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
-        let mut mb = MapBuilder::default();
-        mb.depth = depth;
-        mb.generate_random_table();
-        mb.take_snapshot();
-
-        let mut grid = Grid::new((MAP_WIDTH as i32 / 2) - 1, (MAP_HEIGHT as i32 / 2) - 1, rng);
-        grid.generate_maze(&mut mb);
-        mb.map.populate_blocked();
-
-        mb.player_start = Point::new(2, 2);
-        mb.goal_start = mb.find_most_distant();
-        mb.take_snapshot();
-
-        mb
+impl MazeBuilder {
+    #[allow(dead_code)]
+    pub fn new() -> Box<MazeBuilder> {
+        Box::new(MazeBuilder::default())
     }
 
-    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        mb.spawn_voronoi_regions(rng);
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        let mut grid = Grid::new(
+            (build_data.map.width as i32 / 2) - 1,
+            (build_data.map.height as i32 / 2) - 1,
+            rng,
+        );
+        grid.generate_maze(build_data);
     }
 }
 
@@ -147,7 +143,7 @@ impl<'a> Grid<'a> {
         None
     }
 
-    fn generate_maze(&mut self, mb: &mut MapBuilder) {
+    fn generate_maze(&mut self, build_data: &mut BuilderMap) {
         let mut i = 0;
         loop {
             self.cells[self.current].visited = true;
@@ -178,8 +174,8 @@ impl<'a> Grid<'a> {
             }
 
             if i % 50 == 0 {
-                self.copy_to_map(&mut mb.map);
-                mb.take_snapshot();
+                self.copy_to_map(&mut build_data.map);
+                build_data.take_snapshot();
             }
             i += 1;
         }
@@ -198,13 +194,13 @@ impl<'a> Grid<'a> {
 
             map.tiles[idx] = TileType::Floor;
             if !cell.walls[TOP] {
-                map.tiles[idx - MAP_WIDTH] = TileType::Floor
+                map.tiles[idx - map.width] = TileType::Floor
             }
             if !cell.walls[RIGHT] {
                 map.tiles[idx + 1] = TileType::Floor
             }
             if !cell.walls[BOTTOM] {
-                map.tiles[idx + MAP_WIDTH] = TileType::Floor
+                map.tiles[idx + map.height] = TileType::Floor
             }
             if !cell.walls[LEFT] {
                 map.tiles[idx - 1] = TileType::Floor

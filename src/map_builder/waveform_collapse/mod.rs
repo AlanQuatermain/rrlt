@@ -1,7 +1,6 @@
 mod constraints;
 mod solver;
 
-use super::MapArchitect;
 use crate::prelude::*;
 
 use constraints::*;
@@ -19,123 +18,65 @@ fn tile_idx_in_chunk(chunk_size: i32, x: i32, y: i32) -> usize {
     ((y * chunk_size) + x) as usize
 }
 
-pub struct WaveformCollapseArchitect {
-    derive_from: Option<Box<dyn MapArchitect>>,
-}
+#[derive(Default)]
+pub struct WaveformCollapseBuilder {}
 
-const CHUNK_SIZE: i32 = 8;
-
-impl Default for WaveformCollapseArchitect {
-    fn default() -> Self {
-        WaveformCollapseArchitect { derive_from: None }
+impl MetaMapBuilder for WaveformCollapseBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        self.build(rng, build_data);
     }
 }
 
-impl MapArchitect for WaveformCollapseArchitect {
-    fn new(&mut self, rng: &mut RandomNumberGenerator, depth: i32) -> MapBuilder {
-        let mut mb = MapBuilder::default();
-        mb.depth = depth;
-        mb.generate_random_table();
+impl WaveformCollapseBuilder {
+    #[allow(dead_code)]
+    pub fn new() -> Box<WaveformCollapseBuilder> {
+        Box::new(WaveformCollapseBuilder::default())
+    }
 
-        if let Some(mut src_builder) = self.derive_from.as_mut().map(|a| a.new(rng, depth).clone())
-        {
-            mb.history = src_builder.history.clone();
-            for t in src_builder.map.tiles.iter_mut() {
-                if *t == TileType::DownStairs {
-                    *t = TileType::Floor;
-                }
-            }
-            mb.map = src_builder.map;
-        } else {
-            let base = super::CellularAutomataArchitect::default().new(rng, depth);
-            mb.history = base.history.clone();
-            mb.map = base.map;
-        }
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+        const CHUNK_SIZE: i32 = 8;
+        build_data.take_snapshot();
 
-        let patterns = build_patterns(&mb.map, CHUNK_SIZE, true, true);
+        let patterns = build_patterns(&build_data.map, CHUNK_SIZE, true, true);
         let constraints = patterns_to_constraints(patterns, CHUNK_SIZE);
-        let desired_floor = (0.4f32 * (MAP_WIDTH * MAP_HEIGHT) as f32) as usize;
+        self.render_tile_gallery(&constraints, CHUNK_SIZE, build_data);
 
+        build_data.map = Map::new(build_data.map.depth);
         loop {
-            mb.map = Map::new();
-            self.render_tile_gallery(&mut mb, &constraints, CHUNK_SIZE);
-            mb.take_snapshot();
-
-            mb.map = Map::new();
-            mb.fill(TileType::Wall);
-
-            loop {
-                let mut solver = Solver::new(constraints.clone(), CHUNK_SIZE, &mb.map);
-                while !solver.iteration(&mut mb.map, rng) {
-                    mb.take_snapshot();
-                }
-                mb.take_snapshot();
-                if solver.possible {
-                    break;
-                }
+            let mut solver = Solver::new(constraints.clone(), CHUNK_SIZE, &build_data.map);
+            while !solver.iteration(&mut build_data.map, rng) {
+                build_data.take_snapshot();
             }
-
-            mb.player_start = mb
-                .map
-                .closest_floor(Point::new(MAP_WIDTH / 2, MAP_HEIGHT / 2));
-
-            mb.map.populate_blocked();
-            mb.prune_unreachable_regions(mb.player_start);
-
-            if mb
-                .map
-                .tiles
-                .iter()
-                .filter(|t| **t == TileType::Floor)
-                .count()
-                >= desired_floor
-            {
+            build_data.take_snapshot();
+            if solver.possible {
                 break;
             }
         }
-
-        mb.goal_start = mb.find_most_distant();
-        mb.take_snapshot();
-
-        mb
-    }
-
-    fn spawn(&mut self, _ecs: &mut World, mb: &mut MapBuilder, rng: &mut RandomNumberGenerator) {
-        mb.spawn_voronoi_regions(rng);
-    }
-}
-
-impl WaveformCollapseArchitect {
-    pub fn new(derive_from: Option<Box<dyn MapArchitect>>) -> Self {
-        WaveformCollapseArchitect { derive_from }
-    }
-
-    pub fn derived_map(architect: Box<dyn MapArchitect>) -> WaveformCollapseArchitect {
-        WaveformCollapseArchitect::new(Some(architect))
+        build_data.spawn_list.clear();
     }
 
     fn render_tile_gallery(
         &mut self,
-        mb: &mut MapBuilder,
         constraints: &Vec<MapChunk>,
         chunk_size: i32,
+        build_data: &mut BuilderMap,
     ) {
-        mb.map = Map::new();
+        build_data.map = Map::new(build_data.map.depth);
         let mut counter = 0;
         let mut pos = Point::new(1, 1);
         while counter < constraints.len() {
-            render_pattern_to_map(&mut mb.map, &constraints[counter], chunk_size, pos);
+            render_pattern_to_map(&mut build_data.map, &constraints[counter], chunk_size, pos);
 
             pos.x += chunk_size + 1;
-            if pos.x + chunk_size > MAP_WIDTH as i32 {
+            if pos.x + chunk_size > build_data.map.width as i32 {
                 // Move to the next row
                 pos.x = 1;
                 pos.y += chunk_size + 1;
 
-                if pos.y + chunk_size > MAP_HEIGHT as i32 {
+                if pos.y + chunk_size > build_data.map.height as i32 {
                     // Move to the next page
-                    mb.take_snapshot();
-                    mb.map = Map::new();
+                    build_data.take_snapshot();
+                    build_data.map = Map::new(build_data.map.depth);
 
                     pos = Point::new(1, 1);
                 }
@@ -144,6 +85,6 @@ impl WaveformCollapseArchitect {
             counter += 1;
         }
 
-        mb.take_snapshot()
+        build_data.take_snapshot()
     }
 }
