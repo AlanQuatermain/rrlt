@@ -25,11 +25,13 @@ impl DoglegCorridors {
             panic!("Dogleg corridors require a builder with room structures");
         }
 
+        let mut corridors = Vec::new();
         for (i, room) in rooms.iter().enumerate().skip(1) {
             let start = rooms[i - 1].center();
             let end = room.center();
-            build_corridor(&mut build_data.map, rng, start, end);
+            corridors.push(build_corridor(&mut build_data.map, rng, start, end));
             build_data.take_snapshot();
         }
+        build_data.corridors = Some(corridors);
     }
 }

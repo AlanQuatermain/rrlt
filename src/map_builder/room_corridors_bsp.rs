@@ -26,6 +26,7 @@ impl BSPCorridors {
             panic!("BSP Corridors require a builder with room structures");
         }
 
+        let mut corridors = Vec::new();
         for i in 0..rooms.len() - 1 {
             let room = rooms[i];
             let next_room = rooms[i + 1];
@@ -38,8 +39,9 @@ impl BSPCorridors {
                 next_room.y1 + (rng.roll_dice(1, i32::abs(next_room.y1 - next_room.y2)) - 1),
             );
 
-            draw_corridor(&mut build_data.map, start, end);
+            corridors.push(draw_corridor(&mut build_data.map, start, end));
             build_data.take_snapshot();
         }
+        build_data.corridors = Some(corridors);
     }
 }

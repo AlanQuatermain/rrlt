@@ -82,33 +82,47 @@ pub fn fill_spawns_for_region(
     }
 }
 
-pub fn apply_horizontal_tunnel(map: &mut Map, x1: i32, x2: i32, y: i32) {
+pub fn apply_horizontal_tunnel(map: &mut Map, x1: i32, x2: i32, y: i32) -> Vec<usize> {
+    let mut corridor = Vec::new();
     for x in i32::min(x1, x2)..=i32::max(x1, x2) {
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
             map.tiles[idx] = TileType::Floor;
+            corridor.push(idx);
         }
     }
+    corridor
 }
 
-pub fn apply_vertical_tunnel(map: &mut Map, y1: i32, y2: i32, x: i32) {
+pub fn apply_vertical_tunnel(map: &mut Map, y1: i32, y2: i32, x: i32) -> Vec<usize> {
+    let mut corridor = Vec::new();
     for y in i32::min(y1, y2)..=i32::max(y1, y2) {
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
             map.tiles[idx] = TileType::Floor;
+            corridor.push(idx);
         }
     }
+    corridor
 }
 
-pub fn build_corridor(map: &mut Map, rng: &mut RandomNumberGenerator, start: Point, end: Point) {
+pub fn build_corridor(
+    map: &mut Map,
+    rng: &mut RandomNumberGenerator,
+    start: Point,
+    end: Point,
+) -> Vec<usize> {
+    let mut corridor = Vec::new();
     if rng.roll_dice(1, 2) == 1 {
-        apply_horizontal_tunnel(map, start.x, end.x, start.y);
-        apply_vertical_tunnel(map, start.y, end.y, end.x);
+        corridor.extend(apply_horizontal_tunnel(map, start.x, end.x, start.y));
+        corridor.extend(apply_vertical_tunnel(map, start.y, end.y, end.x));
     } else {
-        apply_vertical_tunnel(map, start.y, end.y, start.x);
-        apply_horizontal_tunnel(map, start.x, end.x, end.y);
+        corridor.extend(apply_vertical_tunnel(map, start.y, end.y, start.x));
+        corridor.extend(apply_horizontal_tunnel(map, start.x, end.x, end.y));
     }
+    corridor
 }
 
-pub fn draw_corridor(map: &mut Map, start: Point, end: Point) {
+pub fn draw_corridor(map: &mut Map, start: Point, end: Point) -> Vec<usize> {
+    let mut corridor = Vec::new();
     let mut x = start.x;
     let mut y = start.y;
 
@@ -125,8 +139,11 @@ pub fn draw_corridor(map: &mut Map, start: Point, end: Point) {
 
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
             map.tiles[idx] = TileType::Floor;
+            corridor.push(idx);
         }
     }
+
+    corridor
 }
 
 pub fn paint(map: &mut Map, mode: Symmetry, brush_size: i32, pos: Point) {

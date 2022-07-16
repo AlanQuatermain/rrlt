@@ -10,13 +10,16 @@ use self::{
     dla::DLABuilder,
     drunkard::DrunkardsWalkBuilder,
     maze::MazeBuilder,
+    nearest_corridors::NearestCorridors,
     prefab::PrefabBuilder,
     room_based_spawner::RoomBasedSpawner,
     room_based_stairs::RoomBasedStairs,
     room_based_starting_position::RoomBasedStartingPosition,
     room_corner_rounding::RoomCornerRounder,
+    room_corridor_spawner::CorridorSpawner,
     room_corridors_bsp::BSPCorridors,
     room_corridors_dogleg::DoglegCorridors,
+    room_corridors_lines::StraightLineCorridors,
     room_draw::RoomDrawer,
     room_exploder::RoomExploder,
     room_sorter::{RoomSort, RoomSorter},
@@ -36,13 +39,16 @@ mod distant_exit;
 mod dla;
 mod drunkard;
 mod maze;
+mod nearest_corridors;
 mod prefab;
 mod room_based_spawner;
 mod room_based_stairs;
 mod room_based_starting_position;
 mod room_corner_rounding;
+mod room_corridor_spawner;
 mod room_corridors_bsp;
 mod room_corridors_dogleg;
+mod room_corridors_lines;
 mod room_draw;
 mod room_exploder;
 mod room_sorter;
@@ -59,6 +65,7 @@ pub struct BuilderMap {
     pub map: Map,
     pub starting_position: Option<Point>,
     pub rooms: Option<Vec<Rect>>,
+    pub corridors: Option<Vec<Vec<usize>>>,
     pub history: Vec<Map>,
 }
 
@@ -98,6 +105,7 @@ impl BuilderChain {
                 map: Map::new(depth),
                 starting_position: None,
                 rooms: None,
+                corridors: None,
                 history: Vec::new(),
             },
         }
@@ -184,9 +192,15 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
         builder.push(RoomSorter::new(sort_order));
         builder.push(RoomDrawer::new());
 
-        match rng.roll_dice(1, 2) {
+        match rng.roll_dice(1, 4) {
             1 => builder.push(DoglegCorridors::new()),
-            _ => builder.push(BSPCorridors::new()),
+            2 => builder.push(BSPCorridors::new()),
+            3 => builder.push(StraightLineCorridors::new()),
+            _ => builder.push(NearestCorridors::new()),
+        }
+
+        if rng.roll_dice(1, 2) == 1 {
+            builder.push(CorridorSpawner::new());
         }
 
         match rng.roll_dice(1, 6) {
@@ -281,8 +295,9 @@ pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> Builde
     // builder.initial(SimpleMapBuilder::new());
     // builder.push(RoomDrawer::new());
     // builder.push(RoomSorter::new(RoomSort::Leftmost));
-    // builder.push(BSPCorridors::new());
+    // builder.push(StraightLineCorridors::new());
     // builder.push(RoomBasedSpawner::new());
+    // builder.push(CorridorSpawner::new());
     // builder.push(RoomBasedStairs::new());
     // builder.push(RoomBasedStartingPosition::new());
     // builder
