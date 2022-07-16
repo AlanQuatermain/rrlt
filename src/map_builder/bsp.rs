@@ -39,14 +39,9 @@ impl BSPDungeonBuilder {
             let rect = self.get_random_rect(rng);
             let candidate = self.get_random_sub_rect(rect, rng);
 
-            if self.is_possible(candidate, &build_data.map) {
-                candidate.for_each(|pos| {
-                    let idx = build_data.map.point2d_to_index(pos);
-                    build_data.map.tiles[idx] = TileType::Floor;
-                });
+            if self.is_possible(candidate, &build_data.map, &rooms) {
                 rooms.push(candidate);
                 self.add_subrects(rect);
-                build_data.take_snapshot();
             }
         }
         build_data.rooms = Some(rooms);
@@ -101,7 +96,7 @@ impl BSPDungeonBuilder {
         result
     }
 
-    fn is_possible(&self, rect: Rect, map: &Map) -> bool {
+    fn is_possible(&self, rect: Rect, map: &Map, rooms: &Vec<Rect>) -> bool {
         let mut expanded = rect;
         expanded.x1 -= 2;
         expanded.y1 -= 2;
@@ -109,23 +104,21 @@ impl BSPDungeonBuilder {
         expanded.y2 += 2;
 
         let mut can_build = true;
-        for y in expanded.y1..expanded.y2 {
-            for x in expanded.x1..expanded.x2 {
-                if x < 1 || y < 1 || x as usize > MAP_WIDTH - 2 || y as usize > MAP_HEIGHT - 2 {
-                    can_build = false;
-                    break;
-                }
-                let idx = map.point2d_to_index(Point::new(x, y));
-                if map.tiles[idx] != TileType::Wall {
-                    can_build = false;
-                    break;
-                }
-            }
-            if !can_build {
-                break;
+
+        for r in rooms.iter() {
+            if r.intersect(&rect) {
+                return false;
             }
         }
 
-        can_build
+        for y in expanded.y1..expanded.y2 {
+            for x in expanded.x1..expanded.x2 {
+                if x < 1 || y < 1 || x as usize > MAP_WIDTH - 2 || y as usize > MAP_HEIGHT - 2 {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 }

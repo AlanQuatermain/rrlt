@@ -1,5 +1,5 @@
 use super::{BuilderMap, InitialMapBuilder};
-use crate::{map_builder::common::apply_room_to_map, prelude::*};
+use crate::prelude::*;
 
 #[derive(Default)]
 pub struct SimpleMapBuilder {}
@@ -26,8 +26,8 @@ impl SimpleMapBuilder {
         for i in 0..MAX_ROOMS {
             let w = rng.range(MIN_SIZE, MAX_SIZE);
             let h = rng.range(MIN_SIZE, MAX_SIZE);
-            let x = rng.roll_dice(1, build_data.map.width as i32 - w - 1) - 1;
-            let y = rng.roll_dice(1, build_data.map.height as i32 - h - 1) - 1;
+            let x = rng.roll_dice(1, build_data.map.width as i32 - w - 2);
+            let y = rng.roll_dice(1, build_data.map.height as i32 - h - 2);
 
             let new_room = Rect::with_size(x, y, w, h);
             let mut ok = true;
@@ -38,9 +38,7 @@ impl SimpleMapBuilder {
                 }
             }
             if ok {
-                apply_room_to_map(&mut build_data.map, &new_room);
                 rooms.push(new_room);
-                build_data.take_snapshot();
             }
         }
 

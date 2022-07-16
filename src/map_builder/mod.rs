@@ -17,6 +17,7 @@ use self::{
     room_corner_rounding::RoomCornerRounder,
     room_corridors_bsp::BSPCorridors,
     room_corridors_dogleg::DoglegCorridors,
+    room_draw::RoomDrawer,
     room_exploder::RoomExploder,
     room_sorter::{RoomSort, RoomSorter},
     simple::SimpleMapBuilder,
@@ -42,6 +43,7 @@ mod room_based_starting_position;
 mod room_corner_rounding;
 mod room_corridors_bsp;
 mod room_corridors_dogleg;
+mod room_draw;
 mod room_exploder;
 mod room_sorter;
 mod simple;
@@ -180,6 +182,7 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
             _ => RoomSort::Central,
         };
         builder.push(RoomSorter::new(sort_order));
+        builder.push(RoomDrawer::new());
 
         match rng.roll_dice(1, 2) {
             1 => builder.push(DoglegCorridors::new()),
@@ -275,8 +278,9 @@ pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> Builde
     builder
 
     // let mut builder = BuilderChain::new(new_depth);
-    // builder.initial(BSPDungeonBuilder::new());
-    // builder.push(RoomSorter::new(RoomSort::Central));
+    // builder.initial(SimpleMapBuilder::new());
+    // builder.push(RoomDrawer::new());
+    // builder.push(RoomSorter::new(RoomSort::Leftmost));
     // builder.push(BSPCorridors::new());
     // builder.push(RoomBasedSpawner::new());
     // builder.push(RoomBasedStairs::new());

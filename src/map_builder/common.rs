@@ -82,14 +82,6 @@ pub fn fill_spawns_for_region(
     }
 }
 
-pub fn apply_room_to_map(map: &mut Map, room: &Rect) {
-    for pos in room.point_set().iter() {
-        if let Some(idx) = map.try_idx(*pos) {
-            map.tiles[idx] = TileType::Floor;
-        }
-    }
-}
-
 pub fn apply_horizontal_tunnel(map: &mut Map, x1: i32, x2: i32, y: i32) {
     for x in i32::min(x1, x2)..=i32::max(x1, x2) {
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
