@@ -17,7 +17,7 @@ pub fn movement(
     #[resource] particle_builder: &mut ParticleBuilder,
     #[resource] rng: &mut RandomNumberGenerator,
     ecs: &mut SubWorld,
-    commands: &mut CommandBuffer
+    commands: &mut CommandBuffer,
 ) {
     if map.can_enter_tile(want_move.destination) {
         let mut will_move = true;
@@ -30,7 +30,7 @@ pub fn movement(
                         *current_pos,
                         ColorPair::new(MAGENTA, BLACK),
                         to_cp437('?'),
-                        200.0
+                        200.0,
                     );
                 }
 
@@ -38,14 +38,14 @@ pub fn movement(
                 let new_duration = confusion.0 - 1;
                 if new_duration > 0 {
                     commands.add_component(want_move.entity, Confusion(new_duration));
-                }
-                else {
+                } else {
                     let name = name_for(&want_move.entity, ecs).0;
-                    gamelog.entries.push(format!("{} shakes off their confusion.", name));
+                    gamelog
+                        .entries
+                        .push(format!("{} shakes off their confusion.", name));
                     commands.remove_component::<Confusion>(want_move.entity);
                 }
-            }
-            else if let Ok(fov) = entry.get_component::<FieldOfView>() {
+            } else if let Ok(fov) = entry.get_component::<FieldOfView>() {
                 commands.add_component(want_move.entity, fov.clone_dirty());
 
                 if entry.get_component::<Player>().is_ok() {
@@ -54,7 +54,8 @@ pub fn movement(
                         map.revealed_tiles[map_idx(pos.x, pos.y)] = true;
 
                         // Chance to find hidden things.
-                        <(Entity, &Point, &Name)>::query().filter(component::<Hidden>())
+                        <(Entity, &Point, &Name)>::query()
+                            .filter(component::<Hidden>())
                             .iter(ecs)
                             .filter(|(_, p, _)| *p == pos)
                             .for_each(|(entity, _, name)| {

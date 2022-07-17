@@ -244,6 +244,8 @@ impl State {
         registry.register::<Hidden>("hidden".to_string());
         registry.register::<EntryTrigger>("entry_trigger".to_string());
         registry.register::<SingleActivation>("one_shot".to_string());
+        registry.register::<Door>("door".to_string());
+        registry.register::<BlocksVisibility>("blocks_visibility".to_string());
         registry.on_unknown(Ignore);
     }
 

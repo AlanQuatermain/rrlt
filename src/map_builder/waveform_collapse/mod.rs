@@ -37,11 +37,19 @@ impl WaveformCollapseBuilder {
         const CHUNK_SIZE: i32 = 8;
         build_data.take_snapshot();
 
+        // remove any stairs (they will need to be replaced)
+        for t in build_data.map.tiles.iter_mut() {
+            if *t == TileType::DownStairs {
+                *t = TileType::Floor;
+            }
+        }
+
         let patterns = build_patterns(&build_data.map, CHUNK_SIZE, true, true);
         let constraints = patterns_to_constraints(patterns, CHUNK_SIZE);
         self.render_tile_gallery(&constraints, CHUNK_SIZE, build_data);
 
         build_data.map = Map::new(build_data.map.depth);
+        build_data.map.fill(TileType::Wall);
         loop {
             let mut solver = Solver::new(constraints.clone(), CHUNK_SIZE, &build_data.map);
             while !solver.iteration(&mut build_data.map, rng) {

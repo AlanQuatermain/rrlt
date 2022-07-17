@@ -1,25 +1,25 @@
+use super::{tile_idx_in_chunk, MapChunk};
 use crate::prelude::*;
-use super::{MapChunk, tile_idx_in_chunk};
 use std::collections::HashSet;
 
 pub fn build_patterns(
     map: &Map,
     chunk_size: i32,
     include_flipping: bool,
-    dedupe: bool
+    dedupe: bool,
 ) -> Vec<Vec<TileType>> {
-    let chunks_x = MAP_WIDTH as i32 / chunk_size;
-    let chunks_y = MAP_HEIGHT as i32 / chunk_size;
+    let chunks_x = (MAP_WIDTH as i32 - 2) / chunk_size;
+    let chunks_y = (MAP_HEIGHT as i32 - 2) / chunk_size;
     let mut patterns = Vec::new();
 
-    for cy in 0..chunks_y {
-        for cx in 0..chunks_x {
+    for cy in 1..chunks_y {
+        for cx in 1..chunks_x {
             // Normal orientation
             let mut pattern: Vec<TileType> = Vec::new();
             let start_x = cx * chunk_size;
-            let end_x = (cx+1) * chunk_size;
+            let end_x = (cx + 1) * chunk_size;
             let start_y = cy * chunk_size;
-            let end_y = (cy+1) * chunk_size;
+            let end_y = (cy + 1) * chunk_size;
 
             for y in start_y..end_y {
                 for x in start_x..end_x {
@@ -34,7 +34,7 @@ pub fn build_patterns(
                 pattern = Vec::new();
                 for y in start_y..end_y {
                     for x in start_x..end_x {
-                        let idx = map_idx(end_x - (x+1), y);
+                        let idx = map_idx(end_x - (x + 1), y);
                         pattern.push(map.tiles[idx]);
                     }
                 }
@@ -44,7 +44,7 @@ pub fn build_patterns(
                 pattern = Vec::new();
                 for y in start_y..end_y {
                     for x in start_x..end_x {
-                        let idx = map_idx(x, end_y - (y+1));
+                        let idx = map_idx(x, end_y - (y + 1));
                         pattern.push(map.tiles[idx]);
                     }
                 }
@@ -54,7 +54,7 @@ pub fn build_patterns(
                 pattern = Vec::new();
                 for y in start_y..end_y {
                     for x in start_x..end_x {
-                        let idx = map_idx(end_x - (x+1), end_y - (y+1));
+                        let idx = map_idx(end_x - (x + 1), end_y - (y + 1));
                         pattern.push(map.tiles[idx]);
                     }
                 }
@@ -64,7 +64,10 @@ pub fn build_patterns(
     }
 
     if dedupe {
-        log(format!("Pre de-duplication, there are {} patterns", patterns.len()));
+        log(format!(
+            "Pre de-duplication, there are {} patterns",
+            patterns.len()
+        ));
         let set: HashSet<Vec<TileType>> = patterns.drain(..).collect(); // de-duplicate
         patterns.extend(set.into_iter());
         log(format!("There are {} unique patterns", patterns.len()));
@@ -73,12 +76,7 @@ pub fn build_patterns(
     patterns
 }
 
-pub fn render_pattern_to_map(
-    map: &mut Map,
-    chunk: &MapChunk,
-    chunk_size: i32,
-    start: Point
-) {
+pub fn render_pattern_to_map(map: &mut Map, chunk: &MapChunk, chunk_size: i32, start: Point) {
     let mut i = 0usize;
     for tile_y in 0..chunk_size {
         for tile_x in 0..chunk_size {
@@ -96,7 +94,7 @@ pub fn render_pattern_to_map(
     }
     for (x, southbound) in chunk.exits[1].iter().enumerate() {
         if *southbound {
-            let map_idx = map.point2d_to_index(start + Point::new(x as i32, chunk_size-1));
+            let map_idx = map.point2d_to_index(start + Point::new(x as i32, chunk_size - 1));
             map.tiles[map_idx] = TileType::DownStairs;
         }
     }
@@ -108,23 +106,20 @@ pub fn render_pattern_to_map(
     }
     for (x, eastbound) in chunk.exits[3].iter().enumerate() {
         if *eastbound {
-            let map_idx = map.point2d_to_index(start + Point::new(chunk_size-1, x as i32));
+            let map_idx = map.point2d_to_index(start + Point::new(chunk_size - 1, x as i32));
             map.tiles[map_idx] = TileType::DownStairs;
         }
     }
 }
 
-pub fn patterns_to_constraints(
-    patterns: Vec<Vec<TileType>>,
-    chunk_size: i32
-) -> Vec<MapChunk> {
+pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) -> Vec<MapChunk> {
     let mut constraints: Vec<MapChunk> = Vec::new();
     for p in patterns {
         let mut new_chunk = MapChunk {
             pattern: p,
             exits: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
             has_exits: true,
-            compatible_with: [Vec::new(), Vec::new(), Vec::new(), Vec::new()]
+            compatible_with: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
         };
         for exit in new_chunk.exits.iter_mut() {
             for _ in 0..chunk_size {
@@ -142,7 +137,7 @@ pub fn patterns_to_constraints(
             }
 
             // Check for south-bound exits
-            let south_idx = tile_idx_in_chunk(chunk_size, x, chunk_size-1);
+            let south_idx = tile_idx_in_chunk(chunk_size, x, chunk_size - 1);
             if new_chunk.pattern[south_idx] == TileType::Floor {
                 new_chunk.exits[1][x as usize] = true;
                 n_exits += 1;
@@ -156,7 +151,7 @@ pub fn patterns_to_constraints(
             }
 
             // Check for east-bound exits
-            let east_idx = tile_idx_in_chunk(chunk_size, chunk_size-1, x);
+            let east_idx = tile_idx_in_chunk(chunk_size, chunk_size - 1, x);
             if new_chunk.pattern[east_idx] == TileType::Floor {
                 new_chunk.exits[3][x as usize] = true;
                 n_exits += 1;
@@ -179,8 +174,7 @@ pub fn patterns_to_constraints(
                 for compat in c.compatible_with.iter_mut() {
                     compat.push(j);
                 }
-            }
-            else {
+            } else {
                 // Evaluate compatibility by direction
                 for (direction, exit_list) in c.exits.iter_mut().enumerate() {
                     let opposite = match direction {
@@ -206,8 +200,8 @@ pub fn patterns_to_constraints(
                     if !has_any {
                         // No exits on this side, let's match only if the other edge also has
                         // no exits.
-                        let matching_exit_count = potential.exits[opposite].iter()
-                            .filter(|a| !**a).count();
+                        let matching_exit_count =
+                            potential.exits[opposite].iter().filter(|a| !**a).count();
                         if matching_exit_count == 0 {
                             c.compatible_with[direction].push(j);
                         }

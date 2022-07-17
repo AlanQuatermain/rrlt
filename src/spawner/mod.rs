@@ -56,6 +56,7 @@ pub fn spawn_entity(ecs: &mut World, spawn: &(&Point, &String)) {
         "Rations" => rations(ecs, pos),
         "Dungeon Map" => dungeon_map(ecs, pos),
         "Bear Trap" => bear_trap(ecs, pos),
+        "Door" => door(ecs, pos),
         _ => {}
     }
 }

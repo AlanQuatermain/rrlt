@@ -86,8 +86,10 @@ pub fn apply_horizontal_tunnel(map: &mut Map, x1: i32, x2: i32, y: i32) -> Vec<u
     let mut corridor = Vec::new();
     for x in i32::min(x1, x2)..=i32::max(x1, x2) {
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
-            map.tiles[idx] = TileType::Floor;
-            corridor.push(idx);
+            if map.tiles[idx] == TileType::Wall {
+                map.tiles[idx] = TileType::Floor;
+                corridor.push(idx);
+            }
         }
     }
     corridor
@@ -97,8 +99,10 @@ pub fn apply_vertical_tunnel(map: &mut Map, y1: i32, y2: i32, x: i32) -> Vec<usi
     let mut corridor = Vec::new();
     for y in i32::min(y1, y2)..=i32::max(y1, y2) {
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
-            map.tiles[idx] = TileType::Floor;
-            corridor.push(idx);
+            if map.tiles[idx] == TileType::Wall {
+                map.tiles[idx] = TileType::Floor;
+                corridor.push(idx);
+            }
         }
     }
     corridor
@@ -138,8 +142,10 @@ pub fn draw_corridor(map: &mut Map, start: Point, end: Point) -> Vec<usize> {
         }
 
         if let Some(idx) = map.try_idx(Point::new(x, y)) {
-            map.tiles[idx] = TileType::Floor;
-            corridor.push(idx);
+            if map.tiles[idx] == TileType::Wall {
+                map.tiles[idx] = TileType::Floor;
+                corridor.push(idx);
+            }
         }
     }
 

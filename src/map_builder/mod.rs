@@ -8,6 +8,7 @@ use self::{
     cull_unreachable::CullUnreachable,
     distant_exit::DistantExit,
     dla::DLABuilder,
+    door_placement::DoorPlacement,
     drunkard::DrunkardsWalkBuilder,
     maze::MazeBuilder,
     nearest_corridors::NearestCorridors,
@@ -37,6 +38,7 @@ mod common;
 mod cull_unreachable;
 mod distant_exit;
 mod dla;
+mod door_placement;
 mod drunkard;
 mod maze;
 mod nearest_corridors;
@@ -203,9 +205,10 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
             builder.push(CorridorSpawner::new());
         }
 
-        match rng.roll_dice(1, 6) {
+        match rng.roll_dice(1, 8) {
             1 => builder.push(RoomExploder::new()),
             2 => builder.push(RoomCornerRounder::new()),
+            3 => builder.push(DLABuilder::heavy_erosion()),
             _ => {}
         }
     }
@@ -232,7 +235,7 @@ fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderCha
 }
 
 pub fn random_shape_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderChain) {
-    match rng.roll_dice(1, 16) {
+    match rng.roll_dice(1, 15) {
         1 => builder.initial(CellularAutomataBuilder::new()),
         2 => builder.initial(DrunkardsWalkBuilder::open_area()),
         3 => builder.initial(DrunkardsWalkBuilder::open_halls()),
@@ -246,6 +249,7 @@ pub fn random_shape_builder(rng: &mut RandomNumberGenerator, builder: &mut Build
         11 => builder.initial(DLABuilder::rorschach()),
         12 => builder.initial(VoronoiCellBuilder::pythagoras()),
         13 => builder.initial(VoronoiCellBuilder::manhattan()),
+        14 => builder.initial(VoronoiCellBuilder::chebyshev()),
         _ => builder.initial(PrefabBuilder::constant(prefab::levels::WFC_POPULATED)),
     }
 
@@ -287,6 +291,7 @@ pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> Builde
         builder.push(PrefabBuilder::sectional(prefab::sections::UNDERGROUND_FORT));
     }
 
+    builder.push(DoorPlacement::new());
     builder.push(PrefabBuilder::vaults());
 
     builder
@@ -295,9 +300,16 @@ pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> Builde
     // builder.initial(SimpleMapBuilder::new());
     // builder.push(RoomDrawer::new());
     // builder.push(RoomSorter::new(RoomSort::Leftmost));
-    // builder.push(StraightLineCorridors::new());
+    // builder.push(BSPCorridors::new());
     // builder.push(RoomBasedSpawner::new());
     // builder.push(CorridorSpawner::new());
+    // builder.push(RoomBasedStairs::new());
+    // builder.push(RoomBasedStartingPosition::new());
+    // builder
+
+    // builder.initial(BSPInteriorBuilder::new());
+    // builder.push(DoorPlacement::new());
+    // builder.push(RoomBasedSpawner::new());
     // builder.push(RoomBasedStairs::new());
     // builder.push(RoomBasedStartingPosition::new());
     // builder

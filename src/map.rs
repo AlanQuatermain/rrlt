@@ -22,6 +22,7 @@ pub struct Map {
     pub revealed_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
     pub bloodstains: HashSet<usize>,
+    pub view_blocked: HashSet<usize>,
 }
 
 impl Map {
@@ -34,6 +35,7 @@ impl Map {
             revealed_tiles: vec![false; NUM_TILES],
             blocked: vec![false; NUM_TILES],
             bloodstains: HashSet::new(),
+            view_blocked: HashSet::new(),
         }
     }
 
@@ -148,7 +150,7 @@ impl BaseMap for Map {
     }
 
     fn is_opaque(&self, idx: usize) -> bool {
-        self.tiles[idx as usize] == TileType::Wall
+        self.tiles[idx] == TileType::Wall || self.view_blocked.contains(&idx)
     }
 }
 

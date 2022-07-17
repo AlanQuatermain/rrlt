@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-use crate::prelude::*;
 use super::MapChunk;
+use crate::prelude::*;
+use std::collections::HashSet;
 
 pub struct Solver {
     constraints: Vec<MapChunk>,
@@ -9,7 +9,7 @@ pub struct Solver {
     chunks_x: usize,
     chunks_y: usize,
     remaining: Vec<(usize, i32)>, // (index, # neighbors)
-    pub possible: bool
+    pub possible: bool,
 }
 
 impl Solver {
@@ -17,7 +17,7 @@ impl Solver {
         let chunks_x = MAP_WIDTH / chunk_size as usize;
         let chunks_y = MAP_HEIGHT / chunk_size as usize;
         let mut remaining: Vec<(usize, i32)> = Vec::new();
-        for i in 0..(chunks_x*chunks_y) {
+        for i in 0..(chunks_x * chunks_y) {
             remaining.push((i, 0));
         }
 
@@ -28,7 +28,7 @@ impl Solver {
             chunks_x,
             chunks_y,
             remaining,
-            possible: true
+            possible: true,
         }
     }
 
@@ -40,28 +40,28 @@ impl Solver {
         let mut neighbors = 0;
 
         if chunk_x > 0 {
-            let left_idx = self.chunk_idx(chunk_x-1, chunk_y);
+            let left_idx = self.chunk_idx(chunk_x - 1, chunk_y);
             if self.chunks[left_idx].is_some() {
                 neighbors += 1;
             }
         }
 
-        if chunk_x < self.chunks_x-1 {
-            let right_idx = self.chunk_idx(chunk_x+1, chunk_y);
+        if chunk_x < self.chunks_x - 1 {
+            let right_idx = self.chunk_idx(chunk_x + 1, chunk_y);
             if self.chunks[right_idx].is_some() {
                 neighbors += 1;
             }
         }
 
         if chunk_y > 0 {
-            let up_idx = self.chunk_idx(chunk_x, chunk_y-1);
+            let up_idx = self.chunk_idx(chunk_x, chunk_y - 1);
             if self.chunks[up_idx].is_some() {
                 neighbors += 1;
             }
         }
 
-        if chunk_y < self.chunks_y-1 {
-            let down_idx = self.chunk_idx(chunk_x, chunk_y+1);
+        if chunk_y < self.chunks_y - 1 {
+            let down_idx = self.chunk_idx(chunk_x, chunk_y + 1);
             if self.chunks[down_idx].is_some() {
                 neighbors += 1;
             }
@@ -71,7 +71,9 @@ impl Solver {
     }
 
     pub fn iteration(&mut self, map: &mut Map, rng: &mut RandomNumberGenerator) -> bool {
-        if self.remaining.is_empty() { return true }
+        if self.remaining.is_empty() {
+            return true;
+        }
 
         // Populate the neighbor count of the remaining list
         let mut remain_copy = self.remaining.clone();
@@ -81,16 +83,20 @@ impl Solver {
             let chunk_x = idx % self.chunks_x;
             let chunk_y = idx / self.chunks_x;
             let neighbor_count = self.count_neighbors(chunk_x, chunk_y);
-            if neighbor_count > 0 { neighbors_exist = true }
+            if neighbor_count > 0 {
+                neighbors_exist = true
+            }
             *r = (r.0, neighbor_count);
         }
-        remain_copy.sort_by(|a,b| b.1.cmp(&a.1));
+        remain_copy.sort_by(|a, b| b.1.cmp(&a.1));
         self.remaining = remain_copy;
 
         // Pick a random chunk we haven't dealt with yet and get its index, remove from remaining
         let remaining_index = if !neighbors_exist {
             rng.random_slice_index(self.remaining.as_slice()).unwrap()
-        } else { 0usize };
+        } else {
+            0usize
+        };
         let chunk_index = self.remaining[remaining_index].0;
         self.remaining.remove(remaining_index);
 
@@ -101,14 +107,14 @@ impl Solver {
         let mut options: Vec<Vec<usize>> = Vec::new();
 
         if chunk_x > 0 {
-            let idx = self.chunk_idx(chunk_x-1, chunk_y);
+            let idx = self.chunk_idx(chunk_x - 1, chunk_y);
             if let Some(nt) = self.chunks[idx] {
                 neighbors += 1;
                 options.push(self.constraints[nt].compatible_with[3].clone());
             }
         }
-        if chunk_x < self.chunks_x-1 {
-            let idx = self.chunk_idx(chunk_x+1, chunk_y);
+        if chunk_x < self.chunks_x - 1 {
+            let idx = self.chunk_idx(chunk_x + 1, chunk_y);
             if let Some(nt) = self.chunks[idx] {
                 neighbors += 1;
                 options.push(self.constraints[nt].compatible_with[2].clone());
@@ -116,14 +122,14 @@ impl Solver {
         }
 
         if chunk_y > 0 {
-            let idx = self.chunk_idx(chunk_x, chunk_y-1);
+            let idx = self.chunk_idx(chunk_x, chunk_y - 1);
             if let Some(nt) = self.chunks[idx] {
                 neighbors += 1;
                 options.push(self.constraints[nt].compatible_with[1].clone());
             }
         }
-        if chunk_y < self.chunks_y-1 {
-            let idx = self.chunk_idx(chunk_x, chunk_y+1);
+        if chunk_y < self.chunks_y - 1 {
+            let idx = self.chunk_idx(chunk_x, chunk_y + 1);
             if let Some(nt) = self.chunks[idx] {
                 neighbors += 1;
                 options.push(self.constraints[nt].compatible_with[0].clone());
@@ -134,22 +140,30 @@ impl Solver {
             // There is nothing nearby, so we can have anything!
             let new_chunk_idx = rng.random_slice_index(self.constraints.as_slice()).unwrap();
             self.chunks[chunk_index] = Some(new_chunk_idx);
-            let left_x = chunk_x as i32 * self.chunk_size;
-            let right_x = (chunk_x as i32+1) * self.chunk_size;
-            let top_y = chunk_y as i32 * self.chunk_size;
-            let bottom_y = (chunk_y as i32+1) * self.chunk_size;
+            // Avoid drawing in the rightmost column or bottommost row
+            let left_x = chunk_x as i32 * self.chunk_size + 1;
+            let right_x = i32::min(
+                (chunk_x as i32 + 1) * self.chunk_size + 1,
+                map.width as i32 - 1,
+            );
+            let top_y = chunk_y as i32 * self.chunk_size + 1;
+            let bottom_y = i32::min(
+                (chunk_y as i32 + 1) * self.chunk_size + 1,
+                map.height as i32 - 1,
+            );
 
             let mut i = 0usize;
             for y in top_y..bottom_y {
                 for x in left_x..right_x {
-                    let mapidx = map_idx(x, y);
-                    let tile = self.constraints[new_chunk_idx].pattern[i];
-                    map.tiles[mapidx] = tile;
+                    // Don't wrap.
+                    if let Some(mapidx) = map.try_idx(Point::new(x, y)) {
+                        let tile = self.constraints[new_chunk_idx].pattern[i];
+                        map.tiles[mapidx] = tile;
+                    }
                     i += 1;
                 }
             }
-        }
-        else {
+        } else {
             // There are neighbors, so we try to be compatible with them
             let mut options_to_check: HashSet<usize> = HashSet::new();
             for o in options.iter() {
@@ -162,7 +176,9 @@ impl Solver {
             for new_chunk_idx in options_to_check.iter() {
                 let mut possible = true;
                 for o in options.iter() {
-                    if !o.contains(new_chunk_idx) { possible = false; }
+                    if !o.contains(new_chunk_idx) {
+                        possible = false;
+                    }
                 }
                 if possible {
                     possible_options.push(*new_chunk_idx);
@@ -173,23 +189,33 @@ impl Solver {
                 log("Oh no! It's not possible!");
                 self.possible = false;
                 return true;
-            }
-            else {
-                let new_chunk_idx = if possible_options.len() == 1 { 0 }
-                    else { rng.random_slice_index(possible_options.as_slice()).unwrap() };
+            } else {
+                let new_chunk_idx = if possible_options.len() == 1 {
+                    0
+                } else {
+                    rng.random_slice_index(possible_options.as_slice()).unwrap()
+                };
 
                 self.chunks[chunk_index] = Some(new_chunk_idx);
-                let left_x = chunk_x as i32 * self.chunk_size;
-                let right_x = (chunk_x as i32+1) * self.chunk_size;
-                let top_y = chunk_y as i32 * self.chunk_size;
-                let bottom_y = (chunk_y as i32+1) * self.chunk_size;
+                // Avoid drawing in the rightmost column or bottommost row
+                let left_x = chunk_x as i32 * self.chunk_size + 1;
+                let right_x = i32::min(
+                    (chunk_x as i32 + 1) * self.chunk_size + 1,
+                    map.width as i32 - 1,
+                );
+                let top_y = chunk_y as i32 * self.chunk_size + 1;
+                let bottom_y = i32::min(
+                    (chunk_y as i32 + 1) * self.chunk_size + 1,
+                    map.height as i32 - 1,
+                );
 
                 let mut i = 0usize;
                 for y in top_y..bottom_y {
                     for x in left_x..right_x {
-                        let mapidx = map_idx(x, y);
-                        let tile = self.constraints[new_chunk_idx].pattern[i];
-                        map.tiles[mapidx] = tile;
+                        if let Some(mapidx) = map.try_idx(Point::new(x, y)) {
+                            let tile = self.constraints[new_chunk_idx].pattern[i];
+                            map.tiles[mapidx] = tile;
+                        }
                         i += 1;
                     }
                 }

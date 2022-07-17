@@ -24,6 +24,22 @@ pub fn spawn_random_item(ecs: &mut World, rng: &mut RandomNumberGenerator, pos: 
     }
 }
 
+pub fn door(ecs: &mut World, pos: Point) {
+    ecs.push((
+        (),
+        pos,
+        Render {
+            color: ColorPair::new(CHOCOLATE, BLACK),
+            glyph: to_cp437('+'),
+        },
+        Name("Door".to_string()),
+        SerializeMe {},
+        BlocksTile {},
+        BlocksVisibility {},
+        Door { open: false },
+    ));
+}
+
 pub fn health_potion(ecs: &mut World, healing: i32, pos: Point) {
     ecs.push((
         Item,

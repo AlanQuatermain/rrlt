@@ -1,25 +1,25 @@
-mod player_input;
-mod map_render;
-mod movement;
+mod bury_dead;
+mod chasing;
+mod collect;
+mod combat;
+mod damage;
+mod drop_item;
+mod end_turn;
 mod entity_render;
 mod fov;
-mod end_turn;
-mod chasing;
-mod combat;
-mod map_indexing;
 mod gui;
-mod tooltips;
-mod collect;
-mod inventory;
-mod use_items;
-mod drop_item;
-mod ranged_target;
-mod menu;
-mod particles;
 mod hunger;
-mod damage;
-mod bury_dead;
+mod inventory;
+mod map_indexing;
+mod map_render;
+mod menu;
+mod movement;
+mod particles;
+mod player_input;
+mod ranged_target;
+mod tooltips;
 mod trigger;
+mod use_items;
 
 use crate::prelude::*;
 
@@ -31,6 +31,7 @@ pub fn build_input_scheduler() -> Schedule {
         .add_system(particles::particle_cull_system())
         .add_system(player_input::player_input_system())
         .add_system(collect::collect_system())
+        .flush()
         .add_system(fov::fov_system())
         .add_system(particles::particle_spawn_system())
         .flush()
@@ -142,11 +143,14 @@ pub fn map_reveal_scheduler() -> Schedule {
 fn name_for(entity: &Entity, ecs: &SubWorld) -> (String, bool) {
     if let Ok(name) = ecs.entry_ref(*entity).unwrap().get_component::<Name>() {
         (name.0.clone(), false)
-    }
-    else if ecs.entry_ref(*entity).unwrap().get_component::<Player>().is_ok() {
+    } else if ecs
+        .entry_ref(*entity)
+        .unwrap()
+        .get_component::<Player>()
+        .is_ok()
+    {
         ("Player".to_string(), true)
-    }
-    else {
+    } else {
         ("Someone".to_string(), false)
     }
 }

@@ -5,12 +5,12 @@ use crate::prelude::*;
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Render {
     pub color: ColorPair,
-    pub glyph: FontCharType
+    pub glyph: FontCharType,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Player {
-    pub map_level: u32
+    pub map_level: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -19,13 +19,13 @@ pub struct Enemy;
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WantsToMove {
     pub entity: Entity,
-    pub destination: Point
+    pub destination: Point,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Health {
     pub current: i32,
-    pub max: i32
+    pub max: i32,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -34,7 +34,7 @@ pub struct Name(pub String);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WantsToAttack {
     pub attacker: Entity,
-    pub victim: Entity
+    pub victim: Entity,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -52,7 +52,7 @@ pub struct FieldOfView {
     #[serde(skip_deserializing)]
     pub visible_tiles: HashSet<Point>,
     pub radius: i32,
-    pub is_dirty: bool
+    pub is_dirty: bool,
 }
 
 impl FieldOfView {
@@ -60,7 +60,7 @@ impl FieldOfView {
         Self {
             visible_tiles: HashSet::new(),
             radius,
-            is_dirty: true
+            is_dirty: true,
         }
     }
 
@@ -68,14 +68,14 @@ impl FieldOfView {
         Self {
             visible_tiles: HashSet::new(),
             radius: self.radius,
-            is_dirty: true
+            is_dirty: true,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ProvidesHealing {
-    pub amount: i32
+    pub amount: i32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -106,13 +106,13 @@ pub struct Armor(pub i32);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WantsToCollect {
     pub who: Entity,
-    pub what: Entity
+    pub what: Entity,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WantsToDrop {
     pub who: Entity,
-    pub what: Entity
+    pub what: Entity,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -132,30 +132,36 @@ pub struct SerializeMe;
 
 #[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 pub enum EquipmentSlot {
-    Melee, Shield
+    Melee,
+    Shield,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct Equippable {
-    pub slot: EquipmentSlot
+    pub slot: EquipmentSlot,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct Equipped {
     pub owner: Entity,
-    pub slot: EquipmentSlot
+    pub slot: EquipmentSlot,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ParticleLifetime(pub f32);
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub enum HungerState { WellFed, Normal, Hungry, Starving }
+pub enum HungerState {
+    WellFed,
+    Normal,
+    Hungry,
+    Starving,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HungerClock {
     pub state: HungerState,
-    pub duration: i32
+    pub duration: i32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -163,7 +169,7 @@ pub struct InflictDamage {
     pub target: Entity,
     pub user_entity: Entity,
     pub damage: i32,
-    pub item_entity: Option<Entity>
+    pub item_entity: Option<Entity>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -183,3 +189,11 @@ pub struct EntityMoved;
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SingleActivation;
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BlocksVisibility {}
+
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Door {
+    pub open: bool,
+}

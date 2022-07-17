@@ -8,8 +8,12 @@ use crate::prelude::*;
 #[read_component(Item)]
 #[read_component(Carried)]
 #[read_component(Weapon)]
-#[read_component(FieldOfView)]
+#[write_component(FieldOfView)]
 #[read_component(HungerClock)]
+#[write_component(Door)]
+#[read_component(BlocksVisibility)]
+#[read_component(BlocksTile)]
+#[write_component(Render)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -111,6 +115,7 @@ pub fn player_input(
         let mut enemies = <(Entity, &Point)>::query().filter(component::<Enemy>());
         if delta != Point::zero() {
             let mut attacked = false;
+            let mut opened = false;
             enemies
                 .iter(ecs)
                 .filter(|(_, pos)| **pos == destination)
@@ -126,6 +131,26 @@ pub fn player_input(
                 });
 
             if !attacked {
+                <(Entity, &Point, &mut Door, &mut Render)>::query()
+                    .filter(component::<BlocksTile>())
+                    .iter_mut(ecs)
+                    .filter(|(_, pos, _, _)| **pos == destination)
+                    .for_each(|(entity, _, door, render)| {
+                        door.open = true;
+                        render.glyph = to_cp437('/');
+                        commands.remove_component::<BlocksVisibility>(*entity);
+                        commands.remove_component::<BlocksTile>(*entity);
+                        opened = true;
+                    });
+                if opened {
+                    // mark fov as dirty
+                    <&mut FieldOfView>::query()
+                        .filter(component::<Player>())
+                        .for_each_mut(ecs, |fov| fov.is_dirty = true);
+                }
+            }
+
+            if !attacked && !opened {
                 commands.push((
                     (),
                     WantsToMove {

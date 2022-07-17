@@ -36,8 +36,12 @@ impl BSPInteriorBuilder {
         let rooms = self.rects.clone();
         for r in rooms.iter() {
             r.for_each(|pos| {
-                if let Some(idx) = build_data.map.try_idx(pos) {
-                    build_data.map.tiles[idx] = TileType::Floor;
+                if pos.x < build_data.map.width as i32 - 1
+                    && pos.y < build_data.map.height as i32 - 1
+                {
+                    if let Some(idx) = build_data.map.try_idx(pos) {
+                        build_data.map.tiles[idx] = TileType::Floor;
+                    }
                 }
             });
             build_data.take_snapshot();

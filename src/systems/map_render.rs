@@ -23,7 +23,11 @@ pub fn map_render(
                 && (player_fov.visible_tiles.contains(&pt) | map.revealed_tiles[idx])
             {
                 let tint = if player_fov.visible_tiles.contains(&pt) {
-                    WHITE
+                    if map.tiles[idx] == TileType::Wall || map.tiles[idx] == TileType::Floor {
+                        PALEGREEN1
+                    } else {
+                        WHITE
+                    }
                 } else {
                     DARK_GRAY
                 };

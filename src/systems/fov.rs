@@ -4,11 +4,18 @@ use crate::prelude::*;
 #[read_component(Point)]
 #[write_component(FieldOfView)]
 #[read_component(Player)]
-pub fn fov(
-    ecs: &mut SubWorld,
-    #[resource] map: &mut Map
-) {
+#[read_component(BlocksVisibility)]
+pub fn fov(ecs: &mut SubWorld, #[resource] map: &mut Map) {
     let mut updated_locations: Vec<Point> = Vec::new();
+
+    map.view_blocked.clear();
+    <&Point>::query()
+        .filter(component::<BlocksVisibility>())
+        .for_each(ecs, |pos| {
+            let idx = map.point2d_to_index(*pos);
+            map.view_blocked.insert(idx);
+        });
+
     let mut views = <(&Point, &mut FieldOfView, Entity)>::query();
     views
         .iter_mut(ecs)
@@ -19,7 +26,8 @@ pub fn fov(
             updated_locations.push(*pos);
         });
 
-    <(&Point, &FieldOfView)>::query().filter(component::<Player>())
+    <(&Point, &FieldOfView)>::query()
+        .filter(component::<Player>())
         .iter(ecs)
         .filter(|(pos, _)| updated_locations.contains(*pos))
         .for_each(|(_, fov)| {
