@@ -18,6 +18,7 @@ impl RawMaster {
                 items: Vec::new(),
                 mobs: Vec::new(),
                 props: Vec::new(),
+                spawn_table: Vec::new(),
             },
             item_index: HashMap::new(),
             mob_index: HashMap::new(),
@@ -27,19 +28,51 @@ impl RawMaster {
 
     pub fn load(&mut self, raws: Raws) {
         self.raws = raws;
+        let mut used_names = HashSet::new();
+
         self.item_index = HashMap::new();
         for (i, item) in self.raws.items.iter().enumerate() {
+            if used_names.contains(&item.name) {
+                log(format!(
+                    "WARNING: duplicate item name in raws [{}]",
+                    &item.name
+                ))
+            }
             self.item_index.insert(item.name.clone(), i);
+            used_names.insert(item.name.clone());
         }
 
         self.mob_index = HashMap::new();
         for (i, mob) in self.raws.mobs.iter().enumerate() {
+            if used_names.contains(&mob.name) {
+                log(format!(
+                    "WARNING: duplicate mob name in raws [{}]",
+                    &mob.name
+                ))
+            }
             self.mob_index.insert(mob.name.clone(), i);
+            used_names.insert(mob.name.clone());
         }
 
         self.prop_index = HashMap::new();
         for (i, prop) in self.raws.props.iter().enumerate() {
+            if used_names.contains(&prop.name) {
+                log(format!(
+                    "WARNING: duplicate prop name in raws [{}]",
+                    &prop.name
+                ))
+            }
             self.prop_index.insert(prop.name.clone(), i);
+            used_names.insert(prop.name.clone());
+        }
+
+        for spawn in self.raws.spawn_table.iter() {
+            if !used_names.contains(&spawn.name) {
+                log(format!(
+                    "WARNING: Spawn table references unspecified entity [{}]",
+                    &spawn.name
+                ));
+            }
         }
     }
 }
@@ -182,13 +215,13 @@ pub fn spawn_named_prop(
     if let Some(renderable) = &template.renderable {
         commands.add_component(entity, get_renderable(renderable));
     }
-    if let Some(hidden) = &template.hidden {
+    if template.hidden.is_some() {
         commands.add_component(entity, Hidden);
     }
-    if let Some(blocks_tile) = &template.blocks_tile {
+    if template.blocks_tile.is_some() {
         commands.add_component(entity, BlocksTile);
     }
-    if let Some(blocks_visibility) = &template.blocks_visibility {
+    if template.blocks_visibility.is_some() {
         commands.add_component(entity, BlocksVisibility {});
     }
     if let Some(door_open) = &template.door_open {
@@ -225,6 +258,26 @@ pub fn spawn_named_entity(
     } else {
         false
     }
+}
+
+pub fn spawn_table_for_depth(raws: &RawMaster, depth: i32) -> RandomTable {
+    use super::spawn_table_structs::SpawnTableEntry;
+    let available_options: Vec<&SpawnTableEntry> = raws
+        .raws
+        .spawn_table
+        .iter()
+        .filter(|a| depth >= a.min_depth && depth <= a.max_depth)
+        .collect();
+
+    let mut rt = RandomTable::new();
+    for e in available_options.iter() {
+        let mut weight = e.weight;
+        if e.add_map_depth_to_weight.is_some() {
+            weight += depth;
+        }
+        rt = rt.add(e.name.clone(), weight);
+    }
+    rt
 }
 
 fn get_renderable(renderable: &super::Renderable) -> crate::components::Render {

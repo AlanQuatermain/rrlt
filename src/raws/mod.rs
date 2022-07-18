@@ -5,6 +5,7 @@ mod item_structs;
 mod mob_structs;
 mod prop_structs;
 mod rawmaster;
+mod spawn_table_structs;
 
 pub use rawmaster::*;
 
@@ -19,6 +20,7 @@ pub struct Raws {
     pub items: Vec<item_structs::Item>,
     pub mobs: Vec<mob_structs::Mob>,
     pub props: Vec<prop_structs::Prop>,
+    pub spawn_table: Vec<spawn_table_structs::SpawnTableEntry>,
 }
 
 #[derive(Deserialize, Debug)]
