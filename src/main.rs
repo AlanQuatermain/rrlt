@@ -4,6 +4,7 @@ mod gamelog;
 mod map;
 mod map_builder;
 mod random_table;
+mod raws;
 mod rex_assets;
 mod spawner;
 mod systems;
@@ -23,7 +24,7 @@ mod prelude {
     pub const DISPLAY_WIDTH: i32 = SCREEN_WIDTH / 2;
     pub const DISPLAY_HEIGHT: i32 = SCREEN_HEIGHT / 2;
 
-    pub const SHOW_MAPGEN_VISUALIZER: bool = true;
+    pub const SHOW_MAPGEN_VISUALIZER: bool = false;
     pub const SHOW_BOUNDARIES: bool = true;
 
     pub const FINAL_LEVEL: u32 = 2;
@@ -34,6 +35,7 @@ mod prelude {
     pub use crate::map::*;
     pub use crate::map_builder::*;
     pub use crate::random_table::*;
+    pub use crate::raws::*;
     pub use crate::rex_assets::*;
     pub use crate::spawner::*;
     pub use crate::systems::*;
@@ -44,6 +46,9 @@ use legion::serialize::UnknownType::Ignore;
 use prelude::*;
 use std::fs;
 use std::fs::File;
+
+#[macro_use]
+extern crate lazy_static;
 
 struct State {
     ecs: World,
@@ -88,6 +93,7 @@ impl State {
     fn make_new_game(&mut self) {
         self.ecs = World::default();
         self.resources = Resources::default();
+        load_raws();
 
         let mut rng = RandomNumberGenerator::new();
         let mut map_builder = random_builder(0, 64, 64, &mut rng);

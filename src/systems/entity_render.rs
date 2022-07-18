@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::prelude::*;
 
 #[system]
@@ -18,23 +20,20 @@ pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
         .filter(!component::<Player>() & !component::<Hidden>())
         .iter(ecs)
         .filter(|(pos, _)| player_fov.visible_tiles.contains(&pos))
+        .sorted_by(|a, b| a.1.render_order.cmp(&b.1.render_order))
         .for_each(|(pos, render)| {
-            draw_batch.set(
-                *pos - offset,
-                render.color,
-                render.glyph
-            );
+            draw_batch.set(*pos - offset, render.color, render.glyph);
         });
 
-    draw_batch.submit(5000)
-        .expect("Batch error");
+    draw_batch.submit(5000).expect("Batch error");
 
     let (pos, render) = <(&Point, &Render)>::query()
         .filter(component::<Player>())
-        .iter(ecs).nth(0).unwrap();
+        .iter(ecs)
+        .nth(0)
+        .unwrap();
 
     draw_batch = DrawBatch::new();
     draw_batch.set(*pos - offset, render.color, render.glyph);
-    draw_batch.submit(6000)
-        .expect("Batch error");
+    draw_batch.submit(6000).expect("Batch error");
 }

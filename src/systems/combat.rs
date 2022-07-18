@@ -1,5 +1,5 @@
-use crate::prelude::*;
 use super::*;
+use crate::prelude::*;
 
 #[system(for_each)]
 #[read_component(WantsToAttack)]
@@ -26,12 +26,10 @@ pub fn combat(
     let base_damage = if let Ok(v) = ecs.entry_ref(attacker) {
         if let Ok(dmg) = v.get_component::<Damage>() {
             dmg.0
-        }
-        else {
+        } else {
             0
         }
-    }
-    else {
+    } else {
         0
     };
 
@@ -45,33 +43,50 @@ pub fn combat(
         .iter(ecs)
         .filter(|(_, entity)| **entity == attacker)
         .map(|(clock, _)| {
-            if clock.state == HungerState::WellFed { 1 } else { 0 }
+            if clock.state == HungerState::WellFed {
+                1
+            } else {
+                0
+            }
         })
         .nth(0)
         .unwrap_or(0);
     let defense = if let Ok(v) = ecs.entry_ref(victim) {
         let base_armor = if let Ok(armor) = v.get_component::<Armor>() {
             armor.0
-        } else { 0 };
+        } else {
+            0
+        };
         let equipped_armor: i32 = <(&Equipped, &Armor)>::query()
             .iter(ecs)
             .filter(|(equipped, _)| equipped.owner == victim)
             .map(|(_, armor)| armor.0)
             .sum();
         base_armor + equipped_armor
-    } else { 0 };
+    } else {
+        0
+    };
+    // println!(
+    //     "Damage: base {} + weapon {} + well_fed {} - defense {}",
+    //     base_damage, weapon_damage, well_fed_bonus, defense
+    // );
     let final_damage = base_damage + weapon_damage + well_fed_bonus - defense;
 
     if final_damage <= 0 {
-        log.entries.push(format!("{} is unable to hurt {}", attacker_name, victim_name));
-    }
-    else {
-        commands.push(((), InflictDamage {
-            target: victim,
-            user_entity: attacker,
-            damage: final_damage,
-            item_entity: None
-        }));
+        log.entries.push(format!(
+            "{} is unable to hurt {}",
+            attacker_name, victim_name
+        ));
+    } else {
+        commands.push((
+            (),
+            InflictDamage {
+                target: victim,
+                user_entity: attacker,
+                damage: final_damage,
+                item_entity: None,
+            },
+        ));
     }
     commands.remove(*message);
 }

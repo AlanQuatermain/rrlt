@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub struct Render {
     pub color: ColorPair,
     pub glyph: FontCharType,
+    pub render_order: i32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -197,3 +198,11 @@ pub struct BlocksVisibility {}
 pub struct Door {
     pub open: bool,
 }
+
+// #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+// pub struct CombatStats {
+//     pub max_hp: i32,
+//     pub hp: i32,
+//     pub power: i32,
+//     pub defense: i32,
+// }
