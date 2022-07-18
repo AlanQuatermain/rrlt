@@ -213,7 +213,7 @@ fn apply_paint(map: &mut Map, brush_size: i32, pos: Point) {
                         && brush_y > 1
                         && brush_y < map_height - 1
                     {
-                        let idx = map_idx(brush_x, brush_y);
+                        let idx = map.point2d_to_index(Point::new(brush_x, brush_y));
                         map.tiles[idx] = TileType::Floor;
                     }
                 }

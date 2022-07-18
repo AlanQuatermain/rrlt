@@ -47,24 +47,31 @@ impl VoronoiCellBuilder {
             build_data.map.width as i32,
             build_data.map.height as i32,
             rng,
+            &build_data.map,
         );
-        let membership = self.calculate_membership(&seeds);
+        let membership = self.calculate_membership(&seeds, &build_data);
         for y in 1..build_data.map.height - 1 {
             for x in 1..build_data.map.width - 1 {
                 let mut neighbors = 0;
                 let pos = Point::new(x, y);
+
+                let left = pos + Point::new(-1, 0);
+                let right = pos + Point::new(1, 0);
+                let above = pos + Point::new(0, -1);
+                let below = pos + Point::new(0, 1);
+
                 let my_idx = build_data.map.point2d_to_index(pos);
                 let my_seed = membership[my_idx];
-                if membership[map_idx(pos.x - 1, pos.y)] != my_seed {
+                if membership[build_data.map.point2d_to_index(left)] != my_seed {
                     neighbors += 1
                 }
-                if membership[map_idx(pos.x + 1, pos.y)] != my_seed {
+                if membership[build_data.map.point2d_to_index(right)] != my_seed {
                     neighbors += 1
                 }
-                if membership[map_idx(pos.x, pos.y - 1)] != my_seed {
+                if membership[build_data.map.point2d_to_index(above)] != my_seed {
                     neighbors += 1
                 }
-                if membership[map_idx(pos.x, pos.y + 1)] != my_seed {
+                if membership[build_data.map.point2d_to_index(below)] != my_seed {
                     neighbors += 1
                 }
 
@@ -81,13 +88,15 @@ impl VoronoiCellBuilder {
         width: i32,
         height: i32,
         rng: &mut RandomNumberGenerator,
+        map: &Map,
     ) -> Vec<(usize, Point)> {
         let mut voronoi_seeds: Vec<(usize, Point)> = Vec::new();
         while voronoi_seeds.len() < self.num_seeds {
             let vx = rng.roll_dice(1, width - 1);
             let vy = rng.roll_dice(1, height - 1);
-            let vidx = map_idx(vx, vy);
-            let candidate = (vidx, Point::new(vx, vy));
+            let pos = Point::new(vx, vy);
+            let vidx = map.point2d_to_index(pos);
+            let candidate = (vidx, pos);
             if !voronoi_seeds.contains(&candidate) {
                 voronoi_seeds.push(candidate);
             }
@@ -95,12 +104,17 @@ impl VoronoiCellBuilder {
         voronoi_seeds
     }
 
-    fn calculate_membership(&self, seeds: &Vec<(usize, Point)>) -> Vec<i32> {
+    fn calculate_membership(
+        &self,
+        seeds: &Vec<(usize, Point)>,
+        build_data: &BuilderMap,
+    ) -> Vec<i32> {
         let mut voronoi_distance = vec![(0, 0.0f32); self.num_seeds];
-        let mut voronoi_membership: Vec<i32> = vec![0; MAP_WIDTH * MAP_HEIGHT];
+        let mut voronoi_membership: Vec<i32> =
+            vec![0; build_data.map.width * build_data.map.height];
         for (i, vid) in voronoi_membership.iter_mut().enumerate() {
-            let x = (i % MAP_WIDTH) as i32;
-            let y = (i / MAP_WIDTH) as i32;
+            let x = (i % build_data.map.width) as i32;
+            let y = (i / build_data.map.height) as i32;
 
             for (seed, pos) in seeds.iter().enumerate() {
                 let distance = self.compute_distance(Point::new(x, y), pos.1);

@@ -51,7 +51,8 @@ pub fn movement(
                 if entry.get_component::<Player>().is_ok() {
                     camera.on_player_move(want_move.destination);
                     fov.visible_tiles.iter().for_each(|pos| {
-                        map.revealed_tiles[map_idx(pos.x, pos.y)] = true;
+                        let idx = map.point2d_to_index(*pos);
+                        map.revealed_tiles[idx] = true;
 
                         // Chance to find hidden things.
                         <(Entity, &Point, &Name)>::query()

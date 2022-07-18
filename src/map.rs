@@ -1,10 +1,6 @@
 use crate::prelude::*;
 use std::collections::HashSet;
 
-pub const MAP_WIDTH: usize = 80;
-pub const MAP_HEIGHT: usize = 43;
-pub const NUM_TILES: usize = (MAP_WIDTH * MAP_HEIGHT) as usize;
-
 #[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Hash, Eq)]
 pub enum TileType {
     Wall,
@@ -26,14 +22,15 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(depth: i32) -> Self {
+    pub fn new(depth: i32, width: usize, height: usize) -> Self {
+        let num_tiles = width * height;
         Self {
-            width: MAP_WIDTH,
-            height: MAP_HEIGHT,
+            width,
+            height,
             depth,
-            tiles: vec![TileType::Floor; NUM_TILES],
-            revealed_tiles: vec![false; NUM_TILES],
-            blocked: vec![false; NUM_TILES],
+            tiles: vec![TileType::Floor; num_tiles],
+            revealed_tiles: vec![false; num_tiles],
+            blocked: vec![false; num_tiles],
             bloodstains: HashSet::new(),
             view_blocked: HashSet::new(),
         }
@@ -48,14 +45,14 @@ impl Map {
     }
 
     pub fn can_enter_tile(&self, point: Point) -> bool {
-        self.in_bounds(point) && (self.blocked[map_idx(point.x, point.y)] == false)
+        self.in_bounds(point) && (self.blocked[self.point2d_to_index(point)] == false)
     }
 
     pub fn try_idx(&self, point: Point) -> Option<usize> {
         if !self.in_bounds(point) {
             None
         } else {
-            Some(map_idx(point.x, point.y))
+            Some(self.point2d_to_index(point))
         }
     }
 
@@ -127,6 +124,11 @@ impl Map {
         let idx = self.point2d_to_index(Point::new(x, y));
         self.revealed_tiles[idx] && self.tiles[idx] == TileType::Wall
     }
+
+    pub fn tile_matches(&self, pos: &Point, tile: TileType) -> bool {
+        let idx = self.point2d_to_index(*pos);
+        self.tiles[idx] == tile
+    }
 }
 
 impl BaseMap for Map {
@@ -162,8 +164,4 @@ impl Algorithm2D for Map {
     fn in_bounds(&self, pos: Point) -> bool {
         self.in_bounds(pos)
     }
-}
-
-pub fn map_idx(x: i32, y: i32) -> usize {
-    ((y * MAP_WIDTH as i32) + x) as usize
 }

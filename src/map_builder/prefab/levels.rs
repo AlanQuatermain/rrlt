@@ -1,5 +1,3 @@
-use crate::prelude::*;
-
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct PrefabLevel {
     pub template: &'static str,

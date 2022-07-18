@@ -13,9 +13,9 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new(constraints: Vec<MapChunk>, chunk_size: i32, _map: &Map) -> Solver {
-        let chunks_x = MAP_WIDTH / chunk_size as usize;
-        let chunks_y = MAP_HEIGHT / chunk_size as usize;
+    pub fn new(constraints: Vec<MapChunk>, chunk_size: i32, map: &Map) -> Solver {
+        let chunks_x = map.width / chunk_size as usize;
+        let chunks_y = map.height / chunk_size as usize;
         let mut remaining: Vec<(usize, i32)> = Vec::new();
         for i in 0..(chunks_x * chunks_y) {
             remaining.push((i, 0));

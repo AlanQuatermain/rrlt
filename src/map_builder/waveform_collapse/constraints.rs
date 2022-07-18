@@ -8,8 +8,8 @@ pub fn build_patterns(
     include_flipping: bool,
     dedupe: bool,
 ) -> Vec<Vec<TileType>> {
-    let chunks_x = (MAP_WIDTH as i32 - 2) / chunk_size;
-    let chunks_y = (MAP_HEIGHT as i32 - 2) / chunk_size;
+    let chunks_x = (map.width as i32 - 2) / chunk_size;
+    let chunks_y = (map.height as i32 - 2) / chunk_size;
     let mut patterns = Vec::new();
 
     for cy in 1..chunks_y {
@@ -23,7 +23,7 @@ pub fn build_patterns(
 
             for y in start_y..end_y {
                 for x in start_x..end_x {
-                    let idx = map_idx(x, y);
+                    let idx = map.point2d_to_index(Point::new(x, y));
                     pattern.push(map.tiles[idx]);
                 }
             }
@@ -34,7 +34,7 @@ pub fn build_patterns(
                 pattern = Vec::new();
                 for y in start_y..end_y {
                     for x in start_x..end_x {
-                        let idx = map_idx(end_x - (x + 1), y);
+                        let idx = map.point2d_to_index(Point::new(end_x - (x + 1), y));
                         pattern.push(map.tiles[idx]);
                     }
                 }
@@ -44,7 +44,7 @@ pub fn build_patterns(
                 pattern = Vec::new();
                 for y in start_y..end_y {
                     for x in start_x..end_x {
-                        let idx = map_idx(x, end_y - (y + 1));
+                        let idx = map.point2d_to_index(Point::new(x, end_y - (y + 1)));
                         pattern.push(map.tiles[idx]);
                     }
                 }
@@ -54,7 +54,8 @@ pub fn build_patterns(
                 pattern = Vec::new();
                 for y in start_y..end_y {
                     for x in start_x..end_x {
-                        let idx = map_idx(end_x - (x + 1), end_y - (y + 1));
+                        let idx =
+                            map.point2d_to_index(Point::new(end_x - (x + 1), end_y - (y + 1)));
                         pattern.push(map.tiles[idx]);
                     }
                 }

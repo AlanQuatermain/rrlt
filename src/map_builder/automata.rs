@@ -35,13 +35,14 @@ impl CellularAutomataBuilder {
     }
 
     fn random_noise_map(&self, rng: &mut RandomNumberGenerator, map: &mut Map) {
-        for y in 1..MAP_HEIGHT as i32 - 1 {
-            for x in 1..MAP_WIDTH as i32 - 1 {
+        for y in 1..map.height as i32 - 1 {
+            for x in 1..map.width as i32 - 1 {
                 let roll = rng.roll_dice(1, 100);
+                let idx = map.point2d_to_index(Point::new(x, y));
                 if roll > 55 {
-                    map.tiles[map_idx(x, y)] = TileType::Floor;
+                    map.tiles[idx] = TileType::Floor;
                 } else {
-                    map.tiles[map_idx(x, y)] = TileType::Wall;
+                    map.tiles[idx] = TileType::Wall;
                 }
             }
         }
@@ -51,7 +52,9 @@ impl CellularAutomataBuilder {
         let mut neighbors = 0;
         for iy in -1..=1 {
             for ix in -1..=1 {
-                if !(ix == 0 && iy == 0) && map.tiles[map_idx(x + ix, y + iy)] == TileType::Wall {
+                if !(ix == 0 && iy == 0)
+                    && map.tiles[map.point2d_to_index(Point::new(x + ix, y + iy))] == TileType::Wall
+                {
                     neighbors += 1;
                 }
             }
@@ -64,7 +67,7 @@ impl CellularAutomataBuilder {
         for y in 1..map.height as i32 - 1 {
             for x in 1..map.width as i32 - 1 {
                 let neighbors = self.count_neighbors(x, y, map);
-                let idx = map_idx(x, y);
+                let idx = map.point2d_to_index(Point::new(x, y));
                 if neighbors > 4 || neighbors == 0 {
                     new_tiles[idx] = TileType::Wall;
                 } else {

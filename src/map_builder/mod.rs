@@ -62,6 +62,8 @@ mod waveform_collapse;
 
 pub use themes::*;
 
+const PRINT_CHAIN_ITEMS: bool = true;
+
 pub struct BuilderMap {
     pub spawn_list: Vec<(Point, String)>,
     pub map: Map,
@@ -98,13 +100,13 @@ impl BuilderMap {
 }
 
 impl BuilderChain {
-    fn new(depth: i32) -> BuilderChain {
+    fn new(depth: i32, width: usize, height: usize) -> BuilderChain {
         BuilderChain {
             starter: None,
             builders: Vec::new(),
             build_data: BuilderMap {
                 spawn_list: Vec::new(),
-                map: Map::new(depth),
+                map: Map::new(depth, width, height),
                 starting_position: None,
                 rooms: None,
                 corridors: None,
@@ -144,33 +146,18 @@ impl BuilderChain {
             spawn_entity(ecs, &(&entity.0, &entity.1));
         }
     }
+
+    pub fn debug_print(&self) {
+        println!("Build chain:");
+        println!("  {}", type_of(&self.starter));
+        for builder in &self.builders {
+            println!("  {}", type_of(builder));
+        }
+    }
 }
 
-fn random_initial_builder(rng: &mut RandomNumberGenerator) -> (Box<dyn InitialMapBuilder>, bool) {
-    let builder = rng.roll_dice(1, 18);
-    match builder {
-        1 => (BSPDungeonBuilder::new(), true),
-        2 => (BSPInteriorBuilder::new(), true),
-        3 => (CellularAutomataBuilder::new(), false),
-        4 => (DrunkardsWalkBuilder::open_area(), false),
-        5 => (DrunkardsWalkBuilder::open_halls(), false),
-        6 => (DrunkardsWalkBuilder::winding_passages(), false),
-        7 => (DrunkardsWalkBuilder::fat_passages(), false),
-        8 => (DrunkardsWalkBuilder::fearful_symmetry(), false),
-        9 => (MazeBuilder::new(), false),
-        10 => (DLABuilder::walk_inwards(), false),
-        11 => (DLABuilder::walk_outwards(), false),
-        12 => (DLABuilder::central_attractor(), false),
-        13 => (DLABuilder::rorschach(), false),
-        14 => (VoronoiCellBuilder::pythagoras(), false),
-        15 => (VoronoiCellBuilder::manhattan(), false),
-        16 => (VoronoiCellBuilder::chebyshev(), false),
-        17 => (
-            PrefabBuilder::constant(prefab::levels::WFC_POPULATED),
-            false,
-        ),
-        _ => (SimpleMapBuilder::new(), true),
-    }
+fn type_of<T>(_: &T) -> String {
+    format!("{}", std::any::type_name::<T>())
 }
 
 fn random_room_builder(rng: &mut RandomNumberGenerator, builder: &mut BuilderChain) {
@@ -272,18 +259,23 @@ fn cull_and_finalize(rng: &mut RandomNumberGenerator, builder: &mut BuilderChain
     builder.push(DistantExit::new());
 }
 
-pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> BuilderChain {
-    let mut builder = BuilderChain::new(new_depth);
+pub fn random_builder(
+    new_depth: i32,
+    width: usize,
+    height: usize,
+    rng: &mut RandomNumberGenerator,
+) -> BuilderChain {
+    let mut builder = BuilderChain::new(new_depth, width, height);
     match rng.roll_dice(1, 2) {
         1 => random_room_builder(rng, &mut builder),
         _ => random_shape_builder(rng, &mut builder),
     }
 
-    if rng.roll_dice(1, 3) == 1 {
+    if rng.roll_dice(1, 6) == 1 {
         builder.push(WaveformCollapseBuilder::new());
-        if rng.roll_dice(1, 5) == 1 {
-            builder.push(CellularAutomataBuilder::new());
-        }
+        // if rng.roll_dice(1, 5) == 1 {
+        //     builder.push(CellularAutomataBuilder::new());
+        // }
         cull_and_finalize(rng, &mut builder);
     }
 
@@ -294,9 +286,13 @@ pub fn random_builder(new_depth: i32, rng: &mut RandomNumberGenerator) -> Builde
     builder.push(DoorPlacement::new());
     builder.push(PrefabBuilder::vaults());
 
+    if PRINT_CHAIN_ITEMS {
+        builder.debug_print();
+    }
+
     builder
 
-    // let mut builder = BuilderChain::new(new_depth);
+    // let mut builder = BuilderChain::new(new_depth, width, height);
     // builder.initial(SimpleMapBuilder::new());
     // builder.push(RoomDrawer::new());
     // builder.push(RoomSorter::new(RoomSort::Leftmost));

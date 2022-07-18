@@ -32,7 +32,8 @@ pub fn fov(ecs: &mut SubWorld, #[resource] map: &mut Map) {
         .filter(|(pos, _)| updated_locations.contains(*pos))
         .for_each(|(_, fov)| {
             fov.visible_tiles.iter().for_each(|pos| {
-                map.revealed_tiles[map_idx(pos.x, pos.y)] = true;
+                let idx = map.point2d_to_index(*pos);
+                map.revealed_tiles[idx] = true;
             })
         });
 }

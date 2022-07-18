@@ -24,6 +24,7 @@ mod prelude {
     pub const DISPLAY_HEIGHT: i32 = SCREEN_HEIGHT / 2;
 
     pub const SHOW_MAPGEN_VISUALIZER: bool = true;
+    pub const SHOW_BOUNDARIES: bool = true;
 
     pub const FINAL_LEVEL: u32 = 2;
 
@@ -89,7 +90,7 @@ impl State {
         self.resources = Resources::default();
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = random_builder(0, &mut rng);
+        let mut map_builder = random_builder(0, 64, 64, &mut rng);
         let mut gamelog = Gamelog::default();
         gamelog
             .entries
@@ -148,7 +149,7 @@ impl State {
             .for_each(|fov| fov.is_dirty = true);
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = random_builder(map_level + 1, &mut rng);
+        let mut map_builder = random_builder(map_level + 1, 64, 64, &mut rng);
         map_builder.build_map(&mut rng);
         map_builder.spawn_entities(&mut self.ecs);
 
@@ -332,14 +333,18 @@ impl State {
     }
 
     fn reveal_map(&mut self, row: i32) {
+        let height: usize;
+        let width: usize;
         {
             let mut map = self.resources.get_mut::<Map>().unwrap();
-            for x in 0..MAP_WIDTH {
+            for x in 0..map.width {
                 let idx = map.point2d_to_index(Point::new(x, row as usize));
                 map.revealed_tiles[idx] = true;
             }
+            height = map.height;
+            width = map.width;
         }
-        if row as usize == MAP_HEIGHT - 1 {
+        if row as usize == height - 1 {
             self.resources.insert(TurnState::MonsterTurn);
         } else {
             self.resources.insert(TurnState::RevealMap { row: row + 1 })

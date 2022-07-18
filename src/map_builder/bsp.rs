@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-use super::common::build_corridor;
-
 #[derive(Default)]
 pub struct BSPDungeonBuilder {
     rects: Vec<Rect>,
@@ -113,7 +111,7 @@ impl BSPDungeonBuilder {
 
         for y in expanded.y1..expanded.y2 {
             for x in expanded.x1..expanded.x2 {
-                if x < 1 || y < 1 || x as usize > MAP_WIDTH - 2 || y as usize > MAP_HEIGHT - 2 {
+                if x < 1 || y < 1 || x as usize > map.width - 2 || y as usize > map.height - 2 {
                     return false;
                 }
             }

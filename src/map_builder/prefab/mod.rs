@@ -86,7 +86,7 @@ impl PrefabBuilder {
                 for x in 0..layer.width {
                     let cell = layer.get(x, y).unwrap();
                     if x < build_data.map.width && y < build_data.map.height {
-                        let idx = map_idx(x as i32, y as i32);
+                        let idx = build_data.map.point2d_to_index(Point::new(x, y));
                         let glyph = (cell.ch as u8) as char;
                         self.char_to_map(glyph, idx, build_data);
                     }
@@ -116,7 +116,7 @@ impl PrefabBuilder {
         for ty in 0..level.height {
             for tx in 0..level.width {
                 if tx < build_data.map.width && ty < build_data.map.height {
-                    let idx = map_idx(tx as i32, ty as i32);
+                    let idx = build_data.map.point2d_to_index(Point::new(tx, ty));
                     self.char_to_map(string_vec[i], idx, build_data);
                 }
                 i += 1;
