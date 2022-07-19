@@ -172,7 +172,12 @@ pub fn spawn_named_mob(
             commands.add_component(entity, ChasingPlayer);
         }
         "bystander" => commands.add_component(entity, Bystander),
+        "vendor" => commands.add_component(entity, Vendor),
         _ => {}
+    }
+
+    if let Some(quips) = &mob_template.quips {
+        commands.add_component(entity, Quips(quips.clone()));
     }
 
     if let Some(renderable) = &mob_template.renderable {

@@ -45,12 +45,12 @@ impl TownBuilder {
         self.water_and_piers(rng, build_data);
 
         // Make visible for screenshot
-        for t in build_data.map.revealed_tiles.iter_mut() {
-            *t = true;
-        }
-        for t in build_data.map.visible_tiles.iter_mut() {
-            *t = true;
-        }
+        // for t in build_data.map.revealed_tiles.iter_mut() {
+        //     *t = true;
+        // }
+        // for t in build_data.map.visible_tiles.iter_mut() {
+        //     *t = true;
+        // }
         build_data.take_snapshot();
 
         let (mut available_building_tiles, wall_gap_y) = self.town_walls(rng, build_data);
@@ -64,9 +64,11 @@ impl TownBuilder {
             .point2d_to_index(Point::new(build_data.map.width - 5, wall_gap_y as usize));
         build_data.map.tiles[exit_idx] = TileType::DownStairs;
 
-        // Place the user in the largest building (the tavern).
         let building_sizes = self.sort_buildings(&buildings);
         self.building_factory(rng, build_data, &buildings, &building_sizes);
+
+        self.spawn_dockers(build_data, rng);
+        self.spawn_townsfolk(build_data, rng, &mut available_building_tiles);
     }
 
     fn grass_layer(&mut self, build_data: &mut BuilderMap) {
@@ -229,7 +231,7 @@ impl TownBuilder {
             };
             let idx = build_data.map.point2d_to_index(pos);
             build_data.map.tiles[idx] = TileType::Floor;
-            build_data.spawn_list.push((pos, "Front Door".to_string()));
+            build_data.spawn_list.push((pos, "Door".to_string()));
             doors.push(idx);
         }
 
@@ -289,8 +291,6 @@ impl TownBuilder {
             b.2 = BuildingTag::Hovel;
         }
         building_size.last_mut().unwrap().2 = BuildingTag::Abandoned;
-
-        println!("sizes: {:?}", &building_size);
 
         building_size
     }
@@ -476,6 +476,41 @@ impl TownBuilder {
                 let idx = build_data.map.point2d_to_index(build_pos);
                 if build_data.map.tiles[idx].is_walkable() && rng.roll_dice(1, 2) == 1 {
                     build_data.spawn_list.push((build_pos, "Rat".to_string()));
+                }
+            }
+        }
+    }
+
+    fn spawn_dockers(&mut self, build_data: &mut BuilderMap, rng: &mut RandomNumberGenerator) {
+        for (idx, tt) in build_data.map.tiles.iter().enumerate() {
+            if *tt == TileType::Bridge && rng.roll_dice(1, 6) == 1 {
+                let roll = rng.roll_dice(1, 3);
+                let pos = build_data.map.index_to_point2d(idx);
+                match roll {
+                    1 => build_data.spawn_list.push((pos, "Dock Worker".to_string())),
+                    2 => build_data
+                        .spawn_list
+                        .push((pos, "Wannabe Pirate".to_string())),
+                    _ => build_data.spawn_list.push((pos, "Fisher".to_string())),
+                }
+            }
+        }
+    }
+
+    fn spawn_townsfolk(
+        &mut self,
+        build_data: &mut BuilderMap,
+        rng: &mut RandomNumberGenerator,
+        available_building_tiles: &mut HashSet<usize>,
+    ) {
+        for idx in available_building_tiles.iter() {
+            if rng.roll_dice(1, 14) == 1 {
+                let pos = build_data.map.index_to_point2d(*idx);
+                match rng.roll_dice(1, 4) {
+                    1 => build_data.spawn_list.push((pos, "Peasant".to_string())),
+                    2 => build_data.spawn_list.push((pos, "Drunk".to_string())),
+                    3 => build_data.spawn_list.push((pos, "Dock Worker".to_string())),
+                    _ => build_data.spawn_list.push((pos, "Fisher".to_string())),
                 }
             }
         }

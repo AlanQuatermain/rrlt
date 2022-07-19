@@ -205,6 +205,12 @@ pub struct AlwaysVisible;
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Bystander;
 
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub struct Vendor;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Quips(pub Vec<String>);
+
 // #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 // pub struct CombatStats {
 //     pub max_hp: i32,

@@ -1,4 +1,5 @@
 mod bury_dead;
+mod bystander_ai;
 mod chasing;
 mod collect;
 mod combat;
@@ -55,8 +56,6 @@ pub fn build_player_scheduler() -> Schedule {
         .add_system(damage::damage_system())
         .add_system(particles::particle_spawn_system())
         .flush()
-        .add_system(map_indexing::map_indexing_system())
-        .flush()
         .add_system(movement::movement_system())
         .flush()
         .add_system(fov::fov_system())
@@ -77,6 +76,7 @@ pub fn build_monster_scheduler() -> Schedule {
     Schedule::builder()
         .add_system(particles::particle_cull_system())
         .add_system(chasing::chasing_system())
+        .add_system(bystander_ai::bystander_ai_system())
         .flush()
         .add_system(use_items::use_items_system())
         .add_system(drop_item::drop_item_system())
@@ -84,8 +84,6 @@ pub fn build_monster_scheduler() -> Schedule {
         .flush()
         .add_system(hunger::hunger_system())
         .add_system(damage::damage_system())
-        .flush()
-        .add_system(map_indexing::map_indexing_system())
         .flush()
         .add_system(movement::movement_system())
         .flush()

@@ -255,6 +255,8 @@ impl State {
         registry.register::<BlocksVisibility>("blocks_visibility".to_string());
         registry.register::<AlwaysVisible>("always_visible".to_string());
         registry.register::<Bystander>("bystander".to_string());
+        registry.register::<Vendor>("vendor".to_string());
+        registry.register::<Quips>("quips".to_string());
         registry.on_unknown(Ignore);
     }
 
