@@ -26,28 +26,19 @@ pub fn map_render(
             let idx = map.point2d_to_index(pt);
 
             if player_fov.visible_tiles.contains(&pt) | map.revealed_tiles[idx] {
-                let mut fg = tile_color(map.tiles[idx]);
                 let bg = if map.bloodstains.contains(&idx) {
                     RGB::from_f32(0.75, 0.0, 0.0)
                 } else {
                     RGB::named(BLACK)
                 };
-                if !player_fov.visible_tiles.contains(&pt) {
+                let (glyph, mut fg) = theme.tile_to_render(map.tiles[idx], map, idx);
+                if !player_fov.visible_tiles.contains(&pt) && !map.visible_tiles[idx] {
                     fg = fg.to_greyscale();
                 }
-                let glyph = theme.tile_to_render(map.tiles[idx], map, idx);
                 draw_batch.set(pt - offset, ColorPair::new(fg, bg), glyph);
             }
         }
     }
 
     draw_batch.submit(0).expect("Batch error");
-}
-
-fn tile_color(tile: TileType) -> RGB {
-    match tile {
-        TileType::Wall => RGB::named(GREEN),
-        TileType::Floor => RGB::named(TEAL),
-        TileType::DownStairs => RGB::named(CYAN1),
-    }
 }

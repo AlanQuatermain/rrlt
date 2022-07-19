@@ -56,11 +56,13 @@ mod room_exploder;
 mod room_sorter;
 mod simple;
 mod themes;
+mod town;
 mod voronoi;
 mod voronoi_spawning;
 mod waveform_collapse;
 
 pub use themes::*;
+use town::town_builder;
 
 const PRINT_CHAIN_ITEMS: bool = true;
 
@@ -309,4 +311,16 @@ pub fn random_builder(
     // builder.push(RoomBasedStairs::new());
     // builder.push(RoomBasedStartingPosition::new());
     // builder
+}
+
+pub fn level_builder(
+    new_depth: i32,
+    width: usize,
+    height: usize,
+    rng: &mut RandomNumberGenerator,
+) -> BuilderChain {
+    match new_depth {
+        0 => town_builder(new_depth, width, height, rng),
+        _ => random_builder(new_depth, width, height, rng),
+    }
 }

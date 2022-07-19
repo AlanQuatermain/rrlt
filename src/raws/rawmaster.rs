@@ -224,6 +224,9 @@ pub fn spawn_named_prop(
     if template.blocks_visibility.is_some() {
         commands.add_component(entity, BlocksVisibility {});
     }
+    if template.always_visible.is_some() {
+        commands.add_component(entity, AlwaysVisible);
+    }
     if let Some(door_open) = &template.door_open {
         commands.add_component(entity, Door { open: *door_open });
     }

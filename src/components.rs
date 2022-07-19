@@ -199,6 +199,9 @@ pub struct Door {
     pub open: bool,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AlwaysVisible;
+
 // #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 // pub struct CombatStats {
 //     pub max_hp: i32,

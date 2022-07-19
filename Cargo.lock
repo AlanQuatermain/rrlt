@@ -163,6 +163,7 @@ checksum = "6b713222141585b5e5cc6f0be1a0a473e1e339aa1300af91929ce6b1b2ed529c"
 dependencies = [
  "bracket-algorithm-traits",
  "bracket-geometry",
+ "rayon",
  "smallvec",
 ]
 
@@ -1482,6 +1483,7 @@ version = "0.1.0"
 dependencies = [
  "bracket-lib",
  "itertools",
+ "lazy_static",
  "legion",
  "ron",
  "serde",

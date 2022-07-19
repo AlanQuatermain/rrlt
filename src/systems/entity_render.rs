@@ -7,8 +7,10 @@ use crate::prelude::*;
 #[read_component(Render)]
 #[read_component(FieldOfView)]
 #[read_component(Player)]
+#[read_component(AlwaysVisible)]
+#[read_component(Hidden)]
 pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
-    let renderables = <(&Point, &Render)>::query();
+    let renderables = <(&Point, &Render, Entity)>::query();
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
 
     let mut draw_batch = DrawBatch::new();
@@ -19,9 +21,15 @@ pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
     renderables
         .filter(!component::<Player>() & !component::<Hidden>())
         .iter(ecs)
-        .filter(|(pos, _)| player_fov.visible_tiles.contains(&pos))
+        .filter(|(pos, _, entity)| {
+            ecs.entry_ref(**entity)
+                .unwrap()
+                .get_component::<AlwaysVisible>()
+                .is_ok()
+                || player_fov.visible_tiles.contains(&pos)
+        })
         .sorted_by(|a, b| a.1.render_order.cmp(&b.1.render_order))
-        .for_each(|(pos, render)| {
+        .for_each(|(pos, render, _)| {
             draw_batch.set(*pos - offset, render.color, render.glyph);
         });
 

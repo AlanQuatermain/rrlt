@@ -66,7 +66,7 @@ impl AreaStartingPosition {
 
         let mut available_floors: Vec<(usize, f32)> = Vec::new();
         for (idx, tiletype) in build_data.map.tiles.iter().enumerate() {
-            if *tiletype == TileType::Floor {
+            if tiletype.is_walkable() {
                 available_floors.push((
                     idx,
                     DistanceAlg::PythagorasSquared

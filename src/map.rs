@@ -6,6 +6,45 @@ pub enum TileType {
     Wall,
     Floor,
     DownStairs,
+    Road,
+    Grass,
+    ShallowWater,
+    DeepWater,
+    WoodFloor,
+    Bridge,
+    Gravel,
+}
+
+impl TileType {
+    pub fn is_walkable(&self) -> bool {
+        match self {
+            TileType::Floor
+            | TileType::DownStairs
+            | TileType::Road
+            | TileType::Grass
+            | TileType::ShallowWater
+            | TileType::WoodFloor
+            | TileType::Bridge
+            | TileType::Gravel => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        match self {
+            TileType::Wall => true,
+            _ => false,
+        }
+    }
+
+    pub fn cost(&self) -> f32 {
+        match self {
+            TileType::Road => 0.8,
+            TileType::Grass => 1.1,
+            TileType::ShallowWater => 1.2,
+            _ => 1.0,
+        }
+    }
 }
 
 #[derive(Default, Serialize, Deserialize, Clone, PartialEq)]
@@ -19,6 +58,7 @@ pub struct Map {
     pub blocked: Vec<bool>,
     pub bloodstains: HashSet<usize>,
     pub view_blocked: HashSet<usize>,
+    pub visible_tiles: Vec<bool>, // tiles that are always fully visible
 }
 
 impl Map {
@@ -33,6 +73,7 @@ impl Map {
             blocked: vec![false; num_tiles],
             bloodstains: HashSet::new(),
             view_blocked: HashSet::new(),
+            visible_tiles: vec![false; num_tiles],
         }
     }
 
@@ -45,20 +86,20 @@ impl Map {
     }
 
     pub fn can_enter_tile(&self, point: Point) -> bool {
-        self.in_bounds(point) && (self.blocked[self.point2d_to_index(point)] == false)
+        self.in_bounds(point) && (self.blocked[self.idx_for_pos(&point)] == false)
     }
 
     pub fn try_idx(&self, point: Point) -> Option<usize> {
         if !self.in_bounds(point) {
             None
         } else {
-            Some(self.point2d_to_index(point))
+            Some(self.idx_for_pos(&point))
         }
     }
 
     pub fn populate_blocked(&mut self) {
         for (idx, tile) in self.tiles.iter().enumerate() {
-            self.blocked[idx] = *tile == TileType::Wall;
+            self.blocked[idx] = !tile.is_walkable();
         }
     }
 
@@ -66,7 +107,7 @@ impl Map {
         let destination = loc + delta;
         if self.in_bounds(destination) {
             if self.can_enter_tile(destination) {
-                let idx = self.point2d_to_index(destination);
+                let idx = self.idx_for_pos(&destination);
                 Some(idx)
             } else {
                 None
@@ -121,13 +162,17 @@ impl Map {
     }
 
     fn is_revealed_and_wall(&self, x: i32, y: i32) -> bool {
-        let idx = self.point2d_to_index(Point::new(x, y));
+        let idx = self.idx_for_pos(&Point::new(x, y));
         self.revealed_tiles[idx] && self.tiles[idx] == TileType::Wall
     }
 
     pub fn tile_matches(&self, pos: &Point, tile: TileType) -> bool {
-        let idx = self.point2d_to_index(*pos);
+        let idx = self.idx_for_pos(pos);
         self.tiles[idx] == tile
+    }
+
+    fn idx_for_pos(&self, pos: &Point) -> usize {
+        ((pos.y * self.width as i32) + pos.x) as usize
     }
 }
 
@@ -139,7 +184,13 @@ impl BaseMap for Map {
         for tx in -1..=1 {
             for ty in -1..=1 {
                 if let Some(idx) = self.valid_exit(location, Point::new(tx, ty)) {
-                    exits.push((idx, 1.0));
+                    if tx == 0 || ty == 0 {
+                        // Cardinal directions
+                        exits.push((idx, self.tiles[idx].cost()));
+                    } else {
+                        // Diagonals
+                        exits.push((idx, self.tiles[idx].cost() * 1.45));
+                    }
                 }
             }
         }
@@ -152,7 +203,7 @@ impl BaseMap for Map {
     }
 
     fn is_opaque(&self, idx: usize) -> bool {
-        self.tiles[idx] == TileType::Wall || self.view_blocked.contains(&idx)
+        self.tiles[idx].is_opaque() || self.view_blocked.contains(&idx)
     }
 }
 
@@ -163,5 +214,9 @@ impl Algorithm2D for Map {
 
     fn in_bounds(&self, pos: Point) -> bool {
         self.in_bounds(pos)
+    }
+
+    fn point2d_to_index(&self, pt: Point) -> usize {
+        self.idx_for_pos(&pt)
     }
 }

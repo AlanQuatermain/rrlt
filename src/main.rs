@@ -25,7 +25,7 @@ mod prelude {
     pub const DISPLAY_HEIGHT: i32 = SCREEN_HEIGHT / 2;
 
     pub const SHOW_MAPGEN_VISUALIZER: bool = false;
-    pub const SHOW_BOUNDARIES: bool = true;
+    pub const SHOW_BOUNDARIES: bool = false;
 
     pub const FINAL_LEVEL: u32 = 2;
 
@@ -96,7 +96,7 @@ impl State {
         load_raws();
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = random_builder(0, 64, 64, &mut rng);
+        let mut map_builder = level_builder(0, 80, 50, &mut rng);
         let mut gamelog = Gamelog::default();
         gamelog
             .entries
@@ -155,7 +155,7 @@ impl State {
             .for_each(|fov| fov.is_dirty = true);
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = random_builder(map_level + 1, 64, 64, &mut rng);
+        let mut map_builder = random_builder(map_level + 1, 80, 50, &mut rng);
         map_builder.build_map(&mut rng);
         map_builder.spawn_entities(&mut self.ecs);
 
@@ -253,6 +253,7 @@ impl State {
         registry.register::<SingleActivation>("one_shot".to_string());
         registry.register::<Door>("door".to_string());
         registry.register::<BlocksVisibility>("blocks_visibility".to_string());
+        registry.register::<AlwaysVisible>("always_visible".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -465,7 +466,7 @@ fn main() -> BError {
         .with_simple_console_no_bg(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .build()?;
-    context.with_post_scanlines(true);
+    // context.with_post_scanlines(true);
 
     // let context = BTermBuilder::new()
     //     .with_title("Rouguelike Tutorial")
