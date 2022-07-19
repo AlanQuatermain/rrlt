@@ -72,6 +72,8 @@ pub fn movement(
         if will_move {
             commands.add_component(want_move.entity, want_move.destination);
             commands.add_component(want_move.entity, EntityMoved);
+            let idx = map.point2d_to_index(want_move.destination);
+            map.blocked[idx] = true;
         }
     }
     commands.remove(*entity);

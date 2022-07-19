@@ -28,7 +28,7 @@ pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
                 .is_ok()
                 || player_fov.visible_tiles.contains(&pos)
         })
-        .sorted_by(|a, b| a.1.render_order.cmp(&b.1.render_order))
+        .sorted_by(|a, b| b.1.render_order.cmp(&a.1.render_order))
         .for_each(|(pos, render, _)| {
             draw_batch.set(*pos - offset, render.color, render.glyph);
         });

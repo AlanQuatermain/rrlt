@@ -14,6 +14,7 @@ use crate::prelude::*;
 #[read_component(BlocksVisibility)]
 #[read_component(BlocksTile)]
 #[write_component(Render)]
+#[read_component(Bystander)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -107,12 +108,13 @@ pub fn player_input(
         };
         *input_key = None; // prevent the key being processed twice
 
-        let (player_entity, destination) = players
+        let (player_entity, player_pos, destination) = players
             .iter(ecs)
-            .find_map(|(entity, pos)| Some((*entity, *pos + delta)))
+            .find_map(|(entity, pos)| Some((*entity, *pos, *pos + delta)))
             .unwrap();
 
         let mut enemies = <(Entity, &Point)>::query().filter(component::<Enemy>());
+        let mut bystanders = <(Entity, &Point)>::query().filter(component::<Bystander>());
         if delta != Point::zero() {
             let mut attacked = false;
             let mut opened = false;
@@ -158,6 +160,20 @@ pub fn player_input(
                         destination,
                     },
                 ));
+
+                // Are we displacing an NPC?
+                bystanders
+                    .iter(ecs)
+                    .filter(|(_, pos)| **pos == destination)
+                    .for_each(|(entity, _)| {
+                        commands.push((
+                            (),
+                            WantsToMove {
+                                entity: *entity,
+                                destination: player_pos,
+                            },
+                        ));
+                    })
             }
         } else if waiting {
             // Player is standing still.

@@ -164,12 +164,16 @@ pub fn spawn_named_mob(
     }
     let mob_template = &raws.raws.mobs[raws.mob_index[key]];
 
-    let entity = commands.push((
-        Enemy,
-        ChasingPlayer,
-        Name(mob_template.name.clone()),
-        get_position(pos),
-    ));
+    let entity = commands.push((Name(mob_template.name.clone()), get_position(pos)));
+
+    match mob_template.ai.as_ref() {
+        "melee" => {
+            commands.add_component(entity, Enemy);
+            commands.add_component(entity, ChasingPlayer);
+        }
+        "bystander" => commands.add_component(entity, Bystander),
+        _ => {}
+    }
 
     if let Some(renderable) = &mob_template.renderable {
         commands.add_component(entity, get_renderable(renderable));
@@ -215,8 +219,10 @@ pub fn spawn_named_prop(
     if let Some(renderable) = &template.renderable {
         commands.add_component(entity, get_renderable(renderable));
     }
-    if template.hidden.is_some() {
-        commands.add_component(entity, Hidden);
+    if let Some(hidden) = template.hidden {
+        if hidden {
+            commands.add_component(entity, Hidden);
+        }
     }
     if template.blocks_tile.is_some() {
         commands.add_component(entity, BlocksTile);

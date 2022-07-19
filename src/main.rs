@@ -254,6 +254,7 @@ impl State {
         registry.register::<Door>("door".to_string());
         registry.register::<BlocksVisibility>("blocks_visibility".to_string());
         registry.register::<AlwaysVisible>("always_visible".to_string());
+        registry.register::<Bystander>("bystander".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -463,7 +464,7 @@ fn main() -> BError {
         // .with_font("dungeonfont.png", 32, 32)
         .with_font("terminal8x8.png", 8, 8)
         .with_simple_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
-        .with_simple_console_no_bg(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
+        .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .build()?;
     // context.with_post_scanlines(true);
