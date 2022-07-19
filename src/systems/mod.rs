@@ -84,12 +84,12 @@ pub fn build_monster_scheduler() -> Schedule {
         .flush()
         .add_system(hunger::hunger_system())
         .add_system(damage::damage_system())
+        .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(movement::movement_system())
         .flush()
         .add_system(fov::fov_system())
         .add_system(trigger::trigger_system())
-        .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(damage::damage_system())
         .add_system(map_indexing::map_indexing_system())
@@ -151,7 +151,7 @@ fn name_for(entity: &Entity, ecs: &SubWorld) -> (String, bool) {
         .get_component::<Player>()
         .is_ok()
     {
-        ("Player".to_string(), true)
+        ("Hero".to_string(), true)
     } else {
         ("Someone".to_string(), false)
     }

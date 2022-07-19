@@ -5,7 +5,7 @@ const ALLOW_SHOW_COORDINATES: bool = false;
 #[system]
 #[read_component(Point)]
 #[read_component(Name)]
-#[read_component(Health)]
+#[read_component(Pools)]
 #[read_component(Armor)]
 #[read_component(FieldOfView)]
 #[read_component(Player)]
@@ -32,8 +32,8 @@ pub fn tooltips(
         .filter(|(_, pos, _)| **pos == map_pos && player_fov.visible_tiles.contains(&pos))
         .for_each(|(entity, _, name)| {
             let display =
-                if let Ok(health) = ecs.entry_ref(*entity).unwrap().get_component::<Health>() {
-                    format!("{} : {} hp", &name.0, health.current)
+                if let Ok(stats) = ecs.entry_ref(*entity).unwrap().get_component::<Pools>() {
+                    format!("{} : {} hp", &name.0, stats.hit_points.current)
                 } else {
                     name.0.clone()
                 };

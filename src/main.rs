@@ -1,6 +1,7 @@
 mod camera;
 mod components;
 mod gamelog;
+mod gamesystem;
 mod map;
 mod map_builder;
 mod random_table;
@@ -32,6 +33,7 @@ mod prelude {
     pub use crate::camera::*;
     pub use crate::components::*;
     pub use crate::gamelog::*;
+    pub use crate::gamesystem::*;
     pub use crate::map::*;
     pub use crate::map_builder::*;
     pub use crate::random_table::*;
@@ -161,15 +163,6 @@ impl State {
 
         let player_pos = map_builder.build_data.starting_position.unwrap();
 
-        <(&mut Player, &mut Point, &mut Health)>::query().for_each_mut(
-            &mut self.ecs,
-            |(player, pos, health)| {
-                player.map_level = (map_level + 1) as u32;
-                *pos = player_pos;
-                health.current = i32::max(health.current, health.max / 2);
-            },
-        );
-
         self.resources.insert(map_builder.build_data.map.clone());
         self.resources.insert(Camera::new(player_pos));
         self.resources.insert(TurnState::AwaitingInput);
@@ -185,7 +178,7 @@ impl State {
             .get_mut::<Gamelog>()
             .unwrap()
             .entries
-            .push("You descend to the next level, taking a moment to heal.".to_string());
+            .push("You descend to the next level.".to_string());
     }
 
     fn game_over(&mut self, ctx: &mut BTerm) {
@@ -221,7 +214,6 @@ impl State {
         registry.register::<Render>("render".to_string());
         registry.register::<Player>("player".to_string());
         registry.register::<Enemy>("enemy".to_string());
-        registry.register::<Health>("health".to_string());
         registry.register::<Name>("name".to_string());
         registry.register::<ChasingPlayer>("chasing_player".to_string());
         registry.register::<Item>("item".to_string());
@@ -257,6 +249,10 @@ impl State {
         registry.register::<Bystander>("bystander".to_string());
         registry.register::<Vendor>("vendor".to_string());
         registry.register::<Quips>("quips".to_string());
+        registry.register::<Attribute>("attr".to_string());
+        registry.register::<Attributes>("attrs".to_string());
+        registry.register::<Skill>("skill".to_string());
+        registry.register::<Skills>("skills".to_string());
         registry.on_unknown(Ignore);
     }
 

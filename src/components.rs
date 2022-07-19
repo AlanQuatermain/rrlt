@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::prelude::*;
 
@@ -21,12 +21,6 @@ pub struct Enemy;
 pub struct WantsToMove {
     pub entity: Entity,
     pub destination: Point,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Health {
-    pub current: i32,
-    pub max: i32,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -211,10 +205,72 @@ pub struct Vendor;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Quips(pub Vec<String>);
 
-// #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
-// pub struct CombatStats {
-//     pub max_hp: i32,
-//     pub hp: i32,
-//     pub power: i32,
-//     pub defense: i32,
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Attribute {
+    pub base: i32,
+    pub modifiers: i32,
+    pub bonus: i32,
+}
+
+impl Default for Attribute {
+    fn default() -> Self {
+        Self {
+            base: 11,
+            modifiers: 0,
+            bonus: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Attributes {
+    pub might: Attribute,
+    pub fitness: Attribute,
+    pub quickness: Attribute,
+    pub intelligence: Attribute,
+}
+
+impl Default for Attributes {
+    fn default() -> Self {
+        Self {
+            might: Default::default(),
+            fitness: Default::default(),
+            quickness: Default::default(),
+            intelligence: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
+pub enum Skill {
+    Melee,
+    Defense,
+    Magic,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Skills(pub HashMap<Skill, i32>);
+
+impl Default for Skills {
+    fn default() -> Self {
+        let mut map = HashMap::new();
+        map.insert(Skill::Melee, 1);
+        map.insert(Skill::Defense, 1);
+        map.insert(Skill::Magic, 1);
+        Self(map)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pool {
+    pub max: i32,
+    pub current: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pools {
+    pub hit_points: Pool,
+    pub mana: Pool,
+    pub xp: i32,
+    pub level: i32,
+}

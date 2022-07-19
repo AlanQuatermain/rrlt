@@ -13,10 +13,6 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             glyph: to_cp437('@'),
             render_order: 1,
         },
-        Health {
-            current: 30,
-            max: 30,
-        },
         FieldOfView::new(8),
         Damage(5),
         Armor(2),
@@ -25,6 +21,20 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
         HungerClock {
             state: HungerState::WellFed,
             duration: 20,
+        },
+        Attributes::default(),
+        Skills::default(),
+        Pools {
+            hit_points: Pool {
+                current: player_hp_at_level(11, 1),
+                max: player_hp_at_level(11, 1),
+            },
+            mana: Pool {
+                current: mana_at_level(11, 1),
+                max: mana_at_level(11, 1),
+            },
+            xp: 0,
+            level: 1,
         },
     ));
 }

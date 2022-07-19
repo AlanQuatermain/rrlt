@@ -4,7 +4,7 @@ use crate::prelude::*;
 #[read_component(Point)]
 #[read_component(Player)]
 #[read_component(Enemy)]
-#[write_component(Health)]
+#[write_component(Pools)]
 #[read_component(Item)]
 #[read_component(Carried)]
 #[read_component(Weapon)]
@@ -204,11 +204,11 @@ pub fn player_input(
                     _ => false,
                 };
             if can_heal {
-                <&mut Health>::query()
+                <&mut Pools>::query()
                     .filter(component::<Player>())
-                    .for_each_mut(ecs, |health| {
-                        if health.current < health.max {
-                            health.current += 1;
+                    .for_each_mut(ecs, |stats| {
+                        if stats.hit_points.current < stats.hit_points.max {
+                            stats.hit_points.current += 1;
                         }
                     });
             }

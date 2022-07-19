@@ -4,11 +4,10 @@ use crate::prelude::*;
 #[read_component(Point)]
 #[read_component(ChasingPlayer)]
 #[read_component(FieldOfView)]
-#[read_component(Health)]
 #[read_component(Player)]
 pub fn chasing(#[resource] map: &Map, ecs: &SubWorld, commands: &mut CommandBuffer) {
     let mut movers = <(Entity, &Point, &ChasingPlayer, &FieldOfView)>::query();
-    let mut positions = <(Entity, &Point, &Health)>::query();
+    let mut positions = <(Entity, &Point)>::query();
     let mut player = <(&Point, &Player)>::query();
 
     if movers.iter(ecs).count() == 0 {
@@ -38,8 +37,8 @@ pub fn chasing(#[resource] map: &Map, ecs: &SubWorld, commands: &mut CommandBuff
             let mut attacked = false;
             positions
                 .iter(ecs)
-                .filter(|(_, target_pos, _)| **target_pos == destination)
-                .for_each(|(victim, _, _)| {
+                .filter(|(_, target_pos)| **target_pos == destination)
+                .for_each(|(victim, _)| {
                     if ecs
                         .entry_ref(*victim)
                         .unwrap()

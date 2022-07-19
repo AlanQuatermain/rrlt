@@ -19,7 +19,7 @@ pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
     let player_fov = fov.iter(ecs).nth(0).unwrap();
 
     renderables
-        .filter(!component::<Player>() & !component::<Hidden>())
+        .filter(!component::<Player>() & !component::<Hidden>() & !component::<ParticleLifetime>())
         .iter(ecs)
         .filter(|(pos, _, entity)| {
             ecs.entry_ref(**entity)
@@ -44,4 +44,12 @@ pub fn entity_render(ecs: &SubWorld, #[resource] camera: &Camera) {
     draw_batch = DrawBatch::new();
     draw_batch.set(*pos - offset, render.color, render.glyph);
     draw_batch.submit(6000).expect("Batch error");
+
+    draw_batch = DrawBatch::new();
+    <(&Point, &Render)>::query()
+        .filter(component::<ParticleLifetime>())
+        .for_each(ecs, |(pos, render)| {
+            draw_batch.set(*pos - offset, render.color, render.glyph);
+        });
+    draw_batch.submit(7000).expect("Batch error");
 }

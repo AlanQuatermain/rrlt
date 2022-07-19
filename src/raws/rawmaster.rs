@@ -189,21 +189,87 @@ pub fn spawn_named_mob(
     }
     commands.add_component(
         entity,
-        Health {
-            max: mob_template.stats.max_hp,
-            current: mob_template.stats.hp,
-        },
-    );
-    commands.add_component(entity, Damage(mob_template.stats.power));
-    commands.add_component(entity, Armor(mob_template.stats.defense));
-    commands.add_component(
-        entity,
         FieldOfView {
             visible_tiles: HashSet::new(),
             radius: mob_template.vision_range,
             is_dirty: true,
         },
     );
+
+    let mut attr = Attributes::default();
+    let mut mob_fitness = 11;
+    let mut mob_int = 11;
+    if let Some(might) = mob_template.attributes.might {
+        attr.might = Attribute {
+            base: might,
+            modifiers: 0,
+            bonus: attr_bonus(might),
+        }
+    }
+    if let Some(fitness) = mob_template.attributes.fitness {
+        attr.fitness = Attribute {
+            base: fitness,
+            modifiers: 0,
+            bonus: attr_bonus(fitness),
+        };
+        mob_fitness = fitness;
+    }
+    if let Some(quickness) = mob_template.attributes.quickness {
+        attr.quickness = Attribute {
+            base: quickness,
+            modifiers: 0,
+            bonus: attr_bonus(quickness),
+        }
+    }
+    if let Some(intelligence) = mob_template.attributes.intelligence {
+        attr.intelligence = Attribute {
+            base: intelligence,
+            modifiers: 0,
+            bonus: attr_bonus(intelligence),
+        };
+        mob_int = intelligence;
+    }
+    commands.add_component(entity, attr);
+
+    let mob_level = mob_template.level.unwrap_or(1);
+    let mob_hp = npc_hp(mob_fitness, mob_level);
+    let mob_mana = mana_at_level(mob_int, mob_level);
+    commands.add_component(
+        entity,
+        Pools {
+            level: mob_level,
+            xp: 0,
+            hit_points: Pool {
+                current: mob_hp,
+                max: mob_hp,
+            },
+            mana: Pool {
+                current: mob_mana,
+                max: mob_mana,
+            },
+        },
+    );
+
+    let mut skills = Skills::default();
+    if let Some(mobskills) = &mob_template.skills {
+        for (name, value) in mobskills.iter() {
+            match name.as_ref() {
+                "Melee" => {
+                    skills.0.insert(Skill::Melee, *value);
+                }
+                "Defense" => {
+                    skills.0.insert(Skill::Defense, *value);
+                }
+                "Magic" => {
+                    skills.0.insert(Skill::Magic, *value);
+                }
+                _ => {
+                    log(format!("Unknown skill referenced: [{}]", name));
+                }
+            }
+        }
+    }
+    commands.add_component(entity, skills);
 
     true
 }

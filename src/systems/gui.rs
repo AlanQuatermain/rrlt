@@ -5,7 +5,7 @@ use crate::prelude::*;
 #[read_component(Item)]
 #[read_component(Carried)]
 #[read_component(Name)]
-#[read_component(Health)]
+#[read_component(Pools)]
 #[read_component(HungerClock)]
 pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map) {
     let mut draw_batch = DrawBatch::new();
@@ -16,15 +16,18 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
     let depth = format!("Depth: {}", player.map_level + 1);
     draw_batch.print_color(Point::new(2, 43), depth, ColorPair::new(YELLOW, BLACK));
 
-    let mut health_query = <(&Health, &HungerClock)>::query().filter(component::<Player>());
-    let (player_health, hunger_clock) = health_query.iter(ecs).nth(0).unwrap();
-    let health = format!(" HP: {} / {}", player_health.current, player_health.max);
+    let mut health_query = <(&Pools, &HungerClock)>::query().filter(component::<Player>());
+    let (stats, hunger_clock) = health_query.iter(ecs).nth(0).unwrap();
+    let health = format!(
+        " HP: {} / {}",
+        stats.hit_points.current, stats.hit_points.max
+    );
     draw_batch.print_color(Point::new(12, 43), health, ColorPair::new(YELLOW, BLACK));
     draw_batch.bar_horizontal(
         Point::new(28, 43),
         51,
-        player_health.current,
-        player_health.max,
+        stats.hit_points.current,
+        stats.hit_points.max,
         ColorPair::new(RED, BLACK),
     );
 
