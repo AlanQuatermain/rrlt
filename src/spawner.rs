@@ -2,10 +2,12 @@ use crate::prelude::*;
 
 pub enum SpawnType {
     AtPosition { point: Point },
+    Equipped { by: Entity },
+    Carried { by: Entity },
 }
 
 pub fn spawn_player(ecs: &mut World, pos: Point) {
-    ecs.push((
+    let player = ecs.push((
         Player { map_level: 0 },
         pos,
         Render {
@@ -14,8 +16,6 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             render_order: 1,
         },
         FieldOfView::new(8),
-        Damage(5),
-        Armor(2),
         BlocksTile {},
         SerializeMe,
         HungerClock {
@@ -37,6 +37,48 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             level: 1,
         },
     ));
+
+    let mut commands = CommandBuffer::new(ecs);
+
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Rusty Longsword",
+        SpawnType::Equipped { by: player },
+        &mut commands,
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Dried Sausage",
+        SpawnType::Carried { by: player },
+        &mut commands,
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Beer",
+        SpawnType::Carried { by: player },
+        &mut commands,
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Stained Tunic",
+        SpawnType::Equipped { by: player },
+        &mut commands,
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Torn Trousers",
+        SpawnType::Equipped { by: player },
+        &mut commands,
+    );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Old Boots",
+        SpawnType::Equipped { by: player },
+        &mut commands,
+    );
+
+    let mut resources = Resources::default(); // unused in this instance
+    commands.flush(ecs, &mut resources);
 }
 
 #[allow(dead_code)]

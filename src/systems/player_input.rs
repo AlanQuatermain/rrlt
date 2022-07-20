@@ -7,7 +7,7 @@ use crate::prelude::*;
 #[write_component(Pools)]
 #[read_component(Item)]
 #[read_component(Carried)]
-#[read_component(Weapon)]
+#[read_component(MeleeWeapon)]
 #[write_component(FieldOfView)]
 #[read_component(HungerClock)]
 #[write_component(Door)]

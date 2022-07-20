@@ -77,6 +77,37 @@ impl RawMaster {
     }
 }
 
+fn find_slot_for_equippable_item(tag: &str, raws: &RawMaster) -> EquipmentSlot {
+    if !raws.item_index.contains_key(tag) {
+        panic!("Trying to equip an unknown item: {}", tag);
+    }
+
+    let item_index = raws.item_index[tag];
+    let item = &raws.raws.items[item_index];
+    if item.weapon.is_some() {
+        return EquipmentSlot::Melee;
+    } else if let Some(wearable) = &item.wearable {
+        return string_to_slot(&wearable.slot);
+    }
+    panic!("Trying to equip {}, but it has no slot tag.", tag);
+}
+
+fn string_to_slot(name: &str) -> EquipmentSlot {
+    match name {
+        "Shield" => EquipmentSlot::Shield,
+        "Head" => EquipmentSlot::Head,
+        "Torso" => EquipmentSlot::Torso,
+        "Legs" => EquipmentSlot::Legs,
+        "Feet" => EquipmentSlot::Feet,
+        "Hands" => EquipmentSlot::Hands,
+        "Melee" => EquipmentSlot::Melee,
+        _ => {
+            log(format!("WARNING: Unknown equipment slot type [{}]", name));
+            EquipmentSlot::Melee
+        }
+    }
+}
+
 pub fn spawn_named_item(
     raws: &RawMaster,
     key: &str,
@@ -91,7 +122,7 @@ pub fn spawn_named_item(
     let entity = commands.push((crate::components::Item, Name(item_template.name.clone())));
 
     // Spawn in the specified location
-    commands.add_component(entity, get_position(pos));
+    set_position(&entity, pos, key, raws, commands);
 
     if let Some(renderable) = &item_template.renderable {
         commands.add_component(entity, get_renderable(&renderable));
@@ -137,17 +168,27 @@ pub fn spawn_named_item(
                 slot: EquipmentSlot::Melee,
             },
         );
-        commands.add_component(entity, Damage(weapon.power_bonus));
-        commands.add_component(entity, Weapon);
+        let mut wpn = MeleeWeapon {
+            attribute: WeaponAttribute::Might,
+            damage_die: weapon.base_damage.clone(),
+            hit_bonus: weapon.hit_bonus,
+        };
+        match weapon.attribute.as_str() {
+            "Quickness" => wpn.attribute = WeaponAttribute::Quickness,
+            _ => wpn.attribute = WeaponAttribute::Might,
+        }
+        commands.add_component(entity, wpn);
     }
-    if let Some(shield) = &item_template.shield {
+
+    if let Some(wearable) = &item_template.wearable {
+        let slot = string_to_slot(&wearable.slot);
+        commands.add_component(entity, Equippable { slot });
         commands.add_component(
             entity,
-            Equippable {
-                slot: EquipmentSlot::Shield,
+            Wearable {
+                armor_class: wearable.armor_class,
             },
         );
-        commands.add_component(entity, Armor(shield.defense_bonus));
     }
 
     true
@@ -164,7 +205,8 @@ pub fn spawn_named_mob(
     }
     let mob_template = &raws.raws.mobs[raws.mob_index[key]];
 
-    let entity = commands.push((Name(mob_template.name.clone()), get_position(pos)));
+    let entity = commands.push(((), Name(mob_template.name.clone())));
+    set_position(&entity, pos, key, raws, commands);
 
     match mob_template.ai.as_ref() {
         "melee" => {
@@ -271,6 +313,30 @@ pub fn spawn_named_mob(
     }
     commands.add_component(entity, skills);
 
+    if let Some(wielding) = &mob_template.equipped {
+        for tag in wielding.iter() {
+            spawn_named_entity(raws, tag, SpawnType::Equipped { by: entity }, commands);
+        }
+    }
+
+    if let Some(natural) = &mob_template.natural {
+        let mut nature = NaturalAttackDefense {
+            armor_class: natural.armor_class.unwrap_or(0),
+            attacks: Vec::new(),
+        };
+        if let Some(attacks) = &natural.attacks {
+            for nattack in attacks.iter() {
+                let attack = NaturalAttack {
+                    name: nattack.name.clone(),
+                    hit_bonus: nattack.hit_bonus,
+                    damage_die: nattack.damage.clone(),
+                };
+                nature.attacks.push(attack);
+            }
+        }
+        commands.add_component(entity, nature);
+    }
+
     true
 }
 
@@ -285,7 +351,8 @@ pub fn spawn_named_prop(
     }
     let template = &raws.raws.props[raws.prop_index[key]];
 
-    let entity = commands.push(((), Name(template.name.clone()), get_position(pos)));
+    let entity = commands.push(((), Name(template.name.clone())));
+    set_position(&entity, pos, key, raws, commands);
 
     if let Some(renderable) = &template.renderable {
         commands.add_component(entity, get_renderable(renderable));
@@ -371,8 +438,25 @@ fn get_renderable(renderable: &super::Renderable) -> crate::components::Render {
     }
 }
 
-fn get_position(spawn_type: SpawnType) -> Point {
+fn set_position(
+    entity: &Entity,
+    spawn_type: SpawnType,
+    tag: &str,
+    raws: &RawMaster,
+    commands: &mut CommandBuffer,
+) {
     match spawn_type {
-        SpawnType::AtPosition { point } => point,
+        SpawnType::AtPosition { point } => commands.add_component(*entity, point),
+        SpawnType::Carried { by } => commands.add_component(*entity, Carried(by)),
+        SpawnType::Equipped { by } => {
+            commands.add_component(*entity, Carried(by));
+            commands.add_component(
+                *entity,
+                Equipped {
+                    owner: by,
+                    slot: find_slot_for_equippable_item(tag, raws),
+                },
+            );
+        }
     }
 }

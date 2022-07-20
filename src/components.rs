@@ -89,14 +89,36 @@ pub struct ActivateItem {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Damage(pub i32);
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Weapon;
+#[derive(PartialEq, Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum WeaponAttribute {
+    Might,
+    Quickness,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MeleeWeapon {
+    pub attribute: WeaponAttribute,
+    pub damage_die: String,
+    pub hit_bonus: i32,
+}
+
+impl Default for MeleeWeapon {
+    fn default() -> Self {
+        Self {
+            attribute: WeaponAttribute::Might,
+            damage_die: "1d4".to_string(),
+            hit_bonus: 0,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Wearable {
+    pub armor_class: f32,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BlocksTile;
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Armor(pub i32);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WantsToCollect {
@@ -129,6 +151,11 @@ pub struct SerializeMe;
 pub enum EquipmentSlot {
     Melee,
     Shield,
+    Head,
+    Torso,
+    Legs,
+    Feet,
+    Hands,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
@@ -273,4 +300,26 @@ pub struct Pools {
     pub mana: Pool,
     pub xp: i32,
     pub level: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NaturalAttack {
+    pub name: String,
+    pub damage_die: String,
+    pub hit_bonus: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NaturalAttackDefense {
+    pub armor_class: i32,
+    pub attacks: Vec<NaturalAttack>,
+}
+
+impl Default for NaturalAttackDefense {
+    fn default() -> Self {
+        Self {
+            armor_class: 10,
+            attacks: Vec::default(),
+        }
+    }
 }

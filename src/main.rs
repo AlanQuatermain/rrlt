@@ -221,9 +221,10 @@ impl State {
         registry.register::<ProvidesHealing>("provides_healing".to_string());
         registry.register::<ProvidesDungeonMap>("provides_map".to_string());
         registry.register::<Damage>("damage".to_string());
-        registry.register::<Weapon>("weapon".to_string());
+        registry.register::<MeleeWeapon>("melee_weapon".to_string());
+        registry.register::<WeaponAttribute>("wattr".to_string());
+        registry.register::<Wearable>("wearable".to_string());
         registry.register::<BlocksTile>("blocks_tile".to_string());
-        registry.register::<Armor>("armor".to_string());
         registry.register::<Consumable>("consumable".to_string());
         registry.register::<Ranged>("ranged".to_string());
         registry.register::<AreaOfEffect>("aoe".to_string());
@@ -253,6 +254,8 @@ impl State {
         registry.register::<Attributes>("attrs".to_string());
         registry.register::<Skill>("skill".to_string());
         registry.register::<Skills>("skills".to_string());
+        registry.register::<NaturalAttack>("nattack".to_string());
+        registry.register::<NaturalAttackDefense>("natkdef".to_string());
         registry.on_unknown(Ignore);
     }
 

@@ -6,7 +6,8 @@ use crate::prelude::*;
 #[read_component(Player)]
 #[read_component(Pools)]
 #[read_component(Damage)]
-#[read_component(Armor)]
+#[read_component(Wearable)]
+#[read_component(MeleeWeapon)]
 #[read_component(Carried)]
 #[read_component(Name)]
 #[read_component(Equipped)]
@@ -14,6 +15,7 @@ use crate::prelude::*;
 #[read_component(Attributes)]
 #[read_component(Skills)]
 #[read_component(HungerClock)]
+#[read_component(NaturalAttackDefense)]
 pub fn combat(
     message: &Entity,
     wants_attack: &WantsToAttack,
@@ -43,10 +45,27 @@ pub fn combat(
         return;
     }
 
+    // Find the attacker's weapon.
+    let mut weapon_info = <(&MeleeWeapon, &Equipped)>::query()
+        .iter(ecs)
+        .filter(|(_, e)| e.owner == attacker)
+        .find_map(|(wpn, _)| Some(wpn.clone()))
+        .unwrap_or(MeleeWeapon::default());
+    if let Ok(nat) = attacker_entry.get_component::<NaturalAttackDefense>() {
+        if !nat.attacks.is_empty() {
+            let attack = rng.random_slice_entry(nat.attacks.as_slice()).unwrap();
+            weapon_info.hit_bonus = attack.hit_bonus;
+            weapon_info.damage_die = attack.damage_die.clone();
+        }
+    }
+
     let natural_roll = rng.roll_dice(1, 20);
-    let attr_hit_bonus = attacker_attrs.might.bonus;
+    let attr_hit_bonus = match weapon_info.attribute {
+        WeaponAttribute::Might => attacker_attrs.might.bonus,
+        WeaponAttribute::Quickness => attacker_attrs.quickness.bonus,
+    };
     let skill_hit_bonus = skill_bonus(Skill::Melee, attacker_skills);
-    let weapon_hit_bonus = 0; // TODO: once weapons support this
+    let weapon_hit_bonus = weapon_info.hit_bonus;
     let mut status_hit_bonus = 0;
     if let Ok(hc) = attacker_entry.get_component::<HungerClock>() {
         if hc.state == HungerState::WellFed {
@@ -56,24 +75,31 @@ pub fn combat(
     let modified_hit_roll =
         natural_roll + attr_hit_bonus + skill_hit_bonus + weapon_hit_bonus + status_hit_bonus;
 
-    let base_armor_class = 10;
+    let armor_item_bonus_f: f32 = <(&Wearable, &Equipped)>::query()
+        .iter(ecs)
+        .filter(|(_, e)| e.owner == victim)
+        .map(|(item, _)| item.armor_class)
+        .sum();
+
+    let base_armor_class = victim_entry
+        .get_component::<NaturalAttackDefense>()
+        .map(|n| n.armor_class)
+        .unwrap_or(10);
     let armor_quickness_bonus = victim_attrs.quickness.bonus;
     let armor_skill_bonus = skill_bonus(Skill::Defense, victim_skills);
-    let armor_item_bonus = 0; // TODO: once armor supports this
+    let armor_item_bonus = armor_item_bonus_f as i32;
     let armor_class =
         base_armor_class + armor_quickness_bonus + armor_skill_bonus + armor_item_bonus;
 
     if natural_roll != 1 && (natural_roll == 20 || modified_hit_roll > armor_class) {
         // Target hit! Until we support weapons, we're doing with 1d4
-        let base_damage = rng.roll_dice(1, 4);
+        let base_damage = rng
+            .roll_str(weapon_info.damage_die)
+            .expect("Failed to parse die roll");
         let attr_damage_bonus = attacker_attrs.might.bonus;
         let skill_damage_bonus = skill_bonus(Skill::Melee, attacker_skills);
-        let weapon_damage_bonus = 0;
 
-        let damage = i32::max(
-            0,
-            base_damage + attr_damage_bonus + skill_damage_bonus + weapon_damage_bonus,
-        );
+        let damage = i32::max(0, base_damage + attr_damage_bonus + skill_damage_bonus);
         commands.push((
             (),
             InflictDamage {

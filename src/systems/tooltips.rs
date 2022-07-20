@@ -6,15 +6,9 @@ const ALLOW_SHOW_COORDINATES: bool = false;
 #[read_component(Point)]
 #[read_component(Name)]
 #[read_component(Pools)]
-#[read_component(Armor)]
 #[read_component(FieldOfView)]
 #[read_component(Player)]
-pub fn tooltips(
-    ecs: &SubWorld,
-    #[resource] mouse_pos: &Point,
-    #[resource] camera: &Camera,
-    #[resource] key: &Option<VirtualKeyCode>,
-) {
+pub fn tooltips(ecs: &SubWorld, #[resource] mouse_pos: &Point, #[resource] camera: &Camera) {
     let positions = <(Entity, &Point, &Name)>::query();
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
 
