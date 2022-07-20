@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, KeyState};
 use std::collections::HashSet;
 
 #[system]
@@ -12,9 +12,7 @@ pub fn ranged_target(
     ecs: &SubWorld,
     #[resource] map: &Map,
     #[resource] turn_state: &mut TurnState,
-    #[resource] mouse_pos: &Point,
-    #[resource] mouse_clicked: &bool,
-    #[resource] key: &Option<VirtualKeyCode>,
+    #[resource] key_state: &KeyState,
     #[resource] camera: &Camera,
     commands: &mut CommandBuffer,
 ) {
@@ -23,7 +21,7 @@ pub fn ranged_target(
         _ => return,
     };
     let offset = Point::new(camera.left_x, camera.top_y);
-    let map_pos = *mouse_pos + offset;
+    let map_pos = key_state.mouse_pos + offset;
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
     let player_fov = fov.iter(ecs).nth(0).unwrap();
     let (player_pos, _, player) = <(&Point, &Player, Entity)>::query()
@@ -61,7 +59,7 @@ pub fn ranged_target(
     // Draw mouse cursor
     if available_cells.contains(&map_pos) {
         if radius <= 1 {
-            draw_batch.set_bg(*mouse_pos, CYAN);
+            draw_batch.set_bg(key_state.mouse_pos, CYAN);
         } else {
             let tiles = field_of_view_set(map_pos, radius, map);
             for pos in tiles {
@@ -70,7 +68,7 @@ pub fn ranged_target(
                 }
             }
         }
-        if *mouse_clicked {
+        if key_state.mouse_clicked {
             commands.push((
                 (),
                 ActivateItem {
@@ -86,7 +84,7 @@ pub fn ranged_target(
 
     draw_batch.submit(2000).expect("Batch error");
 
-    if let Some(key) = *key {
+    if let Some(key) = key_state.key {
         match key {
             VirtualKeyCode::Escape => *turn_state = TurnState::ShowingInventory,
             _ => {}

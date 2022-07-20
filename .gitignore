@@ -1,3 +1,4 @@
 /target
 .idea
 savegame.json
+.DS_Store

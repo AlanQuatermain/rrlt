@@ -52,6 +52,7 @@ pub struct Map {
     pub width: usize,
     pub height: usize,
     pub depth: i32,
+    pub name: String,
 
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
@@ -62,12 +63,13 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(depth: i32, width: usize, height: usize) -> Self {
+    pub fn new<S: ToString>(depth: i32, width: usize, height: usize, name: S) -> Self {
         let num_tiles = width * height;
         Self {
             width,
             height,
             depth,
+            name: name.to_string(),
             tiles: vec![TileType::Floor; num_tiles],
             revealed_tiles: vec![false; num_tiles],
             blocked: vec![false; num_tiles],

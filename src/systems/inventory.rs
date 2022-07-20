@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, KeyState};
 
 #[system]
 #[read_component(Player)]
@@ -13,7 +13,7 @@ use crate::prelude::*;
 pub fn inventory(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] key: &mut Option<VirtualKeyCode>,
+    #[resource] key_state: &KeyState,
     #[resource] turn_state: &mut TurnState,
 ) {
     match *turn_state {
@@ -98,11 +98,11 @@ pub fn inventory(
 
     draw_batch.submit(12000).expect("Batch error");
 
-    if let Some(input) = key {
+    if let Some(input) = key_state.key {
         match input {
             VirtualKeyCode::Escape => *turn_state = TurnState::AwaitingInput,
             _ => {
-                let selection = letter_to_option(*input);
+                let selection = letter_to_option(input);
                 if selection > -1 && selection < count as i32 {
                     match *turn_state {
                         TurnState::ShowingInventory => {
@@ -113,7 +113,6 @@ pub fn inventory(
                                     range: range.0,
                                     item,
                                 };
-                                *key = None;
                                 return;
                             } else {
                                 commands.push((
@@ -142,6 +141,5 @@ pub fn inventory(
                 }
             }
         }
-        *key = None; // Prevent anything else processing this key input
     }
 }

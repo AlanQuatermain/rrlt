@@ -8,7 +8,7 @@ pub fn town_builder(
     height: usize,
     _rng: &mut RandomNumberGenerator,
 ) -> BuilderChain {
-    let mut chain = BuilderChain::new(new_depth, width, height);
+    let mut chain = BuilderChain::new(new_depth, width, height, "The Town of Brackleton");
     chain.initial(TownBuilder::new());
     chain
 }

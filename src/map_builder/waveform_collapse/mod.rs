@@ -52,6 +52,7 @@ impl WaveformCollapseBuilder {
             build_data.map.depth,
             build_data.map.width,
             build_data.map.height,
+            build_data.map.name.clone(),
         );
         build_data.map.fill(TileType::Wall);
         loop {
@@ -77,6 +78,7 @@ impl WaveformCollapseBuilder {
             build_data.map.depth,
             build_data.map.width,
             build_data.map.height,
+            build_data.map.name.clone(),
         );
         let mut counter = 0;
         let mut pos = Point::new(1, 1);
@@ -96,6 +98,7 @@ impl WaveformCollapseBuilder {
                         build_data.map.depth,
                         build_data.map.width,
                         build_data.map.height,
+                        build_data.map.name.clone(),
                     );
 
                     pos = Point::new(1, 1);

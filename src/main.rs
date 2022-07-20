@@ -21,7 +21,7 @@ mod prelude {
     pub use serde::*;
 
     pub const SCREEN_WIDTH: i32 = 80;
-    pub const SCREEN_HEIGHT: i32 = 50;
+    pub const SCREEN_HEIGHT: i32 = 60;
     pub const DISPLAY_WIDTH: i32 = SCREEN_WIDTH / 2;
     pub const DISPLAY_HEIGHT: i32 = SCREEN_HEIGHT / 2;
 
@@ -51,6 +51,28 @@ use std::fs::File;
 
 #[macro_use]
 extern crate lazy_static;
+
+pub struct KeyState {
+    pub shift: bool,
+    pub control: bool,
+    pub alt: bool,
+    pub mouse_pos: Point,
+    pub mouse_clicked: bool,
+    pub key: Option<VirtualKeyCode>,
+}
+
+impl KeyState {
+    fn new(ctx: &BTerm) -> Self {
+        Self {
+            shift: ctx.shift,
+            control: ctx.control,
+            alt: ctx.alt,
+            mouse_pos: Point::from_tuple(ctx.mouse_pos()),
+            mouse_clicked: ctx.left_click,
+            key: ctx.key,
+        }
+    }
+}
 
 struct State {
     ecs: World,
@@ -405,18 +427,21 @@ impl GameState for State {
         ctx.set_active_console(2);
         ctx.cls();
 
-        self.resources.insert(ctx.key);
         ctx.set_active_console(0);
-        self.resources.insert(Point::from_tuple(ctx.mouse_pos()));
-        self.resources.insert(ctx.left_click);
+        self.resources.insert(KeyState::new(ctx));
         self.resources.insert(ctx.frame_time_ms);
         self.resources.insert(ParticleBuilder::new());
 
         let current_state = self.resources.get::<TurnState>().unwrap().clone();
         match current_state {
-            TurnState::AwaitingInput => self
-                .input_systems
-                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::AwaitingInput => {
+                self.input_systems
+                    .execute(&mut self.ecs, &mut self.resources);
+                if self.resources.get::<TurnState>().unwrap().clone() != current_state {
+                    // if we changed state, clear keyboard input
+                    ctx.key = None;
+                }
+            }
             TurnState::PlayerTurn => self
                 .player_systems
                 .execute(&mut self.ecs, &mut self.resources),
@@ -464,6 +489,7 @@ fn main() -> BError {
         .with_resource_path("resources/")
         // .with_font("dungeonfont.png", 32, 32)
         .with_font("terminal8x8.png", 8, 8)
+        // .with_font("drake_10x10.png", 10, 10)
         .with_simple_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")

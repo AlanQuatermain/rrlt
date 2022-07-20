@@ -7,20 +7,24 @@ pub struct Camera {
     pub bottom_y: i32,
 }
 
+const CAMERA_WIDTH: i32 = 48;
+const CAMERA_HEIGHT: i32 = 44;
+
 impl Camera {
     pub fn new(player_position: Point) -> Self {
+        // View area is 48x44, thus player is at {24,22}
         Self {
-            left_x: player_position.x - SCREEN_WIDTH / 2, // DISPLAY_WIDTH / 2,
-            right_x: player_position.x + SCREEN_WIDTH / 2, // DISPLAY_WIDTH / 2,
-            top_y: player_position.y - SCREEN_HEIGHT / 2, //DISPLAY_HEIGHT / 2,
-            bottom_y: player_position.y + SCREEN_HEIGHT / 2, //DISPLAY_HEIGHT / 2,
+            left_x: player_position.x - CAMERA_WIDTH / 2, // DISPLAY_WIDTH / 2,
+            right_x: player_position.x + CAMERA_WIDTH / 2, // DISPLAY_WIDTH / 2,
+            top_y: player_position.y - CAMERA_HEIGHT / 2, //DISPLAY_HEIGHT / 2,
+            bottom_y: player_position.y + CAMERA_HEIGHT / 2, //DISPLAY_HEIGHT / 2,
         }
     }
 
     pub fn on_player_move(&mut self, player_position: Point) {
-        self.left_x = player_position.x - SCREEN_WIDTH / 2; //DISPLAY_WIDTH / 2;
-        self.right_x = player_position.x + SCREEN_WIDTH / 2; //DISPLAY_WIDTH / 2;
-        self.top_y = player_position.y - SCREEN_HEIGHT / 2; //DISPLAY_HEIGHT / 2;
-        self.bottom_y = player_position.y + SCREEN_HEIGHT / 2; //DISPLAY_HEIGHT / 2;
+        self.left_x = player_position.x - CAMERA_WIDTH / 2; //DISPLAY_WIDTH / 2;
+        self.right_x = player_position.x + CAMERA_WIDTH / 2; //DISPLAY_WIDTH / 2;
+        self.top_y = player_position.y - CAMERA_HEIGHT / 2; //DISPLAY_HEIGHT / 2;
+        self.bottom_y = player_position.y + CAMERA_HEIGHT / 2; //DISPLAY_HEIGHT / 2;
     }
 }

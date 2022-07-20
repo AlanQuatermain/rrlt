@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, KeyState};
 
 #[system]
 #[read_component(Point)]
@@ -8,6 +8,7 @@ use crate::prelude::*;
 #[read_component(Item)]
 #[read_component(Carried)]
 #[read_component(MeleeWeapon)]
+#[read_component(Ranged)]
 #[write_component(FieldOfView)]
 #[read_component(HungerClock)]
 #[write_component(Door)]
@@ -20,7 +21,7 @@ pub fn player_input(
     commands: &mut CommandBuffer,
     #[resource] map: &Map,
     #[resource] gamelog: &mut Gamelog,
-    #[resource] input_key: &mut Option<VirtualKeyCode>,
+    #[resource] key_state: &KeyState,
     #[resource] turn_state: &mut TurnState,
 ) {
     // don't process input here if we're in inventory mode.
@@ -29,7 +30,26 @@ pub fn player_input(
     }
     let mut players = <(Entity, &Point)>::query().filter(component::<Player>());
 
-    if let Some(key) = *input_key {
+    if let Some(key) = key_state.key {
+        if key_state.shift {
+            let hotkey = match key {
+                VirtualKeyCode::Key1 => Some(0),
+                VirtualKeyCode::Key2 => Some(1),
+                VirtualKeyCode::Key3 => Some(2),
+                VirtualKeyCode::Key4 => Some(3),
+                VirtualKeyCode::Key5 => Some(4),
+                VirtualKeyCode::Key6 => Some(5),
+                VirtualKeyCode::Key7 => Some(6),
+                VirtualKeyCode::Key8 => Some(7),
+                VirtualKeyCode::Key9 => Some(8),
+                _ => None,
+            };
+            if let Some(hotkey) = hotkey {
+                *turn_state = use_consumable_hotkey(ecs, commands, hotkey);
+                return;
+            }
+        }
+
         let mut waiting = false;
         let delta = match key {
             VirtualKeyCode::Left => Point::new(-1, 0),
@@ -68,7 +88,6 @@ pub fn player_input(
                 let player_idx = map.point2d_to_index(player_pos);
                 if map.tiles[player_idx] == TileType::DownStairs {
                     *turn_state = TurnState::NextLevel;
-                    *input_key = None;
                     return;
                 }
 
@@ -83,7 +102,6 @@ pub fn player_input(
                 } else {
                     TurnState::AwaitingInput
                 };
-                *input_key = None;
                 return;
             }
             VirtualKeyCode::D => {
@@ -92,12 +110,10 @@ pub fn player_input(
                 } else {
                     TurnState::AwaitingInput
                 };
-                *input_key = None;
                 return;
             }
             VirtualKeyCode::Escape => {
                 *turn_state = TurnState::SaveGame;
-                *input_key = None;
                 return;
             }
             VirtualKeyCode::Space => {
@@ -106,7 +122,6 @@ pub fn player_input(
             }
             _ => Point::zero(),
         };
-        *input_key = None; // prevent the key being processed twice
 
         let (player_entity, player_pos, destination) = players
             .iter(ecs)
@@ -215,4 +230,45 @@ pub fn player_input(
         }
         *turn_state = TurnState::PlayerTurn;
     }
+}
+
+fn use_consumable_hotkey(
+    ecs: &mut SubWorld,
+    commands: &mut CommandBuffer,
+    hotkey: i32,
+) -> TurnState {
+    let player_entity = <Entity>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .unwrap();
+    let mut carried_consumables = Vec::new();
+    <(Entity, &Carried)>::query()
+        .filter(component::<Consumable>())
+        .iter(ecs)
+        .filter(|(_, c)| c.0 == *player_entity)
+        .for_each(|(e, _)| carried_consumables.push(*e));
+
+    if (hotkey as usize) < carried_consumables.len() {
+        if let Ok(entry) = ecs.entry_ref(carried_consumables[hotkey as usize]) {
+            if let Ok(ranged) = entry.get_component::<Ranged>() {
+                return TurnState::RangedTargeting {
+                    range: ranged.0,
+                    item: carried_consumables[hotkey as usize],
+                };
+            }
+
+            // Otherwise, register intent to use
+            commands.push((
+                (),
+                ActivateItem {
+                    used_by: *player_entity,
+                    item: carried_consumables[hotkey as usize],
+                    target: None,
+                },
+            ));
+        }
+    }
+
+    TurnState::PlayerTurn
 }
