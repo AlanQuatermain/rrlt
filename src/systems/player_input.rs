@@ -3,7 +3,7 @@ use crate::{prelude::*, KeyState};
 #[system]
 #[read_component(Point)]
 #[read_component(Player)]
-#[read_component(Enemy)]
+#[read_component(Attackable)]
 #[write_component(Pools)]
 #[read_component(Item)]
 #[read_component(Carried)]
@@ -21,7 +21,7 @@ pub fn player_input(
     commands: &mut CommandBuffer,
     #[resource] map: &Map,
     #[resource] gamelog: &mut Gamelog,
-    #[resource] key_state: &KeyState,
+    #[resource] key_state: &mut KeyState,
     #[resource] turn_state: &mut TurnState,
 ) {
     // don't process input here if we're in inventory mode.
@@ -46,12 +46,24 @@ pub fn player_input(
             };
             if let Some(hotkey) = hotkey {
                 *turn_state = use_consumable_hotkey(ecs, commands, hotkey);
+                key_state.key = None;
                 return;
             }
         }
 
         let mut waiting = false;
         let delta = match key {
+            VirtualKeyCode::LShift
+            | VirtualKeyCode::RShift
+            | VirtualKeyCode::LControl
+            | VirtualKeyCode::RControl
+            | VirtualKeyCode::LAlt
+            | VirtualKeyCode::RAlt
+            | VirtualKeyCode::LWin
+            | VirtualKeyCode::RWin => {
+                // don't use a turn when user only pressed a meta-key
+                return;
+            }
             VirtualKeyCode::Left => Point::new(-1, 0),
             VirtualKeyCode::Right => Point::new(1, 0),
             VirtualKeyCode::Up => Point::new(0, -1),
@@ -88,6 +100,7 @@ pub fn player_input(
                 let player_idx = map.point2d_to_index(player_pos);
                 if map.tiles[player_idx] == TileType::DownStairs {
                     *turn_state = TurnState::NextLevel;
+                    key_state.key = None;
                     return;
                 }
 
@@ -102,6 +115,7 @@ pub fn player_input(
                 } else {
                     TurnState::AwaitingInput
                 };
+                key_state.key = None;
                 return;
             }
             VirtualKeyCode::D => {
@@ -110,10 +124,12 @@ pub fn player_input(
                 } else {
                     TurnState::AwaitingInput
                 };
+                key_state.key = None;
                 return;
             }
             VirtualKeyCode::Escape => {
                 *turn_state = TurnState::SaveGame;
+                key_state.key = None;
                 return;
             }
             VirtualKeyCode::Space => {
@@ -128,7 +144,7 @@ pub fn player_input(
             .find_map(|(entity, pos)| Some((*entity, *pos, *pos + delta)))
             .unwrap();
 
-        let mut enemies = <(Entity, &Point)>::query().filter(component::<Enemy>());
+        let mut enemies = <(Entity, &Point)>::query().filter(component::<Attackable>());
         let mut bystanders = <(Entity, &Point)>::query().filter(component::<Bystander>());
         if delta != Point::zero() {
             let mut attacked = false;
@@ -207,7 +223,7 @@ pub fn player_input(
                 .unwrap();
 
             let num_enemies = <&Point>::query()
-                .filter(component::<Enemy>())
+                .filter(component::<Attackable>())
                 .iter(ecs)
                 .filter(|pos| fov.visible_tiles.contains(pos))
                 .count();
@@ -229,6 +245,7 @@ pub fn player_input(
             }
         }
         *turn_state = TurnState::PlayerTurn;
+        key_state.key = None;
     }
 }
 

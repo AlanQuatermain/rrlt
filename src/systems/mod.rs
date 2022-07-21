@@ -1,3 +1,4 @@
+mod animal_ai;
 mod bury_dead;
 mod bystander_ai;
 mod chasing;
@@ -77,6 +78,7 @@ pub fn build_monster_scheduler() -> Schedule {
         .add_system(particles::particle_cull_system())
         .add_system(chasing::chasing_system())
         .add_system(bystander_ai::bystander_ai_system())
+        .add_system(animal_ai::animal_ai_system())
         .flush()
         .add_system(use_items::use_items_system())
         .add_system(drop_item::drop_item_system())

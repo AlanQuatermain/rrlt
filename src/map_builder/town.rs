@@ -59,10 +59,12 @@ impl TownBuilder {
         self.add_paths(build_data, &doors);
 
         // Place the exit.
-        let exit_idx = build_data
-            .map
-            .point2d_to_index(Point::new(build_data.map.width - 5, wall_gap_y as usize));
-        build_data.map.tiles[exit_idx] = TileType::DownStairs;
+        for y in wall_gap_y - 3..wall_gap_y + 4 {
+            let exit_idx = build_data
+                .map
+                .point2d_to_index(Point::new(build_data.map.width - 2, y as usize));
+            build_data.map.tiles[exit_idx] = TileType::DownStairs;
+        }
 
         let building_sizes = self.sort_buildings(&buildings);
         self.building_factory(rng, build_data, &buildings, &building_sizes);
@@ -98,7 +100,7 @@ impl TownBuilder {
             let y = rng.roll_dice(1, build_data.map.height as i32) - 1;
             for x in 2 + rng.roll_dice(1, 6)..water_width[y as usize] + 4 {
                 let idx = build_data.map.point2d_to_index(Point::new(x, y));
-                build_data.map.tiles[idx] = TileType::WoodFloor;
+                build_data.map.tiles[idx] = TileType::Bridge;
             }
         }
         build_data.take_snapshot();
@@ -204,8 +206,8 @@ impl TownBuilder {
                         available_building_tiles.remove(&(idx - build_data.map.width));
                     }
                 }
+                build_data.take_snapshot();
             }
-            build_data.take_snapshot();
         }
 
         buildings

@@ -2,6 +2,7 @@ use crate::prelude::*;
 use std::sync::Mutex;
 
 mod item_structs;
+mod loot_structs;
 mod mob_structs;
 mod prop_structs;
 mod rawmaster;
@@ -21,6 +22,7 @@ pub struct Raws {
     pub mobs: Vec<mob_structs::Mob>,
     pub props: Vec<prop_structs::Prop>,
     pub spawn_table: Vec<spawn_table_structs::SpawnTableEntry>,
+    pub loot_tables: Vec<loot_structs::LootTable>,
 }
 
 #[derive(Deserialize, Debug)]

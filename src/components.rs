@@ -15,7 +15,7 @@ pub struct Player {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Enemy;
+pub struct Attackable;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WantsToMove {
@@ -323,3 +323,12 @@ impl Default for NaturalAttackDefense {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LootTable(pub String);
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Carnivore;
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Herbivore;

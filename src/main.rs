@@ -136,7 +136,7 @@ impl State {
         self.resources.insert(map_builder.build_data.map.clone());
         self.resources.insert(Camera::new(player_start));
         self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(MapTheme::Dungeon);
+        self.resources.insert(map_builder.build_data.theme);
         self.resources.insert(gamelog);
         self.resources.insert(RexAssets::new());
 
@@ -179,16 +179,23 @@ impl State {
             .for_each(|fov| fov.is_dirty = true);
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = random_builder(map_level + 1, 80, 50, &mut rng);
+        let mut map_builder = level_builder(map_level + 1, 80, 50, &mut rng);
         map_builder.build_map(&mut rng);
         map_builder.spawn_entities(&mut self.ecs);
 
         let player_pos = map_builder.build_data.starting_position.unwrap();
+        <(&mut Player, &mut Point)>::query()
+            .iter_mut(&mut self.ecs)
+            .for_each(|(player, pos)| {
+                player.map_level += 1;
+                pos.x = player_pos.x;
+                pos.y = player_pos.y;
+            });
 
         self.resources.insert(map_builder.build_data.map.clone());
         self.resources.insert(Camera::new(player_pos));
         self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(MapTheme::Dungeon);
+        self.resources.insert(map_builder.build_data.theme);
 
         if SHOW_MAPGEN_VISUALIZER {
             self.real_map = map_builder.build_data.map.clone();
@@ -235,7 +242,7 @@ impl State {
         registry.register::<Point>("position".to_string());
         registry.register::<Render>("render".to_string());
         registry.register::<Player>("player".to_string());
-        registry.register::<Enemy>("enemy".to_string());
+        registry.register::<Attackable>("enemy".to_string());
         registry.register::<Name>("name".to_string());
         registry.register::<ChasingPlayer>("chasing_player".to_string());
         registry.register::<Item>("item".to_string());
@@ -278,6 +285,9 @@ impl State {
         registry.register::<Skills>("skills".to_string());
         registry.register::<NaturalAttack>("nattack".to_string());
         registry.register::<NaturalAttackDefense>("natkdef".to_string());
+        registry.register::<LootTable>("loot_tbl".to_string());
+        registry.register::<Carnivore>("carnivore".to_string());
+        registry.register::<Herbivore>("herbivore".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -365,7 +375,6 @@ impl State {
 
     fn reveal_map(&mut self, row: i32) {
         let height: usize;
-        let width: usize;
         {
             let mut map = self.resources.get_mut::<Map>().unwrap();
             for x in 0..map.width {
@@ -373,7 +382,6 @@ impl State {
                 map.revealed_tiles[idx] = true;
             }
             height = map.height;
-            width = map.width;
         }
         if row as usize == height - 1 {
             self.resources.insert(TurnState::MonsterTurn);
@@ -431,6 +439,8 @@ impl GameState for State {
         self.resources.insert(KeyState::new(ctx));
         self.resources.insert(ctx.frame_time_ms);
         self.resources.insert(ParticleBuilder::new());
+
+        // ctx.key = None;
 
         let current_state = self.resources.get::<TurnState>().unwrap().clone();
         match current_state {

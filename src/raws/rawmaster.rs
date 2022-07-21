@@ -9,6 +9,7 @@ pub struct RawMaster {
     item_index: HashMap<String, usize>,
     mob_index: HashMap<String, usize>,
     prop_index: HashMap<String, usize>,
+    loot_index: HashMap<String, usize>,
 }
 
 impl RawMaster {
@@ -19,10 +20,12 @@ impl RawMaster {
                 mobs: Vec::new(),
                 props: Vec::new(),
                 spawn_table: Vec::new(),
+                loot_tables: Vec::new(),
             },
             item_index: HashMap::new(),
             mob_index: HashMap::new(),
             prop_index: HashMap::new(),
+            loot_index: HashMap::new(),
         }
     }
 
@@ -64,6 +67,11 @@ impl RawMaster {
             }
             self.prop_index.insert(prop.name.clone(), i);
             used_names.insert(prop.name.clone());
+        }
+
+        self.loot_index = HashMap::new();
+        for (i, loot) in self.raws.loot_tables.iter().enumerate() {
+            self.loot_index.insert(loot.name.clone(), i);
         }
 
         for spawn in self.raws.spawn_table.iter() {
@@ -210,11 +218,19 @@ pub fn spawn_named_mob(
 
     match mob_template.ai.as_ref() {
         "melee" => {
-            commands.add_component(entity, Enemy);
+            commands.add_component(entity, Attackable);
             commands.add_component(entity, ChasingPlayer);
         }
         "bystander" => commands.add_component(entity, Bystander),
         "vendor" => commands.add_component(entity, Vendor),
+        "carnivore" => {
+            commands.add_component(entity, Attackable);
+            commands.add_component(entity, Carnivore);
+        }
+        "herbivore" => {
+            commands.add_component(entity, Attackable);
+            commands.add_component(entity, Herbivore);
+        }
         _ => {}
     }
 
@@ -337,6 +353,10 @@ pub fn spawn_named_mob(
         commands.add_component(entity, nature);
     }
 
+    if let Some(loot) = &mob_template.loot_table {
+        commands.add_component(entity, LootTable(loot.clone()));
+    }
+
     true
 }
 
@@ -425,6 +445,21 @@ pub fn spawn_table_for_depth(raws: &RawMaster, depth: i32) -> RandomTable {
         rt = rt.add(e.name.clone(), weight);
     }
     rt
+}
+
+pub fn get_drop_item(
+    raws: &RawMaster,
+    rng: &mut RandomNumberGenerator,
+    table: &str,
+) -> Option<String> {
+    raws.loot_index.get(table).map(|idx| {
+        let mut rt = RandomTable::new();
+        let available_options = &raws.raws.loot_tables[*idx];
+        for item in available_options.drops.iter() {
+            rt = rt.add(item.name.clone(), item.weight);
+        }
+        rt.roll(rng)
+    })
 }
 
 fn get_renderable(renderable: &super::Renderable) -> crate::components::Render {

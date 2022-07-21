@@ -31,7 +31,7 @@ pub fn map_render(
                 } else {
                     RGB::named(BLACK)
                 };
-                let (glyph, mut fg) = theme.tile_to_render(map.tiles[idx], map, idx);
+                let (glyph, mut fg) = theme.tile_to_render(map, idx);
                 if !player_fov.visible_tiles.contains(&pt) && !map.visible_tiles[idx] {
                     fg = fg.to_greyscale();
                 }

@@ -40,6 +40,7 @@ mod distant_exit;
 mod dla;
 mod door_placement;
 mod drunkard;
+mod forest;
 mod maze;
 mod nearest_corridors;
 mod prefab;
@@ -61,6 +62,7 @@ mod voronoi;
 mod voronoi_spawning;
 mod waveform_collapse;
 
+use forest::forest_builder;
 pub use themes::*;
 use town::town_builder;
 
@@ -73,6 +75,7 @@ pub struct BuilderMap {
     pub rooms: Option<Vec<Rect>>,
     pub corridors: Option<Vec<Vec<usize>>>,
     pub history: Vec<Map>,
+    pub theme: MapTheme,
 }
 
 pub struct BuilderChain {
@@ -96,6 +99,9 @@ impl BuilderMap {
             for v in snapshot.revealed_tiles.iter_mut() {
                 *v = true;
             }
+            for v in snapshot.visible_tiles.iter_mut() {
+                *v = true;
+            }
             self.history.push(snapshot);
         }
     }
@@ -113,6 +119,7 @@ impl BuilderChain {
                 rooms: None,
                 corridors: None,
                 history: Vec::new(),
+                theme: MapTheme::Dungeon,
             },
         }
     }
@@ -321,6 +328,7 @@ pub fn level_builder(
 ) -> BuilderChain {
     match new_depth {
         0 => town_builder(new_depth, width, height, rng),
+        1 => forest_builder(new_depth, width, height, rng),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

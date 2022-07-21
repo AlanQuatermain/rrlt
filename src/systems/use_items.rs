@@ -34,7 +34,7 @@ enum Command {
 #[read_component(Item)]
 #[read_component(AreaOfEffect)]
 #[read_component(Confusion)]
-#[read_component(Enemy)]
+#[read_component(Attackable)]
 #[read_component(Equippable)]
 #[read_component(Equipped)]
 #[read_component(ProvidesFood)]
@@ -113,7 +113,7 @@ pub fn use_items(
                     used_item = true;
                 }
                 if let Ok(confusion) = item.get_component::<Confusion>() {
-                    let targets = find_targets::<Enemy>(ecs, &item, &target, map);
+                    let targets = find_targets::<Attackable>(ecs, &item, &target, map);
                     operations.extend(targets.iter().map(|target| Operation {
                         command: Command::Confuse {
                             duration: confusion.0,
@@ -293,7 +293,7 @@ fn apply_confusion(
     let target_name = name_for(&target_entity, ecs);
 
     if let Ok(target) = ecs.entry_ref(target_entity) {
-        if target.get_component::<Enemy>().is_ok() {
+        if target.get_component::<Attackable>().is_ok() {
             commands.add_component(target_entity, Confusion(duration));
             let log = if target_name.1 {
                 format!("You are confused!")

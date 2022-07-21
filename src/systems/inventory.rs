@@ -13,7 +13,7 @@ use crate::{prelude::*, KeyState};
 pub fn inventory(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] key_state: &KeyState,
+    #[resource] key_state: &mut KeyState,
     #[resource] turn_state: &mut TurnState,
 ) {
     match *turn_state {
@@ -141,5 +141,6 @@ pub fn inventory(
                 }
             }
         }
+        key_state.key = None;
     }
 }

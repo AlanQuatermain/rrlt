@@ -4,7 +4,7 @@ use crate::MapTheme::Dungeon;
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum MapTheme {
     Dungeon,
-    // Forest,
+    Forest,
 }
 
 impl Default for MapTheme {
@@ -14,30 +14,30 @@ impl Default for MapTheme {
 }
 
 impl MapTheme {
-    pub fn tile_to_render(
-        &self,
-        tile_type: TileType,
-        map: &Map,
-        idx: usize,
-    ) -> (FontCharType, RGB) {
+    pub fn default_glyph_for_tile(&self, map: &Map, idx: usize) -> (FontCharType, RGB) {
+        match map.tiles[idx] {
+            TileType::Floor => (to_cp437('.'), RGB::named(TEAL)),
+            TileType::WoodFloor => (to_cp437('.'), RGB::named(CHOCOLATE1)),
+            TileType::Wall => (self.wall_glyph(map.wall_mask(idx)), RGB::named(GREEN)),
+            TileType::DownStairs => (to_cp437('>'), RGB::named(CYAN)),
+            TileType::Bridge => (to_cp437('░'), RGB::named(CHOCOLATE)),
+            TileType::Road => (to_cp437('≡'), RGB::named(DIMGREY)),
+            TileType::Grass => (to_cp437('"'), RGB::named(LIGHTGREEN)),
+            TileType::ShallowWater => (to_cp437('~'), RGB::named(CYAN)),
+            TileType::DeepWater => (to_cp437('~'), RGB::named(BLUE)),
+            TileType::Gravel => (to_cp437(';'), RGB::named(LIGHTSLATEGREY)),
+        }
+    }
+
+    pub fn tile_to_render(&self, map: &Map, idx: usize) -> (FontCharType, RGB) {
         match self {
-            MapTheme::Dungeon => match tile_type {
-                TileType::Floor => (to_cp437('.'), RGB::named(TEAL)),
-                TileType::WoodFloor => (to_cp437('.'), RGB::named(CHOCOLATE1)),
-                TileType::Wall => (self.wall_glyph(map.wall_mask(idx)), RGB::named(GREEN)),
-                TileType::DownStairs => (to_cp437('>'), RGB::from_f32(0., 1., 1.)),
-                TileType::Bridge => (to_cp437('.'), RGB::named(CHOCOLATE)),
-                TileType::Road => (to_cp437('-'), RGB::named(DIMGREY)),
-                TileType::Grass => (to_cp437('"'), RGB::named(LIGHTGREEN)),
-                TileType::ShallowWater => (to_cp437('≈'), RGB::named(CYAN)),
-                TileType::DeepWater => (to_cp437('≈'), RGB::named(NAVY_BLUE)),
-                TileType::Gravel => (to_cp437(';'), RGB::named(LIGHTSLATEGREY)),
+            MapTheme::Dungeon => self.default_glyph_for_tile(map, idx),
+            MapTheme::Forest => match map.tiles[idx] {
+                TileType::Wall => (to_cp437('♣'), RGB::from_f32(0., 0.6, 0.)),
+                TileType::Road => (to_cp437('≡'), RGB::named(YELLOW)),
+                TileType::Floor | TileType::WoodFloor => (to_cp437('"'), RGB::named(LIGHTGREEN)),
+                _ => self.default_glyph_for_tile(map, idx),
             },
-            // MapTheme::Forest => match tile_type {
-            //     TileType::Floor => to_cp437(';'),
-            //     TileType::Wall => to_cp437('"'),
-            //     TileType::DownStairs => to_cp437('>'),
-            // },
         }
     }
 
@@ -63,7 +63,8 @@ impl MapTheme {
                     15 => 206, // Wall on all sides.
                     _ => 35,   // We missed one?
                 }
-            } // MapTheme::Forest => to_cp437('"'),
+            }
+            MapTheme::Forest => to_cp437('"'),
         }
     }
 }
