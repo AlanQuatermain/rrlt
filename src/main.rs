@@ -504,7 +504,7 @@ fn main() -> BError {
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .build()?;
-    // context.with_post_scanlines(true);
+    context.with_post_scanlines(true);
 
     // let context = BTermBuilder::new()
     //     .with_title("Rouguelike Tutorial")

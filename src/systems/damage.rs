@@ -5,6 +5,7 @@ use crate::prelude::*;
 #[read_component(InflictDamage)]
 #[read_component(Point)]
 #[write_component(Pools)]
+#[read_component(Attributes)]
 #[read_component(Name)]
 #[read_component(Player)]
 #[read_component(SingleActivation)]
@@ -20,6 +21,8 @@ pub fn damage(
     let user_name = name_for(&command.user_entity, ecs);
     let target_name = name_for(&command.target, ecs);
     let item_name = command.item_entity.map(|item| name_for(&item, ecs).0);
+
+    let mut xp_gain = 0;
 
     if let Ok(mut target) = ecs.entry_mut(command.target) {
         if let Ok(pos) = target.get_component::<Point>() {
@@ -42,6 +45,10 @@ pub fn damage(
                 log_for_damage(&user_name, &target_name, amount)
             };
             gamelog.entries.push(log_line);
+
+            if user_name.1 && !target_name.1 && stats.hit_points.current <= 0 {
+                xp_gain += stats.level * 100;
+            }
         } else if target.get_component::<Item>().is_ok() {
             // destroy the item outright
             commands.remove(command.target);
@@ -58,7 +65,62 @@ pub fn damage(
         }
     }
 
+    if xp_gain != 0 {
+        award_xp(
+            ecs,
+            gamelog,
+            particle_builder,
+            &command.user_entity,
+            xp_gain,
+        );
+    }
+
     commands.remove(*message);
+}
+
+fn award_xp(
+    ecs: &mut SubWorld,
+    gamelog: &mut Gamelog,
+    particle_builder: &mut ParticleBuilder,
+    entity: &Entity,
+    xp_gain: i32,
+) {
+    <(Entity, &mut Pools, &Attributes, &Point)>::query()
+        .filter(component::<Player>())
+        .iter_mut(ecs)
+        .filter(|(e, _, _, _)| *e == entity)
+        .for_each(|(_, stats, attrs, pos)| {
+            stats.xp += xp_gain;
+            let goal = stats.level * 1000;
+            if stats.xp >= goal {
+                // Gained a level!
+                stats.level += 1;
+                gamelog.entries.push(format!(
+                    "Congratulations, you are now level {}",
+                    stats.level
+                ));
+
+                stats.hit_points.max =
+                    player_hp_at_level(attrs.fitness.base + attrs.fitness.modifiers, stats.level);
+                stats.hit_points.current = stats.hit_points.max;
+                stats.mana.max = mana_at_level(
+                    attrs.intelligence.base + attrs.intelligence.modifiers,
+                    stats.level,
+                );
+                stats.mana.current = stats.mana.max;
+
+                for i in 0..10 {
+                    if pos.y - i > 1 {
+                        particle_builder.request(
+                            *pos - Point::new(0, i),
+                            ColorPair::new(GOLD, BLACK),
+                            to_cp437('░'),
+                            300.0,
+                        );
+                    }
+                }
+            }
+        });
 }
 
 fn log_for_damage(user_name: &(String, bool), target_name: &(String, bool), amount: i32) -> String {

@@ -60,8 +60,13 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
             stats.hit_points.current, stats.hit_points.max
         );
         let mana = format!("Mana:   {}/{}", stats.mana.current, stats.mana.max);
+        let level = format!("Level:  {}", stats.level);
+        let xp_level_start = (stats.level - 1) * 1000;
+
         draw_batch.print_color(Point::new(50, 1), health, text_color);
         draw_batch.print_color(Point::new(50, 2), mana, text_color);
+        draw_batch.print_color(Point::new(50, 3), level, text_color);
+
         draw_batch.bar_horizontal(
             Point::new(64, 1),
             14,
@@ -75,6 +80,13 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
             stats.mana.current,
             stats.mana.max,
             mana_color,
+        );
+        draw_batch.bar_horizontal(
+            Point::new(64, 3),
+            14,
+            stats.xp - xp_level_start,
+            1000,
+            ColorPair::new(GOLD, BLACK),
         );
     }
 
