@@ -75,7 +75,6 @@ pub struct BuilderMap {
     pub rooms: Option<Vec<Rect>>,
     pub corridors: Option<Vec<Vec<usize>>>,
     pub history: Vec<Map>,
-    pub theme: MapTheme,
 }
 
 pub struct BuilderChain {
@@ -119,7 +118,6 @@ impl BuilderChain {
                 rooms: None,
                 corridors: None,
                 history: Vec::new(),
-                theme: MapTheme::Dungeon,
             },
         }
     }

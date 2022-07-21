@@ -98,6 +98,7 @@ impl State {
             selection: MainMenuSelection::NewGame,
         });
         resources.insert(RexAssets::new());
+        resources.insert(MasterDungeonMap::new());
 
         Self {
             ecs,
@@ -117,89 +118,71 @@ impl State {
     fn make_new_game(&mut self) {
         self.ecs = World::default();
         self.resources = Resources::default();
-        load_raws();
+        self.resources.insert(RexAssets::new());
+        self.resources.insert(MasterDungeonMap::new());
 
         let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = level_builder(0, 80, 50, &mut rng);
+        self.conjure_map(&mut rng, 0, 0);
+
         let mut gamelog = Gamelog::default();
         gamelog
             .entries
             .push("Welcome to Rusty Roguelike".to_string());
 
-        map_builder.build_map(&mut rng);
-        map_builder.spawn_entities(&mut self.ecs);
-
-        let player_start = map_builder.build_data.starting_position.unwrap();
-        spawn_player(&mut self.ecs, player_start);
-
         self.resources.insert(rng);
-        self.resources.insert(map_builder.build_data.map.clone());
-        self.resources.insert(Camera::new(player_start));
         self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(map_builder.build_data.theme);
         self.resources.insert(gamelog);
-        self.resources.insert(RexAssets::new());
 
         if SHOW_MAPGEN_VISUALIZER {
-            self.real_map = map_builder.build_data.map.clone();
-            self.map_history = map_builder.build_data.history;
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
     }
 
-    fn advance_level(&mut self) {
-        let map_level = self.resources.get::<Map>().unwrap().depth;
-        let player_entity = *<Entity>::query()
-            .filter(component::<Player>())
-            .iter(&mut self.ecs)
-            .nth(0)
-            .unwrap();
+    fn conjure_map(&mut self, rng: &mut RandomNumberGenerator, new_depth: i32, offset: i32) {
+        if SHOW_MAPGEN_VISUALIZER {
+            self.mapgen_timer = 0.0;
+            self.map_history.clear();
+        }
 
-        use std::collections::HashSet;
-        let mut entities_to_keep = HashSet::new();
-        entities_to_keep.insert(player_entity);
-        <(Entity, &Carried)>::query()
-            .iter(&self.ecs)
-            .filter(|(_, carry)| carry.0 == player_entity)
-            .map(|(e, _)| *e)
-            .for_each(|e| {
-                entities_to_keep.insert(e);
-            });
+        let map_building_info =
+            map::level_transition(&mut self.ecs, &mut self.resources, rng, new_depth, offset);
+        if let Some(history) = map_building_info {
+            if SHOW_MAPGEN_VISUALIZER {
+                self.map_history = history;
+            }
+        } else {
+            let mut cb = CommandBuffer::new(&self.ecs);
+            thaw_level_entities(&self.ecs, new_depth, &mut cb);
+            cb.flush(&mut self.ecs, &mut self.resources);
+        }
+    }
+
+    fn switch_level(&mut self, offset: i32) {
+        let current_map = self.resources.get::<Map>().unwrap().clone();
+        let map_level = current_map.depth;
+        let new_depth = map_level + offset;
+
+        // Save the full current state of the map in the master
+        let mut dungeon_master = self.resources.get_mut::<MasterDungeonMap>().unwrap();
+        dungeon_master.store_map(&current_map);
+        std::mem::drop(dungeon_master);
 
         let mut cb = CommandBuffer::new(&mut self.ecs);
-        for e in Entity::query().iter(&self.ecs) {
-            if !entities_to_keep.contains(e) {
-                cb.remove(*e);
-            }
-        }
+        freeze_level_entities(&self.ecs, map_level, &mut cb);
         cb.flush(&mut self.ecs, &mut self.resources);
 
+        let mut rng = RandomNumberGenerator::new();
+        self.conjure_map(&mut rng, new_depth, offset);
+
+        self.resources.insert(rng);
+        self.resources.insert(TurnState::AwaitingInput);
+
         <&mut FieldOfView>::query()
+            .filter(!component::<OtherLevelPosition>())
             .iter_mut(&mut self.ecs)
             .for_each(|fov| fov.is_dirty = true);
 
-        let mut rng = RandomNumberGenerator::new();
-        let mut map_builder = level_builder(map_level + 1, 80, 50, &mut rng);
-        map_builder.build_map(&mut rng);
-        map_builder.spawn_entities(&mut self.ecs);
-
-        let player_pos = map_builder.build_data.starting_position.unwrap();
-        <(&mut Player, &mut Point)>::query()
-            .iter_mut(&mut self.ecs)
-            .for_each(|(player, pos)| {
-                player.map_level += 1;
-                pos.x = player_pos.x;
-                pos.y = player_pos.y;
-            });
-
-        self.resources.insert(map_builder.build_data.map.clone());
-        self.resources.insert(Camera::new(player_pos));
-        self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(map_builder.build_data.theme);
-
         if SHOW_MAPGEN_VISUALIZER {
-            self.real_map = map_builder.build_data.map.clone();
-            self.map_history = map_builder.build_data.history;
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
 
@@ -288,6 +271,7 @@ impl State {
         registry.register::<LootTable>("loot_tbl".to_string());
         registry.register::<Carnivore>("carnivore".to_string());
         registry.register::<Herbivore>("herbivore".to_string());
+        registry.register::<OtherLevelPosition>("olpos".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -295,10 +279,12 @@ impl State {
         let mut registry = Registry::<String>::default();
         self.configure_registry(&mut registry);
 
-        // Temporarily add the map to get it included
-        let map_entity = self.ecs.push((
-            self.resources.get::<Map>().unwrap().clone(),
-            self.resources.get::<MapTheme>().unwrap().clone(),
+        // Temporarily add the map & master to get them included
+        let map_entity = self
+            .ecs
+            .push((self.resources.get::<Map>().unwrap().clone(), SerializeMe));
+        let dm_entity = self.ecs.push((
+            self.resources.get::<MasterDungeonMap>().unwrap().clone(),
             SerializeMe,
         ));
 
@@ -314,6 +300,7 @@ impl State {
 
         // remove the map now
         self.ecs.remove(map_entity);
+        self.ecs.remove(dm_entity);
 
         // Show the main menu.
         self.resources.insert(TurnState::MainMenu {
@@ -336,18 +323,27 @@ impl State {
             .unwrap();
         self.resources = Resources::default();
 
-        // extract the map & theme
-        let entity;
+        // extract the map and master
+        let mut to_remove: Vec<Entity> = Vec::new();
         {
-            let (map, theme, map_entity) = <(&Map, &MapTheme, Entity)>::query()
+            let (map, map_entity) = <(&Map, Entity)>::query()
                 .iter(&mut self.ecs)
                 .nth(0)
                 .unwrap();
             self.resources.insert(map.clone());
-            self.resources.insert(*theme);
-            entity = *map_entity;
+            to_remove.push(*map_entity);
+
+            let (dm, dm_entity) = <(&MasterDungeonMap, Entity)>::query()
+                .iter(&mut self.ecs)
+                .nth(0)
+                .unwrap();
+            self.resources.insert(dm.clone());
+            to_remove.push(*dm_entity);
         }
-        self.ecs.remove(entity);
+
+        for entity in to_remove {
+            self.ecs.remove(entity);
+        }
 
         // build the camera, centered on the player
         let player_pos = <&Point>::query()
@@ -479,7 +475,8 @@ impl GameState for State {
             TurnState::NewGame => self.make_new_game(),
             TurnState::SaveGame => self.save_game(),
             TurnState::LoadGame => self.load_game(),
-            TurnState::NextLevel => self.advance_level(),
+            TurnState::NextLevel => self.switch_level(1),
+            TurnState::PreviousLevel => self.switch_level(-1),
             TurnState::GameOver => self.game_over(ctx),
             TurnState::RevealMap { row } => self.reveal_map(row),
             TurnState::MapBuilding { step } => self.visualize_map_build(step, ctx),
@@ -514,5 +511,6 @@ fn main() -> BError {
     //     .with_simple_console(DISPLAY_WIDTH, DISPLAY_HEIGHT, "terminal8x8.png")
     //     .build()?;
 
+    load_raws();
     main_loop(context, State::new())
 }

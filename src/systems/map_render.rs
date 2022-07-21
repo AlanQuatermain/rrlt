@@ -3,12 +3,7 @@ use crate::prelude::*;
 #[system]
 #[read_component(FieldOfView)]
 #[read_component(Player)]
-pub fn map_render(
-    ecs: &SubWorld,
-    #[resource] map: &Map,
-    #[resource] camera: &Camera,
-    #[resource] theme: &MapTheme,
-) {
+pub fn map_render(ecs: &SubWorld, #[resource] map: &Map, #[resource] camera: &Camera) {
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
     let player_fov = fov.iter(ecs).nth(0).unwrap();
     let offset = Point::new(camera.left_x, camera.top_y);
@@ -31,7 +26,7 @@ pub fn map_render(
                 } else {
                     RGB::named(BLACK)
                 };
-                let (glyph, mut fg) = theme.tile_to_render(map, idx);
+                let (glyph, mut fg) = map.theme.tile_to_render(map, idx);
                 if !player_fov.visible_tiles.contains(&pt) && !map.visible_tiles[idx] {
                     fg = fg.to_greyscale();
                 }

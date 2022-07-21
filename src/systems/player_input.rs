@@ -72,41 +72,61 @@ pub fn player_input(
             VirtualKeyCode::F => Point::new(1, -1),
             VirtualKeyCode::Z => Point::new(-1, 1),
             VirtualKeyCode::C => Point::new(1, 1),
-            VirtualKeyCode::G => {
+            VirtualKeyCode::Period => {
+                if key_state.shift {
+                    // Player typed '>'
+                    let (_player, player_pos) = players
+                        .iter(ecs)
+                        .find_map(|(entity, pos)| Some((*entity, *pos)))
+                        .unwrap();
+                    let player_idx = map.point2d_to_index(player_pos);
+                    if map.tiles[player_idx] == TileType::DownStairs {
+                        *turn_state = TurnState::NextLevel;
+                        key_state.key = None;
+                        return;
+                    }
+
+                    gamelog
+                        .entries
+                        .push("There is no way down from here.".to_string());
+                } else {
+                    waiting = true;
+                }
+                Point::zero()
+            }
+            VirtualKeyCode::Comma => {
                 let (player, player_pos) = players
                     .iter(ecs)
                     .find_map(|(entity, pos)| Some((*entity, *pos)))
                     .unwrap();
-                let mut items = <(Entity, &Item, &Point)>::query();
-                items
-                    .iter(ecs)
-                    .filter(|(_, _, &item_pos)| item_pos == player_pos)
-                    .for_each(|(entity, _, _)| {
-                        commands.push((
-                            (),
-                            WantsToCollect {
-                                who: player,
-                                what: *entity,
-                            },
-                        ));
-                    });
-                Point::zero()
-            }
-            VirtualKeyCode::Period => {
-                let (_player, player_pos) = players
-                    .iter(ecs)
-                    .find_map(|(entity, pos)| Some((*entity, *pos)))
-                    .unwrap();
-                let player_idx = map.point2d_to_index(player_pos);
-                if map.tiles[player_idx] == TileType::DownStairs {
-                    *turn_state = TurnState::NextLevel;
-                    key_state.key = None;
-                    return;
-                }
 
-                gamelog
-                    .entries
-                    .push("There is no way down from here.".to_string());
+                if key_state.shift {
+                    // Player typed '<'
+                    let player_idx = map.point2d_to_index(player_pos);
+                    if map.tiles[player_idx] == TileType::UpStairs {
+                        *turn_state = TurnState::PreviousLevel;
+                        key_state.key = None;
+                        return;
+                    }
+
+                    gamelog
+                        .entries
+                        .push("There is no way up from here.".to_string());
+                } else {
+                    let mut items = <(Entity, &Item, &Point)>::query();
+                    items
+                        .iter(ecs)
+                        .filter(|(_, _, &item_pos)| item_pos == player_pos)
+                        .for_each(|(entity, _, _)| {
+                            commands.push((
+                                (),
+                                WantsToCollect {
+                                    who: player,
+                                    what: *entity,
+                                },
+                            ));
+                        });
+                }
                 Point::zero()
             }
             VirtualKeyCode::I => {
@@ -131,10 +151,6 @@ pub fn player_input(
                 *turn_state = TurnState::SaveGame;
                 key_state.key = None;
                 return;
-            }
-            VirtualKeyCode::Space => {
-                waiting = true;
-                Point::zero()
             }
             _ => Point::zero(),
         };
@@ -184,6 +200,12 @@ pub fn player_input(
             }
 
             if !attacked && !opened {
+                // If destination isn't walkable, don't eat the turn.
+                let idx = map.point2d_to_index(destination);
+                if !map.tiles[idx].is_walkable() {
+                    return;
+                }
+
                 commands.push((
                     (),
                     WantsToMove {

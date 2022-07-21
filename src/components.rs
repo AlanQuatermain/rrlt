@@ -332,3 +332,9 @@ pub struct Carnivore;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Herbivore;
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct OtherLevelPosition {
+    pub position: Point,
+    pub depth: i32,
+}

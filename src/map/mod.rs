@@ -1,6 +1,11 @@
 use crate::prelude::*;
 use std::collections::HashSet;
 
+pub mod dungeon;
+pub use dungeon::*;
+pub mod transitions;
+pub use transitions::*;
+
 #[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Hash, Eq)]
 pub enum TileType {
     Wall,
@@ -13,6 +18,7 @@ pub enum TileType {
     WoodFloor,
     Bridge,
     Gravel,
+    UpStairs,
 }
 
 impl TileType {
@@ -25,6 +31,7 @@ impl TileType {
             | TileType::ShallowWater
             | TileType::WoodFloor
             | TileType::Bridge
+            | TileType::UpStairs
             | TileType::Gravel => true,
             _ => false,
         }
@@ -53,6 +60,7 @@ pub struct Map {
     pub height: usize,
     pub depth: i32,
     pub name: String,
+    pub theme: MapTheme,
 
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
@@ -70,6 +78,7 @@ impl Map {
             height,
             depth,
             name: name.to_string(),
+            theme: MapTheme::Dungeon,
             tiles: vec![TileType::Floor; num_tiles],
             revealed_tiles: vec![false; num_tiles],
             blocked: vec![false; num_tiles],

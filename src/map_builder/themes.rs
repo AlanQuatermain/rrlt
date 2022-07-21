@@ -26,6 +26,7 @@ impl MapTheme {
             TileType::ShallowWater => (to_cp437('~'), RGB::named(CYAN)),
             TileType::DeepWater => (to_cp437('~'), RGB::named(BLUE)),
             TileType::Gravel => (to_cp437(';'), RGB::named(LIGHTSLATEGREY)),
+            TileType::UpStairs => (to_cp437('<'), RGB::named(CYAN)),
         }
     }
 

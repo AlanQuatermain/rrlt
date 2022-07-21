@@ -18,7 +18,7 @@ pub fn forest_builder(
     _rng: &mut RandomNumberGenerator,
 ) -> BuilderChain {
     let mut chain = BuilderChain::new(new_depth, width, height, "Into the Woods");
-    chain.build_data.theme = MapTheme::Forest;
+    chain.build_data.map.theme = MapTheme::Forest;
 
     chain.initial(CellularAutomataBuilder::new());
     chain.push(AreaStartingPosition::new(XStart::Center, YStart::Center));
