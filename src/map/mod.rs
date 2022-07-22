@@ -9,6 +9,8 @@ pub use transitions::*;
 #[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Hash, Eq)]
 pub enum TileType {
     Wall,
+    Stalactite,
+    Stalagmite,
     Floor,
     DownStairs,
     Road,
@@ -39,7 +41,7 @@ impl TileType {
 
     pub fn is_opaque(&self) -> bool {
         match self {
-            TileType::Wall => true,
+            TileType::Wall | TileType::Stalactite | TileType::Stalagmite => true,
             _ => false,
         }
     }
@@ -61,6 +63,8 @@ pub struct Map {
     pub depth: i32,
     pub name: String,
     pub theme: MapTheme,
+    pub outdoors: bool,
+    pub light: Vec<RGB>,
 
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
@@ -79,6 +83,8 @@ impl Map {
             depth,
             name: name.to_string(),
             theme: MapTheme::Dungeon,
+            outdoors: true,
+            light: vec![RGB::named(BLACK); num_tiles],
             tiles: vec![TileType::Floor; num_tiles],
             revealed_tiles: vec![false; num_tiles],
             blocked: vec![false; num_tiles],
@@ -170,6 +176,24 @@ impl Map {
             .map(|(idx, _)| idx)
             .unwrap();
         self.index_to_point2d(closest_point)
+    }
+
+    pub fn count_neighbors(&self, pos: Point) -> usize {
+        let mut neighbors = 0;
+        for iy in -1..=1 {
+            for ix in -1..=1 {
+                if !(ix == 0 && iy == 0) {
+                    let pt = pos + Point::new(ix, iy);
+                    if !self.in_bounds(pt) {
+                        continue;
+                    }
+                    if self.tiles[self.point2d_to_index(pt)] == TileType::Wall {
+                        neighbors += 1;
+                    }
+                }
+            }
+        }
+        neighbors
     }
 
     fn is_revealed_and_wall(&self, x: i32, y: i32) -> bool {

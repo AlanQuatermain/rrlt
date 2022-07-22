@@ -5,6 +5,7 @@ use self::{
     automata::CellularAutomataBuilder,
     bsp::BSPDungeonBuilder,
     bsp_interior::BSPInteriorBuilder,
+    caverns::limestone_cavern_builder,
     cull_unreachable::CullUnreachable,
     distant_exit::DistantExit,
     dla::DLABuilder,
@@ -34,6 +35,8 @@ mod area_starting_points;
 mod automata;
 mod bsp;
 mod bsp_interior;
+mod cave_decorator;
+mod caverns;
 mod common;
 mod cull_unreachable;
 mod distant_exit;
@@ -66,7 +69,7 @@ use forest::forest_builder;
 pub use themes::*;
 use town::town_builder;
 
-const PRINT_CHAIN_ITEMS: bool = true;
+const PRINT_CHAIN_ITEMS: bool = false;
 
 pub struct BuilderMap {
     pub spawn_list: Vec<(Point, String)>,
@@ -327,6 +330,7 @@ pub fn level_builder(
     match new_depth {
         0 => town_builder(new_depth, width, height, rng),
         1 => forest_builder(new_depth, width, height, rng),
+        2 => limestone_cavern_builder(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

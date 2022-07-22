@@ -357,6 +357,16 @@ pub fn spawn_named_mob(
         commands.add_component(entity, LootTable(loot.clone()));
     }
 
+    if let Some(light) = &mob_template.light {
+        commands.add_component(
+            entity,
+            LightSource {
+                range: light.range,
+                color: RGB::from_hex(&light.color).expect("Bad color"),
+            },
+        )
+    }
+
     true
 }
 

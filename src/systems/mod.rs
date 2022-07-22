@@ -12,6 +12,7 @@ mod fov;
 mod gui;
 mod hunger;
 mod inventory;
+mod lighting;
 mod map_indexing;
 mod map_render;
 mod menu;
@@ -37,6 +38,7 @@ pub fn build_input_scheduler() -> Schedule {
         .add_system(fov::fov_system())
         .add_system(particles::particle_spawn_system())
         .flush()
+        .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(map_indexing::map_indexing_system())
@@ -65,6 +67,7 @@ pub fn build_player_scheduler() -> Schedule {
         .flush()
         .add_system(damage::damage_system())
         .add_system(map_indexing::map_indexing_system())
+        .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())
@@ -95,6 +98,7 @@ pub fn build_monster_scheduler() -> Schedule {
         .flush()
         .add_system(damage::damage_system())
         .add_system(map_indexing::map_indexing_system())
+        .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())
@@ -124,11 +128,22 @@ pub fn build_menu_scheduler() -> Schedule {
         .build()
 }
 
+pub fn build_cheat_menu_scheduler() -> Schedule {
+    Schedule::builder()
+        .add_system(particles::particle_cull_system())
+        .add_system(lighting::lighting_system())
+        .add_system(map_render::map_render_system())
+        .add_system(entity_render::entity_render_system())
+        .add_system(menu::cheat_menu_system())
+        .build()
+}
+
 pub fn build_popup_scheduler() -> Schedule {
     Schedule::builder()
         .add_system(particles::particle_cull_system())
         .add_system(particles::particle_spawn_system())
         .flush()
+        .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())
@@ -138,6 +153,7 @@ pub fn build_popup_scheduler() -> Schedule {
 
 pub fn map_reveal_scheduler() -> Schedule {
     Schedule::builder()
+        .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())

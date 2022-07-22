@@ -23,4 +23,5 @@ pub enum TurnState {
     PreviousLevel,
 
     MapBuilding { step: usize },
+    ShowCheatMenu,
 }

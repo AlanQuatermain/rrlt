@@ -49,17 +49,7 @@ impl CellularAutomataBuilder {
     }
 
     fn count_neighbors(&self, x: i32, y: i32, map: &Map) -> usize {
-        let mut neighbors = 0;
-        for iy in -1..=1 {
-            for ix in -1..=1 {
-                if !(ix == 0 && iy == 0)
-                    && map.tiles[map.point2d_to_index(Point::new(x + ix, y + iy))] == TileType::Wall
-                {
-                    neighbors += 1;
-                }
-            }
-        }
-        neighbors
+        map.count_neighbors(Point::new(x, y))
     }
 
     fn iteration(&self, map: &mut Map) {

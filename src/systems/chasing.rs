@@ -27,7 +27,7 @@ pub fn chasing(#[resource] map: &Map, ecs: &SubWorld, commands: &mut CommandBuff
 
         let idx = map.point2d_to_index(*pos);
         let dmap = dijkstra_map.get_or_insert_with(|| {
-            DijkstraMap::new(map.width, map.height, &search_targets, map, 1024.0)
+            DijkstraMap::new(map.width, map.height, &search_targets, map, 20.0)
         });
         if let Some(destination) = DijkstraMap::find_lowest_exit(&dmap, idx, map) {
             let distance = DistanceAlg::Pythagoras.distance2d(*pos, *player_pos);

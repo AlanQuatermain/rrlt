@@ -5,6 +5,7 @@ use crate::MapTheme::Dungeon;
 pub enum MapTheme {
     Dungeon,
     Forest,
+    LimestoneCavern,
 }
 
 impl Default for MapTheme {
@@ -27,6 +28,8 @@ impl MapTheme {
             TileType::DeepWater => (to_cp437('~'), RGB::named(BLUE)),
             TileType::Gravel => (to_cp437(';'), RGB::named(LIGHTSLATEGREY)),
             TileType::UpStairs => (to_cp437('<'), RGB::named(CYAN)),
+            TileType::Stalactite => (to_cp437('╨'), RGB::named(GREY50)),
+            TileType::Stalagmite => (to_cp437('╥'), RGB::named(GREY50)),
         }
     }
 
@@ -37,6 +40,16 @@ impl MapTheme {
                 TileType::Wall => (to_cp437('♣'), RGB::from_f32(0., 0.6, 0.)),
                 TileType::Road => (to_cp437('≡'), RGB::named(YELLOW)),
                 TileType::Floor | TileType::WoodFloor => (to_cp437('"'), RGB::named(LIGHTGREEN)),
+                _ => self.default_glyph_for_tile(map, idx),
+            },
+            MapTheme::LimestoneCavern => match map.tiles[idx] {
+                TileType::Wall => (to_cp437('▒'), RGB::from_f32(0.7, 0.7, 0.7)),
+                TileType::Bridge => (to_cp437('.'), RGB::named(CHOCOLATE)),
+                TileType::Road => (to_cp437('≡'), RGB::named(YELLOW)),
+                TileType::ShallowWater => (to_cp437('░'), RGB::named(CYAN)),
+                TileType::DeepWater => (to_cp437('▓'), RGB::named(BLUE)),
+                TileType::Floor => (to_cp437('░'), RGB::from_f32(0.4, 0.4, 0.4)),
+                TileType::WoodFloor => (to_cp437('░'), RGB::named(CHOCOLATE2)),
                 _ => self.default_glyph_for_tile(map, idx),
             },
         }
@@ -66,6 +79,7 @@ impl MapTheme {
                 }
             }
             MapTheme::Forest => to_cp437('"'),
+            MapTheme::LimestoneCavern => to_cp437('▒'),
         }
     }
 }

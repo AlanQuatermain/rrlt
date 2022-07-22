@@ -36,6 +36,10 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             xp: 0,
             level: 1,
         },
+        LightSource {
+            color: RGB::from_f32(1.0, 1.0, 0.7),
+            range: 8,
+        },
     ));
 
     let mut commands = CommandBuffer::new(ecs);

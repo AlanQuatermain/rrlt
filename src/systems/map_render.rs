@@ -20,15 +20,22 @@ pub fn map_render(ecs: &SubWorld, #[resource] map: &Map, #[resource] camera: &Ca
             }
             let idx = map.point2d_to_index(pt);
 
-            if player_fov.visible_tiles.contains(&pt) | map.revealed_tiles[idx] {
-                let bg = if map.bloodstains.contains(&idx) {
-                    RGB::from_f32(0.75, 0.0, 0.0)
-                } else {
-                    RGB::named(BLACK)
-                };
+            if player_fov.visible_tiles.contains(&pt) || map.revealed_tiles[idx] {
                 let (glyph, mut fg) = map.theme.tile_to_render(map, idx);
+                let mut bg = RGB::named(BLACK);
+                if map.bloodstains.contains(&idx) {
+                    bg = RGB::from_f32(0.75, 0.0, 0.0);
+                }
+
                 if !player_fov.visible_tiles.contains(&pt) && !map.visible_tiles[idx] {
                     fg = fg.to_greyscale();
+                    if !map.outdoors {
+                        fg = fg.lerp(RGB::named(BLACK), 0.7);
+                    }
+                    bg = RGB::named(BLACK);
+                } else if !map.outdoors {
+                    fg = fg * map.light[idx];
+                    bg = bg * map.light[idx];
                 }
                 draw_batch.set(pt - offset, ColorPair::new(fg, bg), glyph);
             }

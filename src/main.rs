@@ -272,6 +272,7 @@ impl State {
         registry.register::<Carnivore>("carnivore".to_string());
         registry.register::<Herbivore>("herbivore".to_string());
         registry.register::<OtherLevelPosition>("olpos".to_string());
+        registry.register::<LightSource>("light_source".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -480,6 +481,9 @@ impl GameState for State {
             TurnState::GameOver => self.game_over(ctx),
             TurnState::RevealMap { row } => self.reveal_map(row),
             TurnState::MapBuilding { step } => self.visualize_map_build(step, ctx),
+            TurnState::ShowCheatMenu => {
+                build_cheat_menu_scheduler().execute(&mut self.ecs, &mut self.resources)
+            }
         }
 
         render_draw_buffer(ctx).expect("Render error");
@@ -487,7 +491,7 @@ impl GameState for State {
 }
 
 fn main() -> BError {
-    let mut context = BTermBuilder::new()
+    let context = BTermBuilder::new()
         .with_title("Roguelike Tutorial")
         .with_fps_cap(30.0)
         .with_dimensions(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -501,7 +505,7 @@ fn main() -> BError {
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .build()?;
-    context.with_post_scanlines(true);
+    // context.with_post_scanlines(true);
 
     // let context = BTermBuilder::new()
     //     .with_title("Rouguelike Tutorial")

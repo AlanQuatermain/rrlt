@@ -72,6 +72,11 @@ pub fn player_input(
             VirtualKeyCode::F => Point::new(1, -1),
             VirtualKeyCode::Z => Point::new(-1, 1),
             VirtualKeyCode::C => Point::new(1, 1),
+            VirtualKeyCode::Backslash => {
+                *turn_state = TurnState::ShowCheatMenu;
+                key_state.key = None;
+                return;
+            }
             VirtualKeyCode::Period => {
                 if key_state.shift {
                     // Player typed '>'

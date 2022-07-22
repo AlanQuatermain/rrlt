@@ -112,3 +112,53 @@ pub fn main_menu(#[resource] turn_state: &mut TurnState, #[resource] key_state: 
         }
     }
 }
+
+#[system]
+#[read_component(Player)]
+#[write_component(Point)]
+#[write_component(Pools)]
+pub fn cheat_menu(
+    ecs: &mut SubWorld,
+    #[resource] turn_state: &mut TurnState,
+    #[resource] key_state: &mut KeyState,
+) {
+    let mut batch = DrawBatch::new();
+    batch.target(2);
+
+    let yellow = ColorPair::new(YELLOW, BLACK);
+    let white = ColorPair::new(WHITE, BLACK);
+
+    let count = 3;
+    let mut y = (25 - (count / 2)) as i32;
+    batch.draw_box(Rect::with_size(15, y - 2, 31, count + 3), white);
+    batch.print_color(Point::new(18, y - 2), "Cheating!", yellow);
+    batch.print_color(Point::new(18, y + count), "ESCAPE to cancel", yellow);
+
+    batch.set(Point::new(17, y), white, to_cp437('('));
+    batch.set(Point::new(18, y), yellow, to_cp437('T'));
+    batch.set(Point::new(19, y), white, to_cp437(')'));
+    batch.print(Point::new(21, y), "Teleport to next level");
+
+    y += 1;
+
+    batch.set(Point::new(17, y), white, to_cp437('('));
+    batch.set(Point::new(18, y), yellow, to_cp437('H'));
+    batch.set(Point::new(19, y), white, to_cp437(')'));
+    batch.print(Point::new(21, y), "Heal to max");
+
+    if let Some(key) = key_state.key {
+        match key {
+            VirtualKeyCode::T => *turn_state = TurnState::NextLevel,
+            VirtualKeyCode::H => {
+                <&mut Pools>::query()
+                    .filter(component::<Player>())
+                    .for_each_mut(ecs, |stats| {
+                        stats.hit_points.current = stats.hit_points.max;
+                    });
+                *turn_state = TurnState::AwaitingInput;
+            }
+            VirtualKeyCode::Escape => *turn_state = TurnState::AwaitingInput,
+            _ => {}
+        }
+    }
+}
