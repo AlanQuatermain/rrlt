@@ -4,7 +4,7 @@ use crate::prelude::*;
 #[read_component(LightSource)]
 #[read_component(Point)]
 #[read_component(FieldOfView)]
-pub fn lighting(ecs: &SubWorld, #[resource] map: &mut Map, commands: &mut CommandBuffer) {
+pub fn lighting(ecs: &SubWorld, #[resource] map: &mut Map) {
     if map.outdoors {
         return;
     }

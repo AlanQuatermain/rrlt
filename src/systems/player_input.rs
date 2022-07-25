@@ -1,9 +1,9 @@
 use crate::{prelude::*, KeyState};
 
 #[system]
-#[read_component(Point)]
+#[write_component(Point)]
 #[read_component(Player)]
-#[read_component(Attackable)]
+#[read_component(Faction)]
 #[write_component(Pools)]
 #[read_component(Item)]
 #[read_component(Carried)]
@@ -15,11 +15,14 @@ use crate::{prelude::*, KeyState};
 #[read_component(BlocksVisibility)]
 #[read_component(BlocksTile)]
 #[write_component(Render)]
-#[read_component(Bystander)]
+#[read_component(Hidden)]
+#[read_component(Name)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] map: &Map,
+    #[resource] camera: &mut Camera,
+    #[resource] rng: &mut RandomNumberGenerator,
+    #[resource] map: &mut Map,
     #[resource] gamelog: &mut Gamelog,
     #[resource] key_state: &mut KeyState,
     #[resource] turn_state: &mut TurnState,
@@ -28,7 +31,6 @@ pub fn player_input(
     if *turn_state != TurnState::AwaitingInput {
         return;
     }
-    let mut players = <(Entity, &Point)>::query().filter(component::<Player>());
 
     if let Some(key) = key_state.key {
         if key_state.shift {
@@ -51,227 +53,58 @@ pub fn player_input(
             }
         }
 
-        let mut waiting = false;
-        let delta = match key {
-            VirtualKeyCode::LShift
-            | VirtualKeyCode::RShift
-            | VirtualKeyCode::LControl
-            | VirtualKeyCode::RControl
-            | VirtualKeyCode::LAlt
-            | VirtualKeyCode::RAlt
-            | VirtualKeyCode::LWin
-            | VirtualKeyCode::RWin => {
-                // don't use a turn when user only pressed a meta-key
-                return;
-            }
-            VirtualKeyCode::Left => Point::new(-1, 0),
-            VirtualKeyCode::Right => Point::new(1, 0),
-            VirtualKeyCode::Up => Point::new(0, -1),
-            VirtualKeyCode::Down => Point::new(0, 1),
-            VirtualKeyCode::Q => Point::new(-1, -1),
-            VirtualKeyCode::F => Point::new(1, -1),
-            VirtualKeyCode::Z => Point::new(-1, 1),
-            VirtualKeyCode::C => Point::new(1, 1),
-            VirtualKeyCode::Backslash => {
-                *turn_state = TurnState::ShowCheatMenu;
-                key_state.key = None;
-                return;
-            }
-            VirtualKeyCode::Period => {
-                if key_state.shift {
-                    // Player typed '>'
-                    let (_player, player_pos) = players
-                        .iter(ecs)
-                        .find_map(|(entity, pos)| Some((*entity, *pos)))
-                        .unwrap();
-                    let player_idx = map.point2d_to_index(player_pos);
-                    if map.tiles[player_idx] == TileType::DownStairs {
-                        *turn_state = TurnState::NextLevel;
-                        key_state.key = None;
-                        return;
-                    }
-
-                    gamelog
-                        .entries
-                        .push("There is no way down from here.".to_string());
-                } else {
-                    waiting = true;
-                }
-                Point::zero()
-            }
-            VirtualKeyCode::Comma => {
-                let (player, player_pos) = players
-                    .iter(ecs)
-                    .find_map(|(entity, pos)| Some((*entity, *pos)))
-                    .unwrap();
-
-                if key_state.shift {
-                    // Player typed '<'
-                    let player_idx = map.point2d_to_index(player_pos);
-                    if map.tiles[player_idx] == TileType::UpStairs {
-                        *turn_state = TurnState::PreviousLevel;
-                        key_state.key = None;
-                        return;
-                    }
-
-                    gamelog
-                        .entries
-                        .push("There is no way up from here.".to_string());
-                } else {
-                    let mut items = <(Entity, &Item, &Point)>::query();
-                    items
-                        .iter(ecs)
-                        .filter(|(_, _, &item_pos)| item_pos == player_pos)
-                        .for_each(|(entity, _, _)| {
-                            commands.push((
-                                (),
-                                WantsToCollect {
-                                    who: player,
-                                    what: *entity,
-                                },
-                            ));
-                        });
-                }
-                Point::zero()
-            }
-            VirtualKeyCode::I => {
-                *turn_state = if *turn_state != TurnState::ShowingInventory {
-                    TurnState::ShowingInventory
-                } else {
-                    TurnState::AwaitingInput
-                };
-                key_state.key = None;
-                return;
-            }
-            VirtualKeyCode::D => {
-                *turn_state = if *turn_state != TurnState::ShowingDropItems {
-                    TurnState::ShowingDropItems
-                } else {
-                    TurnState::AwaitingInput
-                };
-                key_state.key = None;
-                return;
-            }
-            VirtualKeyCode::Escape => {
-                *turn_state = TurnState::SaveGame;
-                key_state.key = None;
-                return;
-            }
-            _ => Point::zero(),
-        };
-
-        let (player_entity, player_pos, destination) = players
+        let (player_entity, player_pos, fov) = <(Entity, &Point, &FieldOfView)>::query()
+            .filter(component::<Player>())
             .iter(ecs)
-            .find_map(|(entity, pos)| Some((*entity, *pos, *pos + delta)))
+            .find_map(|(entity, pos, fov)| Some((*entity, *pos, fov.clone())))
             .unwrap();
 
-        let mut enemies = <(Entity, &Point)>::query().filter(component::<Attackable>());
-        let mut bystanders = <(Entity, &Point)>::query().filter(component::<Bystander>());
+        let mut delta = Point::zero();
+        match process_key_input(key, key_state) {
+            KeyInputResponse::DoNothing => return,
+            KeyInputResponse::Move { delta: mv } => delta = mv,
+            KeyInputResponse::Collect => {
+                try_collect_items(ecs, player_entity, player_pos, commands);
+                *turn_state = TurnState::Ticking;
+            }
+            KeyInputResponse::ShowCheatMenu => *turn_state = TurnState::ShowCheatMenu,
+            KeyInputResponse::ShowDropMenu => *turn_state = TurnState::ShowingDropItems,
+            KeyInputResponse::ShowInventory => *turn_state = TurnState::ShowingInventory,
+            KeyInputResponse::UpStairs => try_climb_stairs(map, turn_state, player_pos, gamelog),
+            KeyInputResponse::DownStairs => {
+                try_descend_stairs(map, turn_state, player_pos, gamelog)
+            }
+            KeyInputResponse::StandStill => {
+                try_wait_player(ecs);
+                *turn_state = TurnState::Ticking;
+            }
+            KeyInputResponse::SaveGame => *turn_state = TurnState::SaveGame,
+        }
+
         if delta != Point::zero() {
-            let mut attacked = false;
-            let mut opened = false;
-            enemies
-                .iter(ecs)
-                .filter(|(_, pos)| **pos == destination)
-                .for_each(|(entity, _)| {
-                    attacked = true;
-                    commands.push((
-                        (),
-                        WantsToAttack {
-                            attacker: player_entity,
-                            victim: *entity,
-                        },
-                    ));
-                });
+            let destination = player_pos + delta;
+            try_move_player(player_entity, player_pos, destination, map, ecs, commands);
 
-            if !attacked {
-                <(Entity, &Point, &mut Door, &mut Render)>::query()
-                    .filter(component::<BlocksTile>())
-                    .iter_mut(ecs)
-                    .filter(|(_, pos, _, _)| **pos == destination)
-                    .for_each(|(entity, _, door, render)| {
-                        door.open = true;
-                        render.glyph = to_cp437('/');
-                        commands.remove_component::<BlocksVisibility>(*entity);
-                        commands.remove_component::<BlocksTile>(*entity);
-                        opened = true;
-                    });
-                if opened {
-                    // mark fov as dirty
-                    <&mut FieldOfView>::query()
-                        .filter(component::<Player>())
-                        .for_each_mut(ecs, |fov| fov.is_dirty = true);
-                }
-            }
+            camera.on_player_move(destination);
+            fov.visible_tiles.iter().for_each(|pos| {
+                let idx = map.point2d_to_index(*pos);
+                map.revealed_tiles[idx] = true;
 
-            if !attacked && !opened {
-                // If destination isn't walkable, don't eat the turn.
-                let idx = map.point2d_to_index(destination);
-                if !map.tiles[idx].is_walkable() {
-                    return;
-                }
-
-                commands.push((
-                    (),
-                    WantsToMove {
-                        entity: player_entity,
-                        destination,
-                    },
-                ));
-
-                // Are we displacing an NPC?
-                bystanders
+                // Chance to find hidden things.
+                <(Entity, &Point, &Name)>::query()
+                    .filter(component::<Hidden>())
                     .iter(ecs)
-                    .filter(|(_, pos)| **pos == destination)
-                    .for_each(|(entity, _)| {
-                        commands.push((
-                            (),
-                            WantsToMove {
-                                entity: *entity,
-                                destination: player_pos,
-                            },
-                        ));
-                    })
-            }
-        } else if waiting {
-            // Player is standing still.
-            // If well fed, we may heal.
-            let hunger_state = <&HungerClock>::query()
-                .filter(component::<Player>())
-                .iter(ecs)
-                .nth(0)
-                .map(|clock| clock.state);
-
-            // If no monsters are visible, heal 1 hp.
-            let fov = <&FieldOfView>::query()
-                .filter(component::<Player>())
-                .iter(ecs)
-                .nth(0)
-                .unwrap();
-
-            let num_enemies = <&Point>::query()
-                .filter(component::<Attackable>())
-                .iter(ecs)
-                .filter(|pos| fov.visible_tiles.contains(pos))
-                .count();
-
-            let can_heal = num_enemies == 0
-                && match hunger_state {
-                    Some(HungerState::WellFed) => true,
-                    Some(HungerState::Normal) => true,
-                    _ => false,
-                };
-            if can_heal {
-                <&mut Pools>::query()
-                    .filter(component::<Player>())
-                    .for_each_mut(ecs, |stats| {
-                        if stats.hit_points.current < stats.hit_points.max {
-                            stats.hit_points.current += 1;
+                    .filter(|(_, p, _)| *p == pos)
+                    .for_each(|(entity, _, name)| {
+                        if rng.roll_dice(1, 24) == 1 {
+                            gamelog.entries.push(format!("You spotted a {}.", name.0));
+                            commands.remove_component::<Hidden>(*entity);
                         }
                     });
-            }
+            });
+
+            *turn_state = TurnState::Ticking;
         }
-        *turn_state = TurnState::PlayerTurn;
         key_state.key = None;
     }
 }
@@ -314,5 +147,269 @@ fn use_consumable_hotkey(
         }
     }
 
-    TurnState::PlayerTurn
+    TurnState::Ticking
+}
+
+fn try_move_player(
+    player_entity: Entity,
+    player_pos: Point,
+    destination: Point,
+    map: &mut Map,
+    ecs: &mut SubWorld,
+    commands: &mut CommandBuffer,
+) -> bool {
+    let mut attacked_or_swapped = false;
+    let mut fov_dirty = false;
+    let mut attacked = false;
+
+    <(Entity, &mut Point, &mut FieldOfView, &Faction)>::query()
+        .filter(component::<Pools>())
+        .iter_mut(ecs)
+        .filter(|(_, pos, _, _)| **pos == destination)
+        .for_each(|(entity, pos, fov, faction)| {
+            attacked_or_swapped = true;
+            let reaction = faction_reaction(&faction.name, "Player", &RAWS.lock().unwrap());
+            if reaction == Reaction::Attack {
+                commands.push((
+                    (),
+                    WantsToAttack {
+                        attacker: player_entity,
+                        victim: *entity,
+                    },
+                ));
+                attacked = true;
+            } else {
+                // Swap positions.
+                commands.add_component(player_entity, destination);
+                *pos = player_pos;
+                fov.is_dirty = true;
+                fov_dirty = true;
+                // both tiles remain blocked
+            }
+        });
+    if fov_dirty {
+        <&mut FieldOfView>::query()
+            .filter(component::<Player>())
+            .for_each_mut(ecs, |fov| fov.is_dirty = true);
+    }
+
+    if attacked {
+        // Won't be changing location
+        return false;
+    }
+
+    if !attacked_or_swapped {
+        if try_open_door(ecs, destination, commands) {
+            return false;
+        }
+
+        // If destination isn't walkable, don't eat the turn.
+        let idx = map.point2d_to_index(destination);
+        if !map.tiles[idx].is_walkable() {
+            return false;
+        }
+
+        let old_idx = map.point2d_to_index(player_pos);
+        map.blocked[old_idx] = false;
+        map.blocked[idx] = true;
+        commands.add_component(player_entity, destination);
+
+        // mark fov as dirty
+        <&mut FieldOfView>::query()
+            .filter(component::<Player>())
+            .for_each_mut(ecs, |fov| fov.is_dirty = true);
+    }
+
+    true
+}
+
+fn try_open_door(ecs: &mut SubWorld, destination: Point, commands: &mut CommandBuffer) -> bool {
+    let mut opened = false;
+    <(Entity, &Point, &mut Door, &mut Render)>::query()
+        .filter(component::<BlocksTile>())
+        .iter_mut(ecs)
+        .filter(|(_, pos, _, _)| **pos == destination)
+        .for_each(|(entity, _, door, render)| {
+            door.open = true;
+            render.glyph = to_cp437('/');
+            commands.remove_component::<BlocksVisibility>(*entity);
+            commands.remove_component::<BlocksTile>(*entity);
+            opened = true;
+        });
+    if opened {
+        // mark fov as dirty
+        <&mut FieldOfView>::query()
+            .filter(component::<Player>())
+            .for_each_mut(ecs, |fov| fov.is_dirty = true);
+    }
+
+    opened
+}
+
+fn try_wait_player(ecs: &mut SubWorld) {
+    // Player is standing still.
+    // If well fed, we may heal.
+    let hunger_state = <&HungerClock>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .map(|clock| clock.state);
+
+    // If no monsters are visible, heal 1 hp.
+    let fov = <&FieldOfView>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .unwrap();
+
+    let num_enemies = <(&Point, &Faction)>::query()
+        .iter(ecs)
+        .filter(|(pos, faction)| {
+            fov.visible_tiles.contains(pos)
+                && faction_reaction(&faction.name, "Player", &RAWS.lock().unwrap())
+                    == Reaction::Attack
+        })
+        .count();
+
+    let can_heal = num_enemies == 0
+        && match hunger_state {
+            Some(HungerState::WellFed) => true,
+            Some(HungerState::Normal) => true,
+            _ => false,
+        };
+    if can_heal {
+        <&mut Pools>::query()
+            .filter(component::<Player>())
+            .for_each_mut(ecs, |stats| {
+                if stats.hit_points.current < stats.hit_points.max {
+                    stats.hit_points.current += 1;
+                }
+            });
+    }
+}
+
+enum KeyInputResponse {
+    DoNothing,
+    ShowCheatMenu,
+    ShowInventory,
+    ShowDropMenu,
+    Move { delta: Point },
+    StandStill,
+    DownStairs,
+    UpStairs,
+    Collect,
+    SaveGame,
+}
+
+fn process_key_input(key: VirtualKeyCode, key_state: &mut KeyState) -> KeyInputResponse {
+    match key {
+        VirtualKeyCode::LShift
+        | VirtualKeyCode::RShift
+        | VirtualKeyCode::LControl
+        | VirtualKeyCode::RControl
+        | VirtualKeyCode::LAlt
+        | VirtualKeyCode::RAlt
+        | VirtualKeyCode::LWin
+        | VirtualKeyCode::RWin => {
+            // don't use a turn when user only pressed a meta-key
+            KeyInputResponse::DoNothing
+        }
+        VirtualKeyCode::Left => KeyInputResponse::Move {
+            delta: Point::new(-1, 0),
+        },
+        VirtualKeyCode::Right => KeyInputResponse::Move {
+            delta: Point::new(1, 0),
+        },
+        VirtualKeyCode::Up => KeyInputResponse::Move {
+            delta: Point::new(0, -1),
+        },
+        VirtualKeyCode::Down => KeyInputResponse::Move {
+            delta: Point::new(0, 1),
+        },
+        VirtualKeyCode::Q => KeyInputResponse::Move {
+            delta: Point::new(-1, -1),
+        },
+        VirtualKeyCode::F => KeyInputResponse::Move {
+            delta: Point::new(1, -1),
+        },
+        VirtualKeyCode::Z => KeyInputResponse::Move {
+            delta: Point::new(-1, 1),
+        },
+        VirtualKeyCode::C => KeyInputResponse::Move {
+            delta: Point::new(1, 1),
+        },
+        VirtualKeyCode::Backslash => KeyInputResponse::ShowCheatMenu,
+        VirtualKeyCode::Period => {
+            if key_state.shift {
+                KeyInputResponse::DownStairs
+            } else {
+                KeyInputResponse::StandStill
+            }
+        }
+        VirtualKeyCode::Comma => {
+            if key_state.shift {
+                KeyInputResponse::UpStairs
+            } else {
+                KeyInputResponse::Collect
+            }
+        }
+        VirtualKeyCode::I => KeyInputResponse::ShowInventory,
+        VirtualKeyCode::D => KeyInputResponse::ShowDropMenu,
+        VirtualKeyCode::Escape => KeyInputResponse::SaveGame,
+        _ => KeyInputResponse::DoNothing,
+    }
+}
+
+fn try_climb_stairs(
+    map: &Map,
+    turn_state: &mut TurnState,
+    player_pos: Point,
+    gamelog: &mut Gamelog,
+) {
+    let player_idx = map.point2d_to_index(player_pos);
+    if map.tiles[player_idx] == TileType::UpStairs {
+        *turn_state = TurnState::PreviousLevel;
+        return;
+    }
+
+    gamelog
+        .entries
+        .push("There is no way up from here.".to_string());
+}
+
+fn try_descend_stairs(
+    map: &Map,
+    turn_state: &mut TurnState,
+    player_pos: Point,
+    gamelog: &mut Gamelog,
+) {
+    let player_idx = map.point2d_to_index(player_pos);
+    if map.tiles[player_idx] == TileType::DownStairs {
+        *turn_state = TurnState::NextLevel;
+        return;
+    }
+
+    gamelog
+        .entries
+        .push("There is no way down from here.".to_string());
+}
+
+fn try_collect_items(
+    ecs: &SubWorld,
+    player: Entity,
+    player_pos: Point,
+    commands: &mut CommandBuffer,
+) {
+    <(Entity, &Item, &Point)>::query()
+        .iter(ecs)
+        .filter(|(_, _, &item_pos)| item_pos == player_pos)
+        .for_each(|(entity, _, _)| {
+            commands.push((
+                (),
+                WantsToCollect {
+                    who: player,
+                    what: *entity,
+                },
+            ));
+        });
 }

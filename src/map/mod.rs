@@ -72,6 +72,8 @@ pub struct Map {
     pub bloodstains: HashSet<usize>,
     pub view_blocked: HashSet<usize>,
     pub visible_tiles: Vec<bool>, // tiles that are always fully visible
+
+    pub debug_pathing: bool,
 }
 
 impl Map {
@@ -91,6 +93,7 @@ impl Map {
             bloodstains: HashSet::new(),
             view_blocked: HashSet::new(),
             visible_tiles: vec![false; num_tiles],
+            debug_pathing: false,
         }
     }
 
@@ -123,8 +126,8 @@ impl Map {
     fn valid_exit(&self, loc: Point, delta: Point) -> Option<usize> {
         let destination = loc + delta;
         if self.in_bounds(destination) {
-            if self.can_enter_tile(destination) {
-                let idx = self.idx_for_pos(&destination);
+            let idx = self.idx_for_pos(&destination);
+            if self.tiles[idx].is_walkable() {
                 Some(idx)
             } else {
                 None
@@ -218,16 +221,23 @@ impl BaseMap for Map {
 
         for tx in -1..=1 {
             for ty in -1..=1 {
-                if let Some(idx) = self.valid_exit(location, Point::new(tx, ty)) {
+                if tx == 0 && ty == 0 {
+                    continue;
+                }
+                if let Some(newidx) = self.valid_exit(location, Point::new(tx, ty)) {
                     if tx == 0 || ty == 0 {
                         // Cardinal directions
-                        exits.push((idx, self.tiles[idx].cost()));
+                        exits.push((newidx, self.tiles[newidx].cost()));
                     } else {
                         // Diagonals
-                        exits.push((idx, self.tiles[idx].cost() * 1.45));
+                        exits.push((newidx, self.tiles[newidx].cost() * 1.45));
                     }
                 }
             }
+        }
+
+        if self.debug_pathing {
+            println!("Exits from {}: {:?}", idx, exits);
         }
 
         exits

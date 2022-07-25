@@ -1,7 +1,5 @@
-mod animal_ai;
+mod ai;
 mod bury_dead;
-mod bystander_ai;
-mod chasing;
 mod collect;
 mod combat;
 mod damage;
@@ -16,7 +14,6 @@ mod lighting;
 mod map_indexing;
 mod map_render;
 mod menu;
-mod movement;
 mod particles;
 mod player_input;
 mod ranged_target;
@@ -26,6 +23,7 @@ mod use_items;
 
 use crate::prelude::*;
 
+pub use ai::*;
 pub use menu::MainMenuSelection;
 pub use particles::ParticleBuilder;
 
@@ -48,56 +46,41 @@ pub fn build_input_scheduler() -> Schedule {
         .build()
 }
 
-pub fn build_player_scheduler() -> Schedule {
+pub fn build_ticking_scheduler() -> Schedule {
     Schedule::builder()
         .add_system(particles::particle_cull_system())
-        .add_system(use_items::use_items_system())
-        .add_system(drop_item::drop_item_system())
-        .add_system(combat::combat_system())
-        .add_system(hunger::hunger_system())
-        .flush()
-        .add_system(damage::damage_system())
-        .add_system(particles::particle_spawn_system())
-        .flush()
-        .add_system(movement::movement_system())
-        .flush()
+        .add_system(map_indexing::map_indexing_system())
         .add_system(fov::fov_system())
         .flush()
-        .add_system(trigger::trigger_system())
+        // Determine initiative, assign current turns
+        .add_system(ai::initiative::initiative_system())
+        .flush()
+        // Possible remove current turn based on status effects
+        .add_system(ai::turn_status::turn_status_system())
+        .flush()
+        .add_system(ai::quipping::quipping_system())
+        // Immediate responses to nearby entities
+        .add_system(ai::adjacent::adjacent_system())
+        .flush()
+        // Responses to non-adjacent visible entities
+        .add_system(ai::visible::visible_system())
+        .flush()
+        // Per-AI systems to act on determined responses
+        .add_system(ai::approach::approach_system())
+        .add_system(ai::flee::flee_system())
+        .add_system(ai::default::default_movement_system())
+        .flush()
+        .add_system(combat::combat_system())
         .flush()
         .add_system(damage::damage_system())
-        .add_system(map_indexing::map_indexing_system())
-        .add_system(lighting::lighting_system())
-        .add_system(map_render::map_render_system())
-        .add_system(entity_render::entity_render_system())
-        .add_system(gui::gui_system())
-        .add_system(bury_dead::bury_dead_system())
-        .add_system(end_turn::end_turn_system())
-        .build()
-}
-
-pub fn build_monster_scheduler() -> Schedule {
-    Schedule::builder()
-        .add_system(particles::particle_cull_system())
-        .add_system(chasing::chasing_system())
-        .add_system(bystander_ai::bystander_ai_system())
-        .add_system(animal_ai::animal_ai_system())
         .flush()
         .add_system(use_items::use_items_system())
         .add_system(drop_item::drop_item_system())
-        .add_system(combat::combat_system())
-        .flush()
         .add_system(hunger::hunger_system())
-        .add_system(damage::damage_system())
         .add_system(particles::particle_spawn_system())
         .flush()
-        .add_system(movement::movement_system())
-        .flush()
-        .add_system(fov::fov_system())
         .add_system(trigger::trigger_system())
         .flush()
-        .add_system(damage::damage_system())
-        .add_system(map_indexing::map_indexing_system())
         .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())

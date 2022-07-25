@@ -77,7 +77,7 @@ pub fn ranged_target(
                     target: Some(map_pos),
                 },
             ));
-            *turn_state = TurnState::PlayerTurn;
+            *turn_state = TurnState::Ticking;
             return;
         }
     }

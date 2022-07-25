@@ -1,3 +1,4 @@
+use super::faction_structs::Reaction;
 use super::Raws;
 use crate::components::*;
 use crate::prelude::*;
@@ -10,6 +11,7 @@ pub struct RawMaster {
     mob_index: HashMap<String, usize>,
     prop_index: HashMap<String, usize>,
     loot_index: HashMap<String, usize>,
+    faction_index: HashMap<String, HashMap<String, Reaction>>,
 }
 
 impl RawMaster {
@@ -21,11 +23,13 @@ impl RawMaster {
                 props: Vec::new(),
                 spawn_table: Vec::new(),
                 loot_tables: Vec::new(),
+                faction_table: Vec::new(),
             },
             item_index: HashMap::new(),
             mob_index: HashMap::new(),
             prop_index: HashMap::new(),
             loot_index: HashMap::new(),
+            faction_index: HashMap::new(),
         }
     }
 
@@ -81,6 +85,21 @@ impl RawMaster {
                     &spawn.name
                 ));
             }
+        }
+
+        for faction in self.raws.faction_table.iter() {
+            let mut reactions: HashMap<String, Reaction> = HashMap::new();
+            for other in faction.responses.iter() {
+                reactions.insert(
+                    other.0.clone(),
+                    match other.1.as_str() {
+                        "ignore" => Reaction::Ignore,
+                        "flee" => Reaction::Flee,
+                        _ => Reaction::Attack,
+                    },
+                );
+            }
+            self.faction_index.insert(faction.name.clone(), reactions);
         }
     }
 }
@@ -216,23 +235,31 @@ pub fn spawn_named_mob(
     let entity = commands.push(((), Name(mob_template.name.clone())));
     set_position(&entity, pos, key, raws, commands);
 
-    match mob_template.ai.as_ref() {
-        "melee" => {
-            commands.add_component(entity, Attackable);
-            commands.add_component(entity, ChasingPlayer);
+    match mob_template.movement.as_ref() {
+        "random" => commands.add_component(entity, MoveMode(Movement::Random)),
+        "random_waypoint" => {
+            commands.add_component(entity, MoveMode(Movement::RandomWaypoint { path: None }))
         }
-        "bystander" => commands.add_component(entity, Bystander),
-        "vendor" => commands.add_component(entity, Vendor),
-        "carnivore" => {
-            commands.add_component(entity, Attackable);
-            commands.add_component(entity, Carnivore);
-        }
-        "herbivore" => {
-            commands.add_component(entity, Attackable);
-            commands.add_component(entity, Herbivore);
-        }
-        _ => {}
+        _ => commands.add_component(entity, MoveMode(Movement::Static)),
     }
+
+    // match mob_template.ai.as_ref() {
+    //     "melee" => {
+    //         commands.add_component(entity, Attackable);
+    //         commands.add_component(entity, ChasingPlayer);
+    //     }
+    //     "bystander" => commands.add_component(entity, Bystander),
+    //     "vendor" => commands.add_component(entity, Vendor),
+    //     "carnivore" => {
+    //         commands.add_component(entity, Attackable);
+    //         commands.add_component(entity, Carnivore);
+    //     }
+    //     "herbivore" => {
+    //         commands.add_component(entity, Attackable);
+    //         commands.add_component(entity, Herbivore);
+    //     }
+    //     _ => {}
+    // }
 
     if let Some(quips) = &mob_template.quips {
         commands.add_component(entity, Quips(quips.clone()));
@@ -253,6 +280,8 @@ pub fn spawn_named_mob(
             is_dirty: true,
         },
     );
+
+    commands.add_component(entity, Initiative { current: 2 });
 
     let mut attr = Attributes::default();
     let mut mob_fitness = 11;
@@ -367,6 +396,22 @@ pub fn spawn_named_mob(
         )
     }
 
+    if let Some(faction) = &mob_template.faction {
+        commands.add_component(
+            entity,
+            Faction {
+                name: faction.clone(),
+            },
+        );
+    } else {
+        commands.add_component(
+            entity,
+            Faction {
+                name: "Mindless".to_string(),
+            },
+        )
+    }
+
     true
 }
 
@@ -470,6 +515,20 @@ pub fn get_drop_item(
         }
         rt.roll(rng)
     })
+}
+
+pub fn faction_reaction(my_faction: &str, their_faction: &str, raws: &RawMaster) -> Reaction {
+    if raws.faction_index.contains_key(my_faction) {
+        let mf = &raws.faction_index[my_faction];
+        if mf.contains_key(their_faction) {
+            return mf[their_faction];
+        } else if mf.contains_key("Default") {
+            return mf["Default"];
+        } else {
+            return Reaction::Ignore;
+        }
+    }
+    Reaction::Ignore
 }
 
 fn get_renderable(renderable: &super::Renderable) -> crate::components::Render {

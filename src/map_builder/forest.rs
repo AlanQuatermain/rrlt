@@ -4,7 +4,6 @@ use super::{
     area_starting_points::{AreaStartingPosition, XStart, YStart},
     automata::CellularAutomataBuilder,
     cull_unreachable::CullUnreachable,
-    distant_exit::DistantExit,
     voronoi_spawning::VoronoiSpawning,
 };
 

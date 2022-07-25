@@ -137,7 +137,7 @@ pub fn inventory(
                         _ => return,
                     }
 
-                    *turn_state = TurnState::PlayerTurn;
+                    *turn_state = TurnState::Ticking;
                 }
             }
         }

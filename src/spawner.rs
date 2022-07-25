@@ -40,6 +40,10 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             color: RGB::from_f32(1.0, 1.0, 0.7),
             range: 8,
         },
+        Initiative { current: 0 },
+        Faction {
+            name: "Player".to_string(),
+        },
     ));
 
     let mut commands = CommandBuffer::new(ecs);

@@ -14,15 +14,6 @@ pub struct Player {
     pub map_level: u32,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Attackable;
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct WantsToMove {
-    pub entity: Entity,
-    pub destination: Point,
-}
-
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Name(pub String);
 
@@ -31,9 +22,6 @@ pub struct WantsToAttack {
     pub attacker: Entity,
     pub victim: Entity,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ChasingPlayer;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Item;
@@ -223,12 +211,6 @@ pub struct Door {
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AlwaysVisible;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub struct Bystander;
-
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub struct Vendor;
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Quips(pub Vec<String>);
 
@@ -328,12 +310,6 @@ impl Default for NaturalAttackDefense {
 pub struct LootTable(pub String);
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Carnivore;
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Herbivore;
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct OtherLevelPosition {
     pub position: Point,
     pub depth: i32,
@@ -343,4 +319,42 @@ pub struct OtherLevelPosition {
 pub struct LightSource {
     pub color: RGB,
     pub range: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Initiative {
+    pub current: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MyTurn;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Faction {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WantsToApproach {
+    pub idx: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WantsToFlee {
+    pub indices: Vec<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub enum Movement {
+    Static,
+    Random,
+    RandomWaypoint { path: Option<Vec<usize>> },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MoveMode(pub Movement);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Chasing {
+    pub target: Entity,
 }

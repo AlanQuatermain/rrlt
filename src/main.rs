@@ -78,8 +78,7 @@ struct State {
     ecs: World,
     resources: Resources,
     input_systems: Schedule,
-    player_systems: Schedule,
-    monster_systems: Schedule,
+    tick_systems: Schedule,
     ranged_systems: Schedule,
     menu_systems: Schedule,
     popup_menu_systems: Schedule,
@@ -104,8 +103,7 @@ impl State {
             ecs,
             resources,
             input_systems: build_input_scheduler(),
-            player_systems: build_player_scheduler(),
-            monster_systems: build_monster_scheduler(),
+            tick_systems: build_ticking_scheduler(),
             ranged_systems: build_ranged_scheduler(),
             menu_systems: build_menu_scheduler(),
             popup_menu_systems: build_popup_scheduler(),
@@ -225,9 +223,7 @@ impl State {
         registry.register::<Point>("position".to_string());
         registry.register::<Render>("render".to_string());
         registry.register::<Player>("player".to_string());
-        registry.register::<Attackable>("enemy".to_string());
         registry.register::<Name>("name".to_string());
-        registry.register::<ChasingPlayer>("chasing_player".to_string());
         registry.register::<Item>("item".to_string());
         registry.register::<AmuletOfYala>("amulet_of_yala".to_string());
         registry.register::<ProvidesHealing>("provides_healing".to_string());
@@ -259,8 +255,6 @@ impl State {
         registry.register::<Door>("door".to_string());
         registry.register::<BlocksVisibility>("blocks_visibility".to_string());
         registry.register::<AlwaysVisible>("always_visible".to_string());
-        registry.register::<Bystander>("bystander".to_string());
-        registry.register::<Vendor>("vendor".to_string());
         registry.register::<Quips>("quips".to_string());
         registry.register::<Attribute>("attr".to_string());
         registry.register::<Attributes>("attrs".to_string());
@@ -269,10 +263,13 @@ impl State {
         registry.register::<NaturalAttack>("nattack".to_string());
         registry.register::<NaturalAttackDefense>("natkdef".to_string());
         registry.register::<LootTable>("loot_tbl".to_string());
-        registry.register::<Carnivore>("carnivore".to_string());
-        registry.register::<Herbivore>("herbivore".to_string());
         registry.register::<OtherLevelPosition>("olpos".to_string());
         registry.register::<LightSource>("light_source".to_string());
+        registry.register::<Initiative>("initiative".to_string());
+        registry.register::<Faction>("faction".to_string());
+        registry.register::<Movement>("movement".to_string());
+        registry.register::<MoveMode>("move_mode".to_string());
+        registry.register::<Chasing>("chasing".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -381,7 +378,7 @@ impl State {
             height = map.height;
         }
         if row as usize == height - 1 {
-            self.resources.insert(TurnState::MonsterTurn);
+            self.resources.insert(TurnState::Ticking);
         } else {
             self.resources.insert(TurnState::RevealMap { row: row + 1 })
         }
@@ -439,6 +436,7 @@ impl GameState for State {
 
         // ctx.key = None;
 
+        let tm = std::time::Instant::now();
         let current_state = self.resources.get::<TurnState>().unwrap().clone();
         match current_state {
             TurnState::AwaitingInput => {
@@ -449,12 +447,12 @@ impl GameState for State {
                     ctx.key = None;
                 }
             }
-            TurnState::PlayerTurn => self
-                .player_systems
-                .execute(&mut self.ecs, &mut self.resources),
-            TurnState::MonsterTurn => self
-                .monster_systems
-                .execute(&mut self.ecs, &mut self.resources),
+            TurnState::Ticking => {
+                while self.resources.get::<TurnState>().unwrap().clone() == TurnState::Ticking {
+                    self.tick_systems
+                        .execute(&mut self.ecs, &mut self.resources);
+                }
+            }
             TurnState::ShowingInventory => self
                 .popup_menu_systems
                 .execute(&mut self.ecs, &mut self.resources),
@@ -485,6 +483,7 @@ impl GameState for State {
                 build_cheat_menu_scheduler().execute(&mut self.ecs, &mut self.resources)
             }
         }
+        // println!("Tick took {} seconds", tm.elapsed().as_secs_f32());
 
         render_draw_buffer(ctx).expect("Render error");
     }

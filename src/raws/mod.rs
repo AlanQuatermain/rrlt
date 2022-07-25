@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use std::sync::Mutex;
 
+mod faction_structs;
 mod item_structs;
 mod loot_structs;
 mod mob_structs;
@@ -8,6 +9,7 @@ mod prop_structs;
 mod rawmaster;
 mod spawn_table_structs;
 
+pub use faction_structs::Reaction;
 pub use rawmaster::*;
 
 lazy_static! {
@@ -23,6 +25,7 @@ pub struct Raws {
     pub props: Vec<prop_structs::Prop>,
     pub spawn_table: Vec<spawn_table_structs::SpawnTableEntry>,
     pub loot_tables: Vec<loot_structs::LootTable>,
+    pub faction_table: Vec<faction_structs::FactionInfo>,
 }
 
 #[derive(Deserialize, Debug)]
