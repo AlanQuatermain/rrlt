@@ -83,25 +83,25 @@ pub fn player_input(
 
         if delta != Point::zero() {
             let destination = player_pos + delta;
-            try_move_player(player_entity, player_pos, destination, map, ecs, commands);
+            if try_move_player(player_entity, player_pos, destination, map, ecs, commands) {
+                camera.on_player_move(destination);
+                fov.visible_tiles.iter().for_each(|pos| {
+                    let idx = map.point2d_to_index(*pos);
+                    map.revealed_tiles[idx] = true;
 
-            camera.on_player_move(destination);
-            fov.visible_tiles.iter().for_each(|pos| {
-                let idx = map.point2d_to_index(*pos);
-                map.revealed_tiles[idx] = true;
-
-                // Chance to find hidden things.
-                <(Entity, &Point, &Name)>::query()
-                    .filter(component::<Hidden>())
-                    .iter(ecs)
-                    .filter(|(_, p, _)| *p == pos)
-                    .for_each(|(entity, _, name)| {
-                        if rng.roll_dice(1, 24) == 1 {
-                            gamelog.entries.push(format!("You spotted a {}.", name.0));
-                            commands.remove_component::<Hidden>(*entity);
-                        }
-                    });
-            });
+                    // Chance to find hidden things.
+                    <(Entity, &Point, &Name)>::query()
+                        .filter(component::<Hidden>())
+                        .iter(ecs)
+                        .filter(|(_, p, _)| *p == pos)
+                        .for_each(|(entity, _, name)| {
+                            if rng.roll_dice(1, 24) == 1 {
+                                gamelog.entries.push(format!("You spotted a {}.", name.0));
+                                commands.remove_component::<Hidden>(*entity);
+                            }
+                        });
+                });
+            }
 
             *turn_state = TurnState::Ticking;
         }
@@ -162,31 +162,42 @@ fn try_move_player(
     let mut fov_dirty = false;
     let mut attacked = false;
 
-    <(Entity, &mut Point, &mut FieldOfView, &Faction)>::query()
-        .filter(component::<Pools>())
-        .iter_mut(ecs)
-        .filter(|(_, pos, _, _)| **pos == destination)
-        .for_each(|(entity, pos, fov, faction)| {
-            attacked_or_swapped = true;
-            let reaction = faction_reaction(&faction.name, "Player", &RAWS.lock().unwrap());
-            if reaction == Reaction::Attack {
-                commands.push((
-                    (),
-                    WantsToAttack {
-                        attacker: player_entity,
-                        victim: *entity,
-                    },
-                ));
-                attacked = true;
-            } else {
-                // Swap positions.
-                commands.add_component(player_entity, destination);
-                *pos = player_pos;
-                fov.is_dirty = true;
-                fov_dirty = true;
-                // both tiles remain blocked
-            }
-        });
+    let mut swaps: Vec<(Entity, Point, Point)> = Vec::new();
+
+    let destination_idx = map.point2d_to_index(destination);
+    crate::spatial::for_each_tile_content(destination_idx, |entity| {
+        let reaction: Reaction;
+        if let Ok(faction) = ecs.entry_ref(entity).unwrap().get_component::<Faction>() {
+            reaction = faction_reaction(&faction.name, "Player", &RAWS.lock().unwrap());
+        } else {
+            return;
+        }
+
+        attacked_or_swapped = true;
+        if reaction == Reaction::Attack {
+            commands.push((
+                (),
+                WantsToAttack {
+                    attacker: player_entity,
+                    victim: entity,
+                },
+            ));
+            attacked = true;
+        } else {
+            // Swap positions.
+            swaps.push((entity, player_pos, destination));
+            commands.add_component(player_entity, destination);
+
+            <(Entity, &mut Point, &mut FieldOfView)>::query()
+                .iter_mut(ecs)
+                .filter(|(e, _, _)| **e == entity)
+                .for_each(|(_, pos, fov)| {
+                    *pos = player_pos;
+                    fov.is_dirty = true;
+                    fov_dirty = true;
+                });
+        }
+    });
     if fov_dirty {
         <&mut FieldOfView>::query()
             .filter(component::<Player>())
@@ -204,20 +215,28 @@ fn try_move_player(
         }
 
         // If destination isn't walkable, don't eat the turn.
-        let idx = map.point2d_to_index(destination);
-        if !map.tiles[idx].is_walkable() {
+        let destination_idx = map.point2d_to_index(destination);
+        if crate::spatial::is_blocked(destination_idx) {
             return false;
         }
 
         let old_idx = map.point2d_to_index(player_pos);
-        map.blocked[old_idx] = false;
-        map.blocked[idx] = true;
+        crate::spatial::move_entity(player_entity, old_idx, destination_idx);
         commands.add_component(player_entity, destination);
 
         // mark fov as dirty
         <&mut FieldOfView>::query()
             .filter(component::<Player>())
             .for_each_mut(ecs, |fov| fov.is_dirty = true);
+    }
+
+    for m in swaps.iter() {
+        let them = m.0;
+        let old_idx = map.point2d_to_index(m.1);
+        let new_idx = map.point2d_to_index(m.2);
+        crate::spatial::move_entity(m.0, new_idx, old_idx);
+        crate::spatial::move_entity(player_entity, old_idx, new_idx);
+        commands.add_component(m.0, EntityMoved);
     }
 
     true

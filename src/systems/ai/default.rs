@@ -32,8 +32,7 @@ pub fn default_movement(
             if map.can_enter_tile(new_pos) {
                 let from_idx = map.point2d_to_index(*pos);
                 let to_idx = map.point2d_to_index(new_pos);
-                map.blocked[from_idx] = false;
-                map.blocked[to_idx] = true;
+                crate::spatial::move_entity(*entity, from_idx, to_idx);
                 *pos = new_pos;
                 fov.is_dirty = true;
                 commands.add_component(*entity, EntityMoved);
@@ -44,13 +43,12 @@ pub fn default_movement(
             if let Some(path) = path {
                 if path.len() > 1 {
                     let new_idx = path[1];
-                    if map.blocked[new_idx] {
+                    if crate::spatial::is_blocked(new_idx) {
                         // Wait for the path to clear
                         return;
                     }
-                    map.blocked[idx] = false;
+                    crate::spatial::move_entity(*entity, idx, new_idx);
                     *pos = map.index_to_point2d(new_idx);
-                    map.blocked[new_idx] = true;
                     fov.is_dirty = true;
                     path.remove(0);
                 } else {

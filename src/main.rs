@@ -7,6 +7,7 @@ mod map_builder;
 mod random_table;
 mod raws;
 mod rex_assets;
+mod spatial;
 mod spawner;
 mod systems;
 mod turn_state;

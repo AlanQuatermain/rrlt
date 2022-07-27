@@ -22,12 +22,12 @@ pub fn chasing(
         let to_idx = map.point2d_to_index(*target_pos);
         let path = a_star_search(my_idx, to_idx, &*map);
         if path.success && path.steps.len() < 15 {
+            let old_idx = map.point2d_to_index(*pos);
             let new_idx = path.steps[1];
-            map.blocked[my_idx] = false;
-            map.blocked[new_idx] = true;
+            crate::spatial::move_entity(*entity, old_idx, new_idx);
             *pos = map.index_to_point2d(new_idx);
-            commands.add_component(*entity, EntityMoved);
             fov.is_dirty = true;
+            commands.add_component(*entity, EntityMoved);
 
             // All done
             commands.remove_component::<MyTurn>(*entity);

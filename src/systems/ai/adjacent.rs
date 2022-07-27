@@ -6,37 +6,30 @@ use crate::raws::Reaction;
 #[read_component(Faction)]
 #[read_component(Point)]
 #[write_component(WantsToAttack)]
-#[filter(component::<MyTurn>())]
+#[read_component(Name)]
+#[filter(component::<MyTurn>()&!component::<Player>())]
 pub fn adjacent(
     ecs: &SubWorld,
     entity: &Entity,
     faction: &Faction,
     pos: &Point,
+    name: &Name,
     #[resource] map: &Map,
     commands: &mut CommandBuffer,
 ) {
-    let player_entity = <Entity>::query()
-        .filter(component::<Player>())
-        .iter(ecs)
-        .nth(0)
-        .unwrap();
-
-    if entity == player_entity {
-        return;
-    }
-
-    // Add possible reactions to adjacents for each direction.
+    // Add possible reactions to adjacent entities for each direction.
     let adjacent_pts = adjacent_points(pos, map);
-    let reactions: Vec<(Entity, Reaction)> = <(&Point, &Faction, Entity)>::query()
+    let mut reactions: Vec<(Entity, Reaction)> = Vec::new();
+
+    <(Entity, &Point, &Faction)>::query()
         .iter(ecs)
-        .filter(|(p, _, _)| adjacent_pts.contains(p))
-        .map(|(_, other_faction, other_entity)| {
-            (
-                *other_entity,
-                faction_reaction(&faction.name, &other_faction.name, &RAWS.lock().unwrap()),
-            )
-        })
-        .collect();
+        .filter(|(_, p, _)| adjacent_pts.contains(p))
+        .for_each(|(e, _, f)| {
+            reactions.push((
+                *e,
+                faction_reaction(&faction.name, &f.name, &RAWS.lock().unwrap()),
+            ));
+        });
 
     let mut acted = false;
     for reaction in reactions.iter() {
@@ -61,8 +54,8 @@ pub fn adjacent(
 fn adjacent_points(pos: &Point, map: &Map) -> Vec<Point> {
     let mut points = Vec::new();
 
-    for x in -1..1 {
-        for y in -1..1 {
+    for x in -1..=1 {
+        for y in -1..=1 {
             if x == 0 && y == 0 {
                 continue;
             }

@@ -71,12 +71,12 @@ pub fn build_ticking_scheduler() -> Schedule {
         .add_system(ai::default::default_movement_system())
         .flush()
         .add_system(combat::combat_system())
+        .add_system(use_items::use_items_system())
+        .add_system(hunger::hunger_system())
         .flush()
         .add_system(damage::damage_system())
         .flush()
-        .add_system(use_items::use_items_system())
         .add_system(drop_item::drop_item_system())
-        .add_system(hunger::hunger_system())
         .add_system(particles::particle_spawn_system())
         .flush()
         .add_system(trigger::trigger_system())
@@ -86,7 +86,7 @@ pub fn build_ticking_scheduler() -> Schedule {
         .add_system(entity_render::entity_render_system())
         .add_system(gui::gui_system())
         .add_system(bury_dead::bury_dead_system())
-        .add_system(end_turn::end_turn_system())
+        // .add_system(end_turn::end_turn_system())
         .build()
 }
 

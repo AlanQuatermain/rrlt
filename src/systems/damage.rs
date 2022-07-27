@@ -25,6 +25,7 @@ pub fn damage(
     let mut xp_gain = 0;
 
     if let Ok(mut target) = ecs.entry_mut(command.target) {
+        let mut target_idx = 0usize;
         if let Ok(pos) = target.get_component::<Point>() {
             // Only leave bloodstains when something hurts itself with an item
             // E.g. not when damaged due to hunger.
@@ -32,10 +33,14 @@ pub fn damage(
                 map.bloodstains.insert(map.point2d_to_index(*pos));
             }
             particle_builder.request(*pos, ColorPair::new(RED, BLACK), to_cp437('‼'), 200.0);
+            target_idx = map.point2d_to_index(*pos);
         }
         if let Ok(stats) = target.get_component_mut::<Pools>() {
             let amount = i32::min(command.damage, stats.hit_points.current);
             stats.hit_points.current -= amount;
+            if stats.hit_points.current < 1 {
+                crate::spatial::remove_entity(command.target, target_idx);
+            }
 
             let log_line = if let Some(item_name) = item_name {
                 log_for_item_damage(&user_name, &target_name, &item_name, amount)
@@ -51,6 +56,7 @@ pub fn damage(
             }
         } else if target.get_component::<Item>().is_ok() {
             // destroy the item outright
+            crate::spatial::remove_entity(command.target, target_idx);
             commands.remove(command.target);
             gamelog
                 .entries

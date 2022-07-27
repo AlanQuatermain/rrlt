@@ -190,44 +190,47 @@ fn find_targets<T: Component>(
     target: &Point,
     map: &Map,
 ) -> Vec<Entity> {
+    let mut entities: Vec<Entity> = Vec::new();
+
     if let Ok(area_of_effect) = item.get_component::<AreaOfEffect>() {
         // Area target -- can aim anywhere
         let blast_tiles = field_of_view_set(*target, area_of_effect.0, map);
-        return <(&Point, Entity)>::query()
+        <(Entity, &Point)>::query()
             .filter(component::<T>())
-            // .filter(component::<Health>())
             .iter(ecs)
-            .filter(|(pos, _)| blast_tiles.contains(*pos))
-            .map(|(_, mob)| *mob)
-            .collect();
+            .filter(|(_, p)| blast_tiles.contains(*p))
+            .for_each(|(e, _)| entities.push(*e));
     } else {
         // Single target -- must have one valid target
-        <(&Point, Entity)>::query()
+        <(Entity, &Point)>::query()
             .filter(component::<T>())
             .iter(ecs)
-            .filter(|(pos, _)| *pos == target)
-            .map(|(_, mob)| *mob)
-            .collect()
+            .filter(|(_, p)| **p == *target)
+            .for_each(|(e, _)| entities.push(*e));
     }
+
+    entities
 }
 
 fn find_all_targets(ecs: &SubWorld, item: &EntryRef, target: &Point, map: &Map) -> Vec<Entity> {
+    let mut entities: Vec<Entity> = Vec::new();
+
     if let Ok(area_of_effect) = item.get_component::<AreaOfEffect>() {
         // Area target -- can aim anywhere
         let blast_tiles = field_of_view_set(*target, area_of_effect.0, map);
-        return <(&Point, Entity)>::query()
+        <(Entity, &Point)>::query()
             .iter(ecs)
-            .filter(|(pos, _)| blast_tiles.contains(*pos))
-            .map(|(_, mob)| *mob)
-            .collect();
+            .filter(|(_, p)| blast_tiles.contains(*p))
+            .for_each(|(e, _)| entities.push(*e));
     } else {
         // Single target -- must have one valid target
-        <(&Point, Entity)>::query()
+        <(Entity, &Point)>::query()
             .iter(ecs)
-            .filter(|(pos, _)| *pos == target)
-            .map(|(_, mob)| *mob)
-            .collect()
+            .filter(|(_, p)| **p == *target)
+            .for_each(|(e, _)| entities.push(*e));
     }
+
+    entities
 }
 
 fn apply_healing(

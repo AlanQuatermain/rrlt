@@ -68,7 +68,6 @@ pub struct Map {
 
     pub tiles: Vec<TileType>,
     pub revealed_tiles: Vec<bool>,
-    pub blocked: Vec<bool>,
     pub bloodstains: HashSet<usize>,
     pub view_blocked: HashSet<usize>,
     pub visible_tiles: Vec<bool>, // tiles that are always fully visible
@@ -79,6 +78,7 @@ pub struct Map {
 impl Map {
     pub fn new<S: ToString>(depth: i32, width: usize, height: usize, name: S) -> Self {
         let num_tiles = width * height;
+        crate::spatial::set_size(num_tiles);
         Self {
             width,
             height,
@@ -89,7 +89,6 @@ impl Map {
             light: vec![RGB::named(BLACK); num_tiles],
             tiles: vec![TileType::Floor; num_tiles],
             revealed_tiles: vec![false; num_tiles],
-            blocked: vec![false; num_tiles],
             bloodstains: HashSet::new(),
             view_blocked: HashSet::new(),
             visible_tiles: vec![false; num_tiles],
@@ -106,7 +105,7 @@ impl Map {
     }
 
     pub fn can_enter_tile(&self, point: Point) -> bool {
-        self.in_bounds(point) && (self.blocked[self.idx_for_pos(&point)] == false)
+        self.in_bounds(point) && (crate::spatial::is_blocked(self.idx_for_pos(&point)) == false)
     }
 
     pub fn try_idx(&self, point: Point) -> Option<usize> {
@@ -118,16 +117,14 @@ impl Map {
     }
 
     pub fn populate_blocked(&mut self) {
-        for (idx, tile) in self.tiles.iter().enumerate() {
-            self.blocked[idx] = !tile.is_walkable();
-        }
+        crate::spatial::populate_blocked_from_map(self)
     }
 
     fn valid_exit(&self, loc: Point, delta: Point) -> Option<usize> {
         let destination = loc + delta;
         if self.in_bounds(destination) {
             let idx = self.idx_for_pos(&destination);
-            if self.tiles[idx].is_walkable() {
+            if !crate::spatial::is_blocked_by_tile(idx) {
                 Some(idx)
             } else {
                 None
