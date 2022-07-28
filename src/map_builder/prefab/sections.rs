@@ -77,3 +77,27 @@ const RIGHT_FORT: &str = "
   #######      
      #         
 ";
+
+#[allow(dead_code)]
+pub const ORC_CAMP: PrefabSection = PrefabSection {
+    template: ORC_CAMP_TEXT,
+    width: 12,
+    height: 12,
+    placement: (HorizontalPlacement::Center, VerticalPlacement::Center),
+};
+
+pub const ORC_CAMP_TEXT: &str = "
+            
+ ≈≈≈≈o≈≈≈≈≈ 
+ ≈☼      ☼≈ 
+ ≈ g      ≈ 
+ ≈        ≈ 
+ ≈    g   ≈ 
+ o   O    o 
+ ≈        ≈ 
+ ≈ g      ≈ 
+ ≈    g   ≈ 
+ ≈☼      ☼≈ 
+ ≈≈≈≈o≈≈≈≈≈
+            
+";

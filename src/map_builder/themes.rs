@@ -47,7 +47,7 @@ impl MapTheme {
                 TileType::Bridge => (to_cp437('.'), RGB::named(CHOCOLATE)),
                 TileType::Road => (to_cp437('≡'), RGB::named(YELLOW)),
                 TileType::ShallowWater => (to_cp437('░'), RGB::named(CYAN)),
-                TileType::DeepWater => (to_cp437('▓'), RGB::named(BLUE)),
+                TileType::DeepWater => (to_cp437('▓'), RGB::from_f32(0.2, 0.2, 1.0)),
                 TileType::Floor => (to_cp437('░'), RGB::from_f32(0.4, 0.4, 0.4)),
                 TileType::WoodFloor => (to_cp437('░'), RGB::named(CHOCOLATE2)),
                 _ => self.default_glyph_for_tile(map, idx),

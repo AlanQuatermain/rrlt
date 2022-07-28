@@ -470,6 +470,23 @@ pub fn spawn_named_prop(
             }
         }
     }
+    if let Some(light) = &template.light {
+        commands.add_component(
+            entity,
+            LightSource {
+                color: RGB::from_hex(&light.color).unwrap(),
+                range: light.range,
+            },
+        );
+        commands.add_component(
+            entity,
+            FieldOfView {
+                visible_tiles: HashSet::new(),
+                radius: light.range,
+                is_dirty: true,
+            },
+        );
+    }
 
     true
 }

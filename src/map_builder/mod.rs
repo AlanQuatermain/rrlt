@@ -5,7 +5,7 @@ use self::{
     automata::CellularAutomataBuilder,
     bsp::BSPDungeonBuilder,
     bsp_interior::BSPInteriorBuilder,
-    caverns::limestone_cavern_builder,
+    caverns::{limestone_cavern_builder, limestone_deep_cavern_builder},
     cull_unreachable::CullUnreachable,
     distant_exit::DistantExit,
     dla::DLABuilder,
@@ -331,6 +331,7 @@ pub fn level_builder(
         0 => town_builder(new_depth, width, height, rng),
         1 => forest_builder(new_depth, width, height, rng),
         2 => limestone_cavern_builder(new_depth, rng, width, height),
+        3 => limestone_deep_cavern_builder(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

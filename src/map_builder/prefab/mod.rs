@@ -278,6 +278,10 @@ impl PrefabBuilder {
             '>' => {
                 build_data.map.tiles[idx] = TileType::DownStairs;
             }
+            'k' => {
+                build_data.map.tiles[idx] = TileType::Floor;
+                build_data.spawn_list.push((pos, "Kobold".to_string()))
+            }
             'g' => {
                 build_data.map.tiles[idx] = TileType::Floor;
                 build_data.spawn_list.push((pos, "Goblin".to_string()))
@@ -288,11 +292,7 @@ impl PrefabBuilder {
             }
             'O' => {
                 build_data.map.tiles[idx] = TileType::Floor;
-                build_data.spawn_list.push((pos, "Ogre".to_string()))
-            }
-            'E' => {
-                build_data.map.tiles[idx] = TileType::Floor;
-                build_data.spawn_list.push((pos, "Ettin".to_string()))
+                build_data.spawn_list.push((pos, "Orc Leader".to_string()))
             }
             '^' => {
                 build_data.map.tiles[idx] = TileType::Floor;
@@ -307,6 +307,13 @@ impl PrefabBuilder {
                 build_data
                     .spawn_list
                     .push((pos, "Health Potion".to_string()))
+            }
+            '≈' => {
+                build_data.map.tiles[idx] = TileType::DeepWater;
+            }
+            '☼' => {
+                build_data.map.tiles[idx] = TileType::Floor;
+                build_data.spawn_list.push((pos, "Watch Fire".to_string()))
             }
             _ => log(format!("Unknown glyph loading map: {}", ch)),
         }
