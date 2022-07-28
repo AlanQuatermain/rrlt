@@ -80,6 +80,19 @@ where
     }
 }
 
+pub fn for_each_tile_content_until_result<T, F>(idx: usize, mut f: F) -> Option<T>
+where
+    F: FnMut(Entity) -> Option<T>,
+{
+    let lock = SPATIAL_MAP.lock().unwrap();
+    for entity in lock.tile_content[idx].iter() {
+        if let Some(result) = f(entity.0) {
+            return Some(result);
+        }
+    }
+    None
+}
+
 pub fn move_entity(entity: Entity, moving_from: usize, moving_to: usize) {
     let mut lock = SPATIAL_MAP.lock().unwrap();
     let mut entity_blocks = false;

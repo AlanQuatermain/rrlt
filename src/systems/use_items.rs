@@ -129,6 +129,7 @@ pub fn use_items(
             if used_item && item.get_component::<Consumable>().is_ok() {
                 // remove the item
                 commands.add_component(activate.item, Consumed {});
+                commands.add_component(activate.used_by, EquipmentChanged);
             }
         }
 

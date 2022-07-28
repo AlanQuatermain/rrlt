@@ -23,6 +23,7 @@ pub fn damage(
     let item_name = command.item_entity.map(|item| name_for(&item, ecs).0);
 
     let mut xp_gain = 0;
+    let mut gold_gain = 0.0f32;
 
     if let Ok(mut target) = ecs.entry_mut(command.target) {
         let mut target_idx = 0usize;
@@ -53,6 +54,7 @@ pub fn damage(
 
             if user_name.1 && !target_name.1 && stats.hit_points.current <= 0 {
                 xp_gain += stats.level * 100;
+                gold_gain += stats.gold;
             }
         } else if target.get_component::<Item>().is_ok() {
             // destroy the item outright
@@ -71,25 +73,27 @@ pub fn damage(
         }
     }
 
-    if xp_gain != 0 {
-        award_xp(
+    if xp_gain != 0 || gold_gain != 0.0 {
+        award_xp_and_gold(
             ecs,
             gamelog,
             particle_builder,
             &command.user_entity,
             xp_gain,
+            gold_gain,
         );
     }
 
     commands.remove(*message);
 }
 
-fn award_xp(
+fn award_xp_and_gold(
     ecs: &mut SubWorld,
     gamelog: &mut Gamelog,
     particle_builder: &mut ParticleBuilder,
     entity: &Entity,
     xp_gain: i32,
+    gold_gain: f32,
 ) {
     <(Entity, &mut Pools, &Attributes, &Point)>::query()
         .filter(component::<Player>())
@@ -97,6 +101,7 @@ fn award_xp(
         .filter(|(e, _, _, _)| *e == entity)
         .for_each(|(_, stats, attrs, pos)| {
             stats.xp += xp_gain;
+            stats.gold += gold_gain;
             let goal = stats.level * 1000;
             if stats.xp >= goal {
                 // Gained a level!

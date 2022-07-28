@@ -271,6 +271,7 @@ impl State {
         registry.register::<Movement>("movement".to_string());
         registry.register::<MoveMode>("move_mode".to_string());
         registry.register::<Chasing>("chasing".to_string());
+        registry.register::<Vendor>("vendor".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -483,6 +484,9 @@ impl GameState for State {
             TurnState::ShowCheatMenu => {
                 build_cheat_menu_scheduler().execute(&mut self.ecs, &mut self.resources)
             }
+            TurnState::ShowingVendor { vendor: _, mode: _ } => self
+                .input_systems
+                .execute(&mut self.ecs, &mut self.resources),
         }
         // println!("Tick took {} seconds", tm.elapsed().as_secs_f32());
 

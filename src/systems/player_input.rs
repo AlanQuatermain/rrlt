@@ -17,6 +17,7 @@ use crate::{prelude::*, KeyState};
 #[write_component(Render)]
 #[read_component(Hidden)]
 #[read_component(Name)]
+#[read_component(Vendor)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -83,27 +84,47 @@ pub fn player_input(
 
         if delta != Point::zero() {
             let destination = player_pos + delta;
-            if try_move_player(player_entity, player_pos, destination, map, ecs, commands) {
-                camera.on_player_move(destination);
-                fov.visible_tiles.iter().for_each(|pos| {
-                    let idx = map.point2d_to_index(*pos);
-                    map.revealed_tiles[idx] = true;
+            match try_move_player(player_entity, player_pos, destination, map, ecs, commands) {
+                MoveResult::Moved => {
+                    camera.on_player_move(destination);
+                    fov.visible_tiles.iter().for_each(|pos| {
+                        let idx = map.point2d_to_index(*pos);
+                        map.revealed_tiles[idx] = true;
 
-                    // Chance to find hidden things.
-                    <(Entity, &Point, &Name)>::query()
-                        .filter(component::<Hidden>())
-                        .iter(ecs)
-                        .filter(|(_, p, _)| *p == pos)
-                        .for_each(|(entity, _, name)| {
-                            if rng.roll_dice(1, 24) == 1 {
-                                gamelog.entries.push(format!("You spotted a {}.", name.0));
-                                commands.remove_component::<Hidden>(*entity);
-                            }
-                        });
-                });
+                        // Chance to find hidden things.
+                        <(Entity, &Point, &Name)>::query()
+                            .filter(component::<Hidden>())
+                            .iter(ecs)
+                            .filter(|(_, p, _)| *p == pos)
+                            .for_each(|(entity, _, name)| {
+                                if rng.roll_dice(1, 24) == 1 {
+                                    gamelog.entries.push(format!("You spotted a {}.", name.0));
+                                    commands.remove_component::<Hidden>(*entity);
+                                }
+                            });
+                    });
+                    *turn_state = TurnState::Ticking;
+                }
+                MoveResult::Stood | MoveResult::OpenedDoor => {
+                    *turn_state = TurnState::Ticking;
+                }
+                MoveResult::Attack { entity } => {
+                    commands.push((
+                        (),
+                        WantsToAttack {
+                            attacker: player_entity,
+                            victim: entity,
+                        },
+                    ));
+                    *turn_state = TurnState::Ticking;
+                }
+                MoveResult::OpenShop { entity } => {
+                    *turn_state = TurnState::ShowingVendor {
+                        vendor: entity,
+                        mode: VendorMode::Buy,
+                    }
+                }
             }
-
-            *turn_state = TurnState::Ticking;
         }
         key_state.key = None;
     }
@@ -150,6 +171,52 @@ fn use_consumable_hotkey(
     TurnState::Ticking
 }
 
+fn swap_entity(
+    ecs: &mut SubWorld,
+    player_entity: Entity,
+    other_entity: Entity,
+    from: Point,
+    to: Point,
+    map: &Map,
+    commands: &mut CommandBuffer,
+) {
+    // Swap positions.
+    commands.add_component(player_entity, to);
+    <(Entity, &mut Point, &mut FieldOfView)>::query()
+        .filter(component::<Player>())
+        .iter_mut(ecs)
+        .filter(|(e, _, _)| **e == player_entity)
+        .for_each(|(_, pos, fov)| {
+            *pos = to;
+            fov.is_dirty = true;
+        });
+
+    <(Entity, &mut Point, &mut FieldOfView)>::query()
+        .iter_mut(ecs)
+        .filter(|(e, _, _)| **e == other_entity)
+        .for_each(|(_, pos, fov)| {
+            *pos = from;
+            fov.is_dirty = true;
+        });
+
+    let from_idx = map.point2d_to_index(from);
+    let to_idx = map.point2d_to_index(to);
+    crate::spatial::move_entity(player_entity, from_idx, to_idx);
+    crate::spatial::move_entity(other_entity, to_idx, from_idx);
+
+    commands.add_component(player_entity, EntityMoved);
+    commands.add_component(other_entity, EntityMoved);
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+enum MoveResult {
+    Stood,
+    Moved,
+    OpenedDoor,
+    Attack { entity: Entity },
+    OpenShop { entity: Entity },
+}
+
 fn try_move_player(
     player_entity: Entity,
     player_pos: Point,
@@ -157,89 +224,65 @@ fn try_move_player(
     map: &mut Map,
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-) -> bool {
-    let mut attacked_or_swapped = false;
-    let mut fov_dirty = false;
-    let mut attacked = false;
-
-    let mut swaps: Vec<(Entity, Point, Point)> = Vec::new();
-
+) -> MoveResult {
     let destination_idx = map.point2d_to_index(destination);
-    crate::spatial::for_each_tile_content(destination_idx, |entity| {
+    let mut swap: Option<Entity> = None;
+    let result = crate::spatial::for_each_tile_content_until_result(destination_idx, |entity| {
+        let entry = ecs.entry_ref(entity).unwrap();
+
         let reaction: Reaction;
-        if let Ok(faction) = ecs.entry_ref(entity).unwrap().get_component::<Faction>() {
+        if let Ok(faction) = entry.get_component::<Faction>() {
             reaction = faction_reaction(&faction.name, "Player", &RAWS.lock().unwrap());
         } else {
-            return;
+            return None;
         }
-
-        attacked_or_swapped = true;
         if reaction == Reaction::Attack {
-            commands.push((
-                (),
-                WantsToAttack {
-                    attacker: player_entity,
-                    victim: entity,
-                },
-            ));
-            attacked = true;
+            return Some(MoveResult::Attack { entity });
+        } else if entry.get_component::<Vendor>().is_ok() {
+            return Some(MoveResult::OpenShop { entity });
         } else {
-            // Swap positions.
-            swaps.push((entity, player_pos, destination));
-            commands.add_component(player_entity, destination);
-
-            <(Entity, &mut Point, &mut FieldOfView)>::query()
-                .iter_mut(ecs)
-                .filter(|(e, _, _)| **e == entity)
-                .for_each(|(_, pos, fov)| {
-                    *pos = player_pos;
-                    fov.is_dirty = true;
-                    fov_dirty = true;
-                });
+            swap = Some(entity);
+            return Some(MoveResult::Moved);
         }
     });
-    if fov_dirty {
-        <&mut FieldOfView>::query()
-            .filter(component::<Player>())
-            .for_each_mut(ecs, |fov| fov.is_dirty = true);
-    }
 
-    if attacked {
-        // Won't be changing location
-        return false;
-    }
-
-    if !attacked_or_swapped {
-        if try_open_door(ecs, destination, commands) {
-            return false;
+    if let Some(result) = result {
+        if let Some(entity) = swap {
+            // Do this outside of the lock held by the iterator above
+            swap_entity(
+                ecs,
+                player_entity,
+                entity,
+                player_pos,
+                destination,
+                map,
+                commands,
+            );
         }
-
-        // If destination isn't walkable, don't eat the turn.
-        let destination_idx = map.point2d_to_index(destination);
-        if crate::spatial::is_blocked(destination_idx) {
-            return false;
-        }
-
-        let old_idx = map.point2d_to_index(player_pos);
-        crate::spatial::move_entity(player_entity, old_idx, destination_idx);
-        commands.add_component(player_entity, destination);
-
-        // mark fov as dirty
-        <&mut FieldOfView>::query()
-            .filter(component::<Player>())
-            .for_each_mut(ecs, |fov| fov.is_dirty = true);
+        return result;
     }
 
-    for m in swaps.iter() {
-        let them = m.0;
-        let old_idx = map.point2d_to_index(m.1);
-        let new_idx = map.point2d_to_index(m.2);
-        crate::spatial::move_entity(m.0, new_idx, old_idx);
-        crate::spatial::move_entity(player_entity, old_idx, new_idx);
-        commands.add_component(m.0, EntityMoved);
+    if try_open_door(ecs, destination, commands) {
+        return MoveResult::OpenedDoor;
     }
 
-    true
+    // If destination isn't walkable, don't eat the turn.
+    let destination_idx = map.point2d_to_index(destination);
+    if crate::spatial::is_blocked(destination_idx) {
+        return MoveResult::Stood;
+    }
+
+    let old_idx = map.point2d_to_index(player_pos);
+    crate::spatial::move_entity(player_entity, old_idx, destination_idx);
+    commands.add_component(player_entity, destination);
+    commands.add_component(player_entity, EntityMoved);
+
+    // mark fov as dirty
+    <&mut FieldOfView>::query()
+        .filter(component::<Player>())
+        .for_each_mut(ecs, |fov| fov.is_dirty = true);
+
+    MoveResult::Moved
 }
 
 fn try_open_door(ecs: &mut SubWorld, destination: Point, commands: &mut CommandBuffer) -> bool {

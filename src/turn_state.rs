@@ -1,6 +1,12 @@
 use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub enum VendorMode {
+    Buy,
+    Sell,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TurnState {
     AwaitingInput,
     Ticking,
@@ -8,6 +14,7 @@ pub enum TurnState {
 
     ShowingInventory,
     ShowingDropItems,
+    ShowingVendor { vendor: Entity, mode: VendorMode },
 
     RangedTargeting { range: i32, item: Entity },
 

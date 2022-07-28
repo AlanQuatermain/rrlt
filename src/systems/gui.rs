@@ -96,10 +96,33 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
         draw_attribute("Quickness:", &attrs.might, 5, &mut draw_batch);
         draw_attribute("Fitness:", &attrs.might, 6, &mut draw_batch);
         draw_attribute("Intelligence:", &attrs.might, 7, &mut draw_batch);
+
+        // Initiative, weight, and gold
+        if let Ok(stats) = player.get_component::<Pools>() {
+            draw_batch.print_color(
+                Point::new(50, 9),
+                &format!(
+                    "{:.1} lbs ({} lbs max)",
+                    stats.total_weight,
+                    attrs.max_weight()
+                ),
+                text_color,
+            );
+            draw_batch.print_color(
+                Point::new(50, 10),
+                &format!("Initiative Penalty: {:.0}", stats.total_initiative_penalty),
+                text_color,
+            );
+            draw_batch.print_color(
+                Point::new(50, 11),
+                &format!("Gold: {:.1}", stats.gold),
+                ColorPair::new(GOLD, BLACK),
+            );
+        }
     }
 
     // Equipped items
-    let mut y = 9;
+    let mut y = 13;
     <(&Name, &Equipped)>::query()
         .iter(ecs)
         .filter(|(_, e)| e.owner == *player_entity)

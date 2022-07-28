@@ -23,8 +23,12 @@ pub struct WantsToAttack {
     pub victim: Entity,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Item;
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Item {
+    pub initiative_penalty: f32,
+    pub weight_lbs: f32,
+    pub base_value: f32,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AmuletOfYala;
@@ -250,6 +254,12 @@ impl Default for Attributes {
     }
 }
 
+impl Attributes {
+    pub fn max_weight(&self) -> i32 {
+        (self.might.base + self.might.modifiers) * 15
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
 pub enum Skill {
     Melee,
@@ -282,6 +292,9 @@ pub struct Pools {
     pub mana: Pool,
     pub xp: i32,
     pub level: i32,
+    pub total_weight: f32,
+    pub total_initiative_penalty: f32,
+    pub gold: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -357,4 +370,12 @@ pub struct MoveMode(pub Movement);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chasing {
     pub target: Entity,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct EquipmentChanged;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Vendor {
+    pub categories: Vec<String>,
 }

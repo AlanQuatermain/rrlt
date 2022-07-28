@@ -57,7 +57,10 @@
             },
             "consumable" : {
                 "effects" : { "provides_healing" : "8" }
-            }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy"
         },
         
         {
@@ -73,7 +76,10 @@
                     "ranged" : "6",
                     "damage" : "20"
                 }
-            }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy"
         },
         
         {
@@ -90,7 +96,10 @@
                     "damage" : "20",
                     "area_of_effect" : "3"
                 }
-            }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 100.0,
+            "vendor_category" : "alchemy"
         },
         
         {
@@ -106,7 +115,10 @@
                     "ranged" : "6",
                     "confusion" : "4"
                 }
-            }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 75.0,
+            "vendor_category" : "alchemy"
         },
         
         {
@@ -121,7 +133,10 @@
                 "effects" : { 
                     "magic_mapping" : ""
                 }
-            }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy"
         },
         
         {
@@ -136,7 +151,10 @@
                 "effects" : { 
                     "food" : ""
                 }
-            }
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 0.5,
+            "vendor_category" : "food"
         },
         
         {
@@ -151,7 +169,10 @@
                 "effects" : { 
                     "food" : ""
                 }
-            }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 0.5,
+            "vendor_category" : "food"
         },
         
         {
@@ -164,7 +185,10 @@
             },
             "consumable" : {
                 "effects" : { "provides_healing" : "4" }
-            }
+            },
+            "weight_lbs" : 0.8,
+            "base_value" : 0.2,
+            "vendor_category" : "food"
         },
         
         {
@@ -180,7 +204,11 @@
                 "attribute" : "Might",
                 "base_damage" : "1d8-1",
                 "hit_bonus" : -1
-            }
+            },
+            "weight_lbs" : 3.0,
+            "base_value" : 10.0,
+            "initiative_penalty" : 2,
+            "vendor_category" : "junk"
         },
         
         {
@@ -196,7 +224,10 @@
                 "attribute" : "Quickness",
                 "base_damage" : "1d4",
                 "hit_bonus" : 0
-            }
+            },
+            "weight_lbs" : 1.0,
+            "base_value" : 2.0,
+            "vendor_category" : "weapon"
         },
         
         {
@@ -212,7 +243,11 @@
                 "attribute" : "Might",
                 "base_damage" : "1d8",
                 "hit_bonus" : 0
-            }
+            },
+            "weight_lbs" : 3.0,
+            "base_value" : 15.0,
+            "initiative_penalty" : 2,
+            "vendor_category" : "weapon"
         },
         
         {
@@ -228,7 +263,31 @@
                 "attribute" : "Might",
                 "base_damage" : "1d8+1",
                 "hit_bonus" : 0
-            }
+            },
+            "weight_lbs" : 4.0,
+            "base_value" : 10.0,
+            "initiative_penalty" : 2,
+            "vendor_category" : "weapon"
+        },
+        
+        {
+            "name" : "War Axe",
+            "renderable" : {
+                "glyph" : "¶",
+                "fg" : "#FF55FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "weapon" : {
+                "range" : "melee",
+                "attribute" : "might",
+                "base_damage" : "1d12",
+                "hit_bonus" : 0
+            },
+            "weight_lbs" : 4.0,
+            "base_value" : 100.0,
+            "initiative_penalty" : 2,
+            "vendor_category" : "weapon"
         },
         
         {
@@ -242,7 +301,11 @@
             "wearable" : {
                 "slot" : "Shield",
                 "armor_class" : 1.0
-            }
+            },
+            "weight_lbs" : 5.0,
+            "base_value" : 3.0,
+            "initiative_penalty" : 0.5,
+            "vendor_category" : "armor"
         },
         
         {
@@ -256,7 +319,11 @@
             "wearable" : {
                 "slot" : "Shield",
                 "armor_class" : 2.0
-            }
+            },
+            "weight_lbs" : 45.0,
+            "base_value" : 30.0,
+            "initiative_penalty" : 1.0,
+            "vendor_category" : "armor"
         },
         
         {
@@ -270,7 +337,10 @@
             "wearable" : {
                 "slot" : "Torso",
                 "armor_class" : 0.1
-            }
+            },
+            "weight_lbs" : 0.4,
+            "base_value" : 1.0,
+            "vendor_category" : "junk"
         },
         
         {
@@ -284,7 +354,10 @@
             "wearable" : {
                 "slot" : "Legs",
                 "armor_class" : 0.1
-            }
+            },
+            "weight_lbs" : 0.6,
+            "base_value" : 1.0,
+            "vendor_category" : "junk"
         },
         
         {
@@ -296,9 +369,12 @@
                 "order" : 2
             },
             "wearable" : {
-                "slot" : "Legs",
+                "slot" : "Feet",
                 "armor_class" : 0.1
-            }
+            },
+            "weight_lbs" : 0.6,
+            "base_value" : 1.0,
+            "vendor_category" : "junk"
         },
         
         {
@@ -314,7 +390,11 @@
                 "attribute" : "Quickness",
                 "base_damage" : "1d4",
                 "hit_bonus" : 0
-            }
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 0.1,
+            "initiative_penalty" : 2.0,
+            "vendor_category" : "junk"
         },
         
         {
@@ -328,7 +408,11 @@
             "wearable" : {
                 "slot" : "Torso",
                 "armor_class" : 0.1
-            }
+            },
+            "weight_lbs" : 1.2,
+            "base_value" : 3.0,
+            "initiative_penalty" : 0.3,
+            "vendor_category" : "clothes"
         },
         
         {
@@ -342,7 +426,11 @@
             "wearable" : {
                 "slot" : "Legs",
                 "armor_class" : 0.1
-            }
+            },
+            "weight_lbs" : 1.0,
+            "base_value" : 2.0,
+            "initiative_penalty" : 0.1,
+            "vendor_category" : "clothes"
         },
         
         {
@@ -356,7 +444,11 @@
             "wearable" : {
                 "slot" : "Legs",
                 "armor_class" : 0.1
-            }
+            },
+            "weight_lbs" : 1.0,
+            "base_value" : 1.0,
+            "initiative_penalty" : 0.1,
+            "vendor_category" : "clothes"
         },
         
         {
@@ -371,7 +463,10 @@
                 "effects" : { 
                     "food" : ""
                 }
-            }
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 0.5,
+            "vendor_category" : "food"
         },
         
         {
@@ -381,7 +476,21 @@
                 "fg" : "#A52A2A",
                 "bg" : "#000000",
                 "order" : 2
-            }
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 5.0
+        },
+        
+        {
+            "name" : "Dragon Scale",
+            "renderable": {
+                "glyph" : "ß",
+                "fg" : "#FFD700",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 75.0
         },
         
         {
@@ -397,7 +506,10 @@
                 "attribute" : "Might",
                 "base_damage" : "1d6",
                 "hit_bonus" : 0
-            }
+            },
+            "weight_lbs" : 4.0,
+            "base_value" : 5.0,
+            "vendor_category" : "weapon"
         },
         
         {
@@ -411,7 +523,11 @@
             "wearable" : {
                 "slot" : "Torso",
                 "armor_class" : 1.0
-            }
+            },
+            "weight_lbs" : 15.0,
+            "base_value" : 10.0,
+            "initiative_penalty" : 0.5,
+            "vendor_category" : "armor"
         },
         
         {
@@ -425,7 +541,83 @@
             "wearable" : {
                 "slot" : "Feet",
                 "armor_class" : 0.2
-            }
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 5.0,
+            "initiative_penalty" : 0.25,
+            "vendor_category" : "armor"
+        },
+        
+        {
+            "name" : "Chainmail Armor",
+            "renderable" : {
+                "glyph" : "[",
+                "fg" : "#00FF00",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "wearable" : {
+                "slot" : "Torso",
+                "armor_class" : 2.0
+            },
+            "weight_lbs" : 20.0,
+            "base_value" : 50.0,
+            "initiative_penalty" : 1.0,
+            "vendor_category" : "armor"
+        },
+        
+        {
+            "name" : "Breastplate",
+            "renderable" : {
+                "glyph" : "[",
+                "fg" : "#00FF00",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "wearable" : {
+                "slot" : "Torso",
+                "armor_class" : 3.0
+            },
+            "weight_lbs" : 25.0,
+            "base_value" : 100.0,
+            "initiative_penalty" : 2.0,
+            "vendor_category" : "armor"
+        },
+        
+        {
+            "name" : "Dwarf-Steel Shirt",
+            "renderable" : {
+                "glyph" : "[",
+                "fg" : "#00FF00",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "wearable" : {
+                "slot" : "Torso",
+                "armor_class" : 3.0
+            },
+            "weight_lbs" : 5.0,
+            "base_value" : 500.0,
+            "initiative_penalty" : 0.0,
+            "vendor_category" : "armor"
+        },
+        
+        {
+            "name" : "Chain Coif",
+            "renderable" : {
+                "glyph" : "[",
+                "fg" : "#00FF00",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "wearable" : {
+                "slot" : "Head",
+                "armor_class" : 1.0
+            },
+            "weight_lbs" : 5.0,
+            "base_value" : 20.0,
+            "initiative_penalty" : 0.5,
+            "vendor_category" : "armor"
         }
     ],
     
@@ -448,7 +640,9 @@
                 "Melee" : 2
             },
             "faction" : "Townsfolk",
-            "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ]
+            "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
+            "gold" : "2d6",
+            "vendor" : [ "food" ]
         },
         
         {
@@ -464,7 +658,9 @@
             "movement" : "static",
             "attributes" : {},
             "faction" : "Townsfolk",
-            "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ]
+            "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
+            "gold" : "2d6",
+            "vendor" : [ "junk" ]
         },
         
         {
@@ -481,7 +677,8 @@
             "quips" : [ "Quiet down, it's too early!", "Oh my, I drank too much.", "Still saving the world, eh?" ],
             "attributes" : {},
             "faction" : "Townsfolk",
-            "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ]
+            "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
+            "gold" : "1d4"
         },
         
         {
@@ -497,7 +694,8 @@
             "movement" : "static",
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "2d6"
         },
         
         {
@@ -514,7 +712,8 @@
             "quips" : [ "Great to see a new face here!", "I hear there's going to be a good sermon on tea", "Want some cake?" ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "1d4"
         },
         
         {
@@ -530,7 +729,9 @@
             "movement" : "static",
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "2d6",
+            "vendor" : [ "armor", "weapon" ]
         },
         
         {
@@ -546,7 +747,9 @@
             "movement" : "static",
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "2d6",
+            "vendor" : [ "clothes" ]
         },
         
         {
@@ -562,7 +765,9 @@
             "movement" : "static",
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "2d6",
+            "vendor" : [ "alchemy" ]
         },
         
         {
@@ -579,7 +784,8 @@
             "quips" : [ "Hello, dear", "Off saving the world again?", "Be careful in the dungeon!", "Your father would be so proud, were he here." ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "2d6"
         },
         
         {
@@ -596,7 +802,8 @@
             "quips" : [ "Why are you in my house?" ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "1d3-1"
         },
         
         {
@@ -613,7 +820,8 @@
             "quips" : [ "Lovely day, eh?", "Nice weather", "Hello" ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "1d3-1"
         },
         
         {
@@ -630,7 +838,8 @@
             "quips" : [ "They're biting today!", "I caught something, but it wasn't a fish!", "Looks like rain" ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "1d3-1"
         },
         
         {
@@ -647,7 +856,8 @@
             "quips" : [ "Arrr", "Grog!", "Booze!" ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "2d6"
         },
         
         {
@@ -664,7 +874,8 @@
             "quips" : [ "Hic", "Need... more... booze!", "Spare a copper?" ],
             "attributes" : {},
             "equipped" : [ "Cudgel", "Cloth Tunic", "Cloth Pants", "Slippers" ],
-            "faction" : "Townsfolk"
+            "faction" : "Townsfolk",
+            "gold" : "1d3-1"
         },
         
         {
@@ -799,7 +1010,8 @@
                 "range" : 6,
                 "color" : "#FFFFB3"
             },
-            "faction" : "Bandits"
+            "faction" : "Bandits",
+            "gold" : "1d6"
         },
         
         {
@@ -894,6 +1106,24 @@
         },
         
         {
+            "name" : "Orc Leader",
+            "renderable" : {
+                "glyph" : "O",
+                "fg" : "#FF0000",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 8,
+            "movement" : "static",
+            "attributes" : {},
+            "faction" : "Cave Goblins",
+            "gold" : "3d8",
+            "equipped" : [ "Battleaxe", "Tower Shield", "Leather Armor", "Leather Boots" ],
+            "level" : 2
+        },
+        
+        {
             "name" : "Goblin",
             "renderable": {
                 "glyph" : "g",
@@ -921,6 +1151,87 @@
             "movement" : "static",
             "attributes" : {},
             "faction" : "Cave Goblins"
+        },
+        
+        {
+            "name" : "Dragon Wyrmling",
+            "renderable": {
+                "glyph" : "d",
+                "fg" : "#FF0000",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 12,
+            "movement" : "random_waypoint",
+            "attributes" : {
+                "might" : 3,
+                "fitness" : 3
+            },
+            "skills" : {
+                "Melee" : 15,
+                "Defense" : 14
+            },
+            "natural" : {
+                "armor_class" : 15,
+                "attacks" : [
+                    { "name" : "bite", "hit_bonus" : 4, "damage" : "1d10+2" }
+                ]   
+            },
+            "loot_table" : "Wyrms",
+            "faction" : "Wyrm",
+            "level" : 3,
+            "gold" : "3d6"
+        },
+        
+        {
+            "name" : "Lizardman",
+            "renderable": {
+                "glyph" : "l",
+                "fg" : "#FF0000",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 4,
+            "movement" : "random_waypoint",
+            "attributes" : {},
+            "faction" : "Wyrm",
+            "gold" : "1d12",
+            "level" : 2
+        },
+        
+        {
+            "name" : "Giant Lizard",
+            "renderable": {
+                "glyph" : "l",
+                "fg" : "#FFFF00",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 4,
+            "movement" : "random",
+            "attributes" : {},
+            "faction" : "Wyrm",
+            "level" : 2,
+            "loot_table" : "Animal"
+        },
+        
+        {
+            "name" : "Rock Golem",
+            "renderable": {
+                "glyph" : "g",
+                "fg" : "#AAAAAA",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 6,
+            "movement" : "random_waypoint",
+            "attributes" : {},
+            "faction" : "Dwarven Remnant",
+            "level" : 3
         }
     ],
     

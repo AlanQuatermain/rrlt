@@ -1,5 +1,3 @@
-use lazy_static::__Deref;
-
 use crate::prelude::*;
 
 #[system]
@@ -8,11 +6,11 @@ use crate::prelude::*;
 #[read_component(Point)]
 #[read_component(Attributes)]
 #[read_component(Player)]
+#[read_component(Pools)]
 pub fn initiative(
     ecs: &mut SubWorld,
     #[resource] rng: &mut RandomNumberGenerator,
     #[resource] turn_state: &mut TurnState,
-    // #[state] time_ms: &mut std::time::Instant,
     commands: &mut CommandBuffer,
 ) {
     if *turn_state != TurnState::Ticking {
@@ -38,10 +36,11 @@ pub fn initiative(
         Entity,
         &mut Initiative,
         &Point,
+        Option<&Pools>,
         Option<&Attributes>,
         Option<&Player>,
     )>::query()
-    .for_each_mut(ecs, |(entity, initiative, pos, attrs, player)| {
+    .for_each_mut(ecs, |(entity, initiative, pos, stats, attrs, player)| {
         initiative.current -= 1;
         if initiative.current < 1 {
             // It's my turn!
@@ -53,6 +52,11 @@ pub fn initiative(
             // Give a bonus for quickness.
             if let Some(attrs) = attrs {
                 initiative.current -= attrs.quickness.bonus;
+            }
+
+            // Apply encumbrance penalty
+            if let Some(stats) = stats {
+                initiative.current += f32::floor(stats.total_initiative_penalty) as i32;
             }
 
             // TODO: More initiative-granting boosts/penalties will go here later.

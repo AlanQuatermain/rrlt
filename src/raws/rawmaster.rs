@@ -146,7 +146,12 @@ pub fn spawn_named_item(
     }
 
     let item_template = &raws.raws.items[raws.item_index[key]];
-    let entity = commands.push((crate::components::Item, Name(item_template.name.clone())));
+    let item = Item {
+        initiative_penalty: item_template.initiative_penalty.unwrap_or(0.0),
+        weight_lbs: item_template.weight_lbs.unwrap_or(0.0),
+        base_value: item_template.base_value.unwrap_or(0.0),
+    };
+    let entity = commands.push((item, Name(item_template.name.clone())));
 
     // Spawn in the specified location
     set_position(&entity, pos, key, raws, commands);
@@ -243,30 +248,21 @@ pub fn spawn_named_mob(
         _ => commands.add_component(entity, MoveMode(Movement::Static)),
     }
 
-    // match mob_template.ai.as_ref() {
-    //     "melee" => {
-    //         commands.add_component(entity, Attackable);
-    //         commands.add_component(entity, ChasingPlayer);
-    //     }
-    //     "bystander" => commands.add_component(entity, Bystander),
-    //     "vendor" => commands.add_component(entity, Vendor),
-    //     "carnivore" => {
-    //         commands.add_component(entity, Attackable);
-    //         commands.add_component(entity, Carnivore);
-    //     }
-    //     "herbivore" => {
-    //         commands.add_component(entity, Attackable);
-    //         commands.add_component(entity, Herbivore);
-    //     }
-    //     _ => {}
-    // }
-
     if let Some(quips) = &mob_template.quips {
         commands.add_component(entity, Quips(quips.clone()));
     }
 
     if let Some(renderable) = &mob_template.renderable {
         commands.add_component(entity, get_renderable(renderable));
+    }
+
+    if let Some(categories) = &mob_template.vendor {
+        commands.add_component(
+            entity,
+            Vendor {
+                categories: categories.clone(),
+            },
+        )
     }
 
     if mob_template.blocks_tile {
@@ -321,6 +317,14 @@ pub fn spawn_named_mob(
     let mob_level = mob_template.level.unwrap_or(1);
     let mob_hp = npc_hp(mob_fitness, mob_level);
     let mob_mana = mana_at_level(mob_int, mob_level);
+    let mob_gold = mob_template
+        .gold
+        .as_ref()
+        .map(|gold| {
+            let mut rng = RandomNumberGenerator::new();
+            rng.roll_str(gold).map_or(0.0, |v| v as f32)
+        })
+        .unwrap_or(0.0);
     commands.add_component(
         entity,
         Pools {
@@ -334,6 +338,9 @@ pub fn spawn_named_mob(
                 current: mob_mana,
                 max: mob_mana,
             },
+            total_weight: 0.0,
+            total_initiative_penalty: 0.0,
+            gold: mob_gold,
         },
     );
 
@@ -411,6 +418,7 @@ pub fn spawn_named_mob(
             },
         )
     }
+    commands.add_component(entity, EquipmentChanged);
 
     true
 }
@@ -529,6 +537,20 @@ pub fn faction_reaction(my_faction: &str, their_faction: &str, raws: &RawMaster)
         }
     }
     Reaction::Ignore
+}
+
+pub fn get_vendor_items(categories: &[String], raws: &RawMaster) -> Vec<(String, f32)> {
+    let mut result: Vec<(String, f32)> = Vec::new();
+
+    for item in raws.raws.items.iter() {
+        if let Some(cat) = &item.vendor_category {
+            if categories.contains(cat) && item.base_value.is_some() {
+                result.push((item.name.clone(), item.base_value.unwrap()));
+            }
+        }
+    }
+
+    result
 }
 
 fn get_renderable(renderable: &super::Renderable) -> crate::components::Render {

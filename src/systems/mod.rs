@@ -4,6 +4,7 @@ mod collect;
 mod combat;
 mod damage;
 mod drop_item;
+mod encumbrance;
 mod end_turn;
 mod entity_render;
 mod fov;
@@ -20,6 +21,7 @@ mod ranged_target;
 mod tooltips;
 mod trigger;
 mod use_items;
+mod vendor;
 
 use crate::prelude::*;
 
@@ -30,9 +32,11 @@ pub use particles::ParticleBuilder;
 pub fn build_input_scheduler() -> Schedule {
     Schedule::builder()
         .add_system(particles::particle_cull_system())
+        .add_system(encumbrance::encumbrance_system())
         .add_system(player_input::player_input_system())
         .add_system(collect::collect_system())
         .flush()
+        .add_system(encumbrance::encumbrance_system())
         .add_system(fov::fov_system())
         .add_system(particles::particle_spawn_system())
         .flush()
@@ -43,6 +47,7 @@ pub fn build_input_scheduler() -> Schedule {
         .add_system(gui::gui_system())
         .add_system(tooltips::tooltips_system())
         .add_system(inventory::inventory_system())
+        .add_system(vendor::vendor_system())
         .build()
 }
 
@@ -51,6 +56,7 @@ pub fn build_ticking_scheduler() -> Schedule {
         .add_system(particles::particle_cull_system())
         .add_system(map_indexing::map_indexing_system())
         .add_system(fov::fov_system())
+        .add_system(encumbrance::encumbrance_system())
         .flush()
         // Determine initiative, assign current turns
         .add_system(ai::initiative::initiative_system())

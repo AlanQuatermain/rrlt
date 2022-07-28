@@ -35,6 +35,9 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             },
             xp: 0,
             level: 1,
+            total_weight: 0.0,
+            total_initiative_penalty: 0.0,
+            gold: 0.0,
         },
         LightSource {
             color: RGB::from_f32(1.0, 1.0, 0.7),
@@ -44,6 +47,7 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
         Faction {
             name: "Player".to_string(),
         },
+        EquipmentChanged,
     ));
 
     let mut commands = CommandBuffer::new(ecs);
@@ -92,7 +96,11 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
 #[allow(dead_code)]
 pub fn spawn_amulet_of_yala(ecs: &mut World, pos: Point) {
     ecs.push((
-        Item,
+        Item {
+            initiative_penalty: 0.0,
+            weight_lbs: 0.1,
+            base_value: 10000.0,
+        },
         AmuletOfYala,
         pos,
         Render {
