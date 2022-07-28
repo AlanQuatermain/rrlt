@@ -38,6 +38,7 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
             total_weight: 0.0,
             total_initiative_penalty: 0.0,
             gold: 0.0,
+            god_mode: false,
         },
         LightSource {
             color: RGB::from_f32(1.0, 1.0, 0.7),

@@ -37,20 +37,22 @@ pub fn damage(
             target_idx = map.point2d_to_index(*pos);
         }
         if let Ok(stats) = target.get_component_mut::<Pools>() {
-            let amount = i32::min(command.damage, stats.hit_points.current);
-            stats.hit_points.current -= amount;
-            if stats.hit_points.current < 1 {
-                crate::spatial::remove_entity(command.target, target_idx);
-            }
+            if !stats.god_mode {
+                let amount = i32::min(command.damage, stats.hit_points.current);
+                stats.hit_points.current -= amount;
+                if stats.hit_points.current < 1 {
+                    crate::spatial::remove_entity(command.target, target_idx);
+                }
 
-            let log_line = if let Some(item_name) = item_name {
-                log_for_item_damage(&user_name, &target_name, &item_name, amount)
-            } else if command.user_entity == command.target {
-                log_for_self_damage(&user_name, amount)
-            } else {
-                log_for_damage(&user_name, &target_name, amount)
-            };
-            gamelog.entries.push(log_line);
+                let log_line = if let Some(item_name) = item_name {
+                    log_for_item_damage(&user_name, &target_name, &item_name, amount)
+                } else if command.user_entity == command.target {
+                    log_for_self_damage(&user_name, amount)
+                } else {
+                    log_for_damage(&user_name, &target_name, amount)
+                };
+                gamelog.entries.push(log_line);
+            }
 
             if user_name.1 && !target_name.1 && stats.hit_points.current <= 0 {
                 xp_gain += stats.level * 100;

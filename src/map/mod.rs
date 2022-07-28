@@ -198,7 +198,8 @@ impl Map {
 
     fn is_revealed_and_wall(&self, x: i32, y: i32) -> bool {
         let idx = self.idx_for_pos(&Point::new(x, y));
-        self.revealed_tiles[idx] && self.tiles[idx] == TileType::Wall
+        /*self.revealed_tiles[idx] &&*/
+        self.tiles[idx] == TileType::Wall
     }
 
     pub fn tile_matches(&self, pos: &Point, tile: TileType) -> bool {

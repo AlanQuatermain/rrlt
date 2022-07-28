@@ -341,6 +341,7 @@ pub fn spawn_named_mob(
             total_weight: 0.0,
             total_initiative_penalty: 0.0,
             gold: mob_gold,
+            god_mode: false,
         },
     );
 
