@@ -1,11 +1,23 @@
 use crate::prelude::*;
 use crate::MapTheme::Dungeon;
 
-#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Orientation {
+    Vertical,
+    Horizontal,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum MapTheme {
     Dungeon,
     Forest,
     LimestoneCavern,
+    Transition {
+        from: Box<MapTheme>,
+        to: Box<MapTheme>,
+        divisor: f32,
+        orientation: Orientation,
+    },
 }
 
 impl Default for MapTheme {
@@ -15,11 +27,25 @@ impl Default for MapTheme {
 }
 
 impl MapTheme {
+    pub fn transition(
+        from: MapTheme,
+        to: MapTheme,
+        divisor: f32,
+        orientation: Orientation,
+    ) -> MapTheme {
+        MapTheme::Transition {
+            from: Box::new(from),
+            to: Box::new(to),
+            divisor,
+            orientation,
+        }
+    }
+
     pub fn default_glyph_for_tile(&self, map: &Map, idx: usize) -> (FontCharType, RGB) {
         match map.tiles[idx] {
             TileType::Floor => (to_cp437('.'), RGB::named(TEAL)),
             TileType::WoodFloor => (to_cp437('.'), RGB::named(CHOCOLATE1)),
-            TileType::Wall => (self.wall_glyph(map.wall_mask(idx)), RGB::named(GREEN)),
+            TileType::Wall => (self.wall_glyph(map, idx), RGB::named(GREEN)),
             TileType::DownStairs => (to_cp437('>'), RGB::named(CYAN)),
             TileType::Bridge => (to_cp437('░'), RGB::named(CHOCOLATE)),
             TileType::Road => (to_cp437('≡'), RGB::named(DIMGREY)),
@@ -52,10 +78,14 @@ impl MapTheme {
                 TileType::WoodFloor => (to_cp437('░'), RGB::named(CHOCOLATE2)),
                 _ => self.default_glyph_for_tile(map, idx),
             },
+            MapTheme::Transition { .. } => self
+                .select_transition_theme(map, idx)
+                .tile_to_render(map, idx),
         }
     }
 
-    fn wall_glyph(&self, mask: u8) -> FontCharType {
+    fn wall_glyph(&self, map: &Map, idx: usize) -> FontCharType {
+        let mask = map.wall_mask(idx);
         match self {
             MapTheme::Dungeon => {
                 match mask {
@@ -80,6 +110,38 @@ impl MapTheme {
             }
             MapTheme::Forest => to_cp437('"'),
             MapTheme::LimestoneCavern => to_cp437('▒'),
+            MapTheme::Transition { .. } => {
+                self.select_transition_theme(map, idx).wall_glyph(map, idx)
+            }
         }
+    }
+
+    fn select_transition_theme(&self, map: &Map, idx: usize) -> Box<MapTheme> {
+        if let MapTheme::Transition {
+            from,
+            to,
+            divisor,
+            orientation,
+        } = self
+        {
+            let pos = map.index_to_point2d(idx);
+            return match orientation {
+                Orientation::Horizontal => {
+                    if pos.x < ((map.width as f32) * divisor) as i32 {
+                        from.clone()
+                    } else {
+                        to.clone()
+                    }
+                }
+                Orientation::Vertical => {
+                    if pos.y < ((map.height as f32) * divisor) as i32 {
+                        from.clone()
+                    } else {
+                        to.clone()
+                    }
+                }
+            };
+        }
+        Box::new(self.clone())
     }
 }

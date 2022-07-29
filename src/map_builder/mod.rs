@@ -1,11 +1,11 @@
 use crate::prelude::*;
 
 use self::{
-    area_starting_points::{AreaStartingPosition, XStart, YStart},
+    area_starting_points::*,
     automata::CellularAutomataBuilder,
     bsp::BSPDungeonBuilder,
     bsp_interior::BSPInteriorBuilder,
-    caverns::{limestone_cavern_builder, limestone_deep_cavern_builder},
+    caverns::*,
     cull_unreachable::CullUnreachable,
     distant_exit::DistantExit,
     dla::DLABuilder,
@@ -31,6 +31,7 @@ use self::{
     waveform_collapse::WaveformCollapseBuilder,
 };
 
+mod area_ending_points;
 mod area_starting_points;
 mod automata;
 mod bsp;
@@ -332,6 +333,7 @@ pub fn level_builder(
         1 => forest_builder(new_depth, width, height, rng),
         2 => limestone_cavern_builder(new_depth, rng, width, height),
         3 => limestone_deep_cavern_builder(new_depth, rng, width, height),
+        4 => limestone_transition_builder(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }
