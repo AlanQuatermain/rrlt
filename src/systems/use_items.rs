@@ -38,6 +38,7 @@ enum Command {
 #[read_component(Equippable)]
 #[read_component(Equipped)]
 #[read_component(ProvidesFood)]
+#[read_component(TownPortal)]
 #[write_component(HungerClock)]
 pub fn use_items(
     ecs: &mut SubWorld,
@@ -77,6 +78,18 @@ pub fn use_items(
                     .push("The map is revealed to you!".to_string());
                 used_item = true;
                 *turn_state = TurnState::RevealMap { row: 0 };
+            }
+
+            if item.get_component::<TownPortal>().is_ok() {
+                println!("Used Town Portal scroll");
+                if map.depth == 0 {
+                    gamelog.entries.push(
+                        "You are already in the town, so the scroll has no effect.".to_string(),
+                    );
+                } else {
+                    used_item = true;
+                    *turn_state = TurnState::TownPortal;
+                }
             }
 
             if let Ok(equippable) = item.get_component::<Equippable>() {

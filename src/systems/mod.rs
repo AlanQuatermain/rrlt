@@ -15,6 +15,7 @@ mod lighting;
 mod map_indexing;
 mod map_render;
 mod menu;
+mod movement;
 mod particles;
 mod player_input;
 mod ranged_target;
@@ -84,6 +85,10 @@ pub fn build_ticking_scheduler() -> Schedule {
         .flush()
         .add_system(drop_item::drop_item_system())
         .add_system(particles::particle_spawn_system())
+        .flush()
+        .add_system(movement::teleport_system()) // may add WantsToMove
+        .flush()
+        .add_system(movement::movement_system())
         .flush()
         .add_system(trigger::trigger_system())
         .flush()

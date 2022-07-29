@@ -27,6 +27,8 @@ pub enum TurnState {
 
     NextLevel,
     PreviousLevel,
+    TownPortal,
+    LevelTeleport { destination: Point, depth: i32 },
 
     MapBuilding { step: usize },
     ShowCheatMenu,

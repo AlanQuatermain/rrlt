@@ -185,6 +185,7 @@ pub fn spawn_named_item(
                 }
                 "magic_mapping" => commands.add_component(entity, ProvidesDungeonMap),
                 "food" => commands.add_component(entity, ProvidesFood),
+                "town_portal" => commands.add_component(entity, TownPortal),
                 _ => log(format!(
                     "Warning: consumable effect {} not implemented",
                     effect_name

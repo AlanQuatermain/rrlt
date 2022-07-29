@@ -30,12 +30,12 @@ pub fn default_movement(
             };
             let new_pos = *pos + delta;
             if map.can_enter_tile(new_pos) {
-                let from_idx = map.point2d_to_index(*pos);
-                let to_idx = map.point2d_to_index(new_pos);
-                crate::spatial::move_entity(*entity, from_idx, to_idx);
-                *pos = new_pos;
-                fov.is_dirty = true;
-                commands.add_component(*entity, EntityMoved);
+                commands.add_component(
+                    *entity,
+                    WantsToMove {
+                        destination: new_pos,
+                    },
+                );
             }
         }
         Movement::RandomWaypoint { path } => {
@@ -43,13 +43,8 @@ pub fn default_movement(
             if let Some(path) = path {
                 if path.len() > 1 {
                     let new_idx = path[1];
-                    if crate::spatial::is_blocked(new_idx) {
-                        // Wait for the path to clear
-                        return;
-                    }
-                    crate::spatial::move_entity(*entity, idx, new_idx);
-                    *pos = map.index_to_point2d(new_idx);
-                    fov.is_dirty = true;
+                    let destination = map.index_to_point2d(new_idx);
+                    commands.add_component(*entity, WantsToMove { destination });
                     path.remove(0);
                 } else {
                     mode.0 = Movement::RandomWaypoint { path: None }

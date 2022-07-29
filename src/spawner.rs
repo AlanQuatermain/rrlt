@@ -89,9 +89,62 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
         SpawnType::Equipped { by: player },
         &mut commands,
     );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Town Portal Scroll",
+        SpawnType::Carried { by: player },
+        &mut commands,
+    );
 
     let mut resources = Resources::default(); // unused in this instance
     commands.flush(ecs, &mut resources);
+}
+
+pub fn spawn_town_portal(ecs: &mut World, resources: &mut Resources) {
+    // Get current position & depth
+    let map = resources.get::<Map>().unwrap();
+    let depth = map.depth;
+    let player_pos = <&Point>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .unwrap()
+        .clone();
+    std::mem::drop(map);
+
+    // Find part of the town for the portal
+    let dm = resources.get::<MasterDungeonMap>().unwrap();
+    let town_map = dm.get_map(0).unwrap();
+    let mut stairs_idx = 0;
+    for (idx, tt) in town_map.tiles.iter().enumerate() {
+        if *tt == TileType::DownStairs {
+            stairs_idx = idx;
+            break;
+        }
+    }
+    let portal_pos = town_map.index_to_point2d(stairs_idx);
+    std::mem::drop(dm);
+
+    // Spawn the portal itself
+    ecs.push((
+        OtherLevelPosition {
+            position: portal_pos,
+            depth: 0,
+        },
+        Render {
+            color: ColorPair::new(CYAN, BLACK),
+            glyph: to_cp437('♥'),
+            render_order: 0,
+        },
+        EntryTrigger,
+        TeleportTo {
+            position: player_pos,
+            depth,
+            player_only: true,
+        },
+        Name("Town Portal".to_string()),
+        SingleActivation,
+    ));
 }
 
 #[allow(dead_code)]

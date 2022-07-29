@@ -3,36 +3,76 @@ use crate::prelude::*;
 #[system(for_each)]
 #[read_component(Player)]
 #[read_component(FieldOfView)]
-#[read_component(Confusion)]
-#[read_component(Name)]
 #[read_component(Point)]
-#[read_component(Hidden)]
+#[read_component(WantsToMove)]
+#[write_component(FieldOfView)]
 pub fn movement(
     entity: &Entity,
     want_move: &WantsToMove,
+    fov: &mut FieldOfView,
+    pos: &mut Point,
+    player: Option<&Player>,
     #[resource] map: &mut Map,
     #[resource] camera: &mut Camera,
-    #[resource] gamelog: &mut Gamelog,
-    #[resource] particle_builder: &mut ParticleBuilder,
-    #[resource] rng: &mut RandomNumberGenerator,
-    ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    if map.can_enter_tile(want_move.destination) {
-        let mut will_move = true;
-        if let Ok(entry) = ecs.entry_ref(want_move.entity) {
-            if let Ok(fov) = entry.get_component::<FieldOfView>() {
-                commands.add_component(want_move.entity, fov.clone_dirty());
+    let to_idx = map.point2d_to_index(want_move.destination);
+    if !crate::spatial::is_blocked(to_idx) {
+        fov.is_dirty = true;
+        commands.add_component(*entity, EntityMoved);
 
-                if entry.get_component::<Player>().is_ok() {}
-            }
-        }
-        if will_move {
-            commands.add_component(want_move.entity, want_move.destination);
-            commands.add_component(want_move.entity, EntityMoved);
-            let idx = map.point2d_to_index(want_move.destination);
-            map.blocked[idx] = true;
+        let from_idx = map.point2d_to_index(*pos);
+        crate::spatial::move_entity(*entity, from_idx, to_idx);
+        *pos = want_move.destination;
+
+        if player.is_some() {
+            camera.on_player_move(want_move.destination);
         }
     }
-    commands.remove(*entity);
+    commands.remove_component::<WantsToMove>(*entity);
+}
+
+#[system(for_each)]
+#[read_component(Player)]
+#[read_component(FieldOfView)]
+#[read_component(Point)]
+#[read_component(ApplyTeleport)]
+#[write_component(FieldOfView)]
+pub fn teleport(
+    entity: &Entity,
+    teleport: &ApplyTeleport,
+    pos: &Point,
+    player: Option<&Player>,
+    #[resource] map: &Map,
+    #[resource] turn_state: &mut TurnState,
+    commands: &mut CommandBuffer,
+) {
+    if teleport.depth == map.depth {
+        // Just move around the map
+        commands.add_component(
+            *entity,
+            WantsToMove {
+                destination: teleport.destination,
+            },
+        );
+    }
+    else if player.is_some() {
+        *turn_state = TurnState::LevelTeleport {
+            destination: teleport.destination,
+            depth: teleport.depth,
+        };
+        return;
+    }
+    else {
+        let from_idx = map.point2d_to_index(*pos);
+        crate::spatial::remove_entity(*entity, from_idx);
+        commands.add_component(
+            *entity,
+            OtherLevelPosition {
+                position: teleport.destination,
+                depth: teleport.depth,
+            },
+        );
+    }
+    commands.remove_component::<ApplyTeleport>(*entity);
 }

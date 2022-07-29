@@ -380,3 +380,24 @@ pub struct EquipmentChanged;
 pub struct Vendor {
     pub categories: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TownPortal;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct TeleportTo {
+    pub position: Point,
+    pub depth: i32,
+    pub player_only: bool,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct WantsToMove {
+    pub destination: Point,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ApplyTeleport {
+    pub destination: Point,
+    pub depth: i32,
+}

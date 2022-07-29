@@ -20,12 +20,8 @@ pub fn flee(
     let flee_map = DijkstraMap::new(map.width, map.height, &flee.indices, &*map, 12.0);
     let flee_target = DijkstraMap::find_highest_exit(&flee_map, start, &*map);
     if let Some(flee_target) = flee_target {
-        if !crate::spatial::is_blocked(flee_target) {
-            crate::spatial::move_entity(*entity, start, flee_target);
-            fov.is_dirty = true;
-            *pos = map.index_to_point2d(flee_target);
-            commands.add_component(*entity, EntityMoved);
-        }
+        let destination = map.index_to_point2d(flee_target);
+        commands.add_component(*entity, WantsToMove { destination });
     }
 
     commands.remove_component::<WantsToFlee>(*entity);

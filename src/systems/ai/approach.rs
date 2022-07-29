@@ -19,14 +19,9 @@ pub fn approach(
     let start = map.point2d_to_index(*pos);
     let path = a_star_search(start, wants_approach.idx, map);
     if path.success && path.steps.len() > 1 {
-        let old_idx = map.point2d_to_index(*pos);
         let new_idx = path.steps[1];
-        if !crate::spatial::is_blocked(new_idx) {
-            crate::spatial::move_entity(*entity, old_idx, new_idx);
-            *pos = map.index_to_point2d(new_idx);
-            fov.is_dirty = true;
-            commands.add_component(*entity, EntityMoved);
-        }
+        let destination = map.index_to_point2d(new_idx);
+        commands.add_component(*entity, WantsToMove { destination });
     }
 
     commands.remove_component::<WantsToApproach>(*entity);

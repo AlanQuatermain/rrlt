@@ -272,6 +272,7 @@ impl State {
         registry.register::<MoveMode>("move_mode".to_string());
         registry.register::<Chasing>("chasing".to_string());
         registry.register::<Vendor>("vendor".to_string());
+        registry.register::<TownPortal>("town_portal".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -438,7 +439,6 @@ impl GameState for State {
 
         // ctx.key = None;
 
-        let tm = std::time::Instant::now();
         let current_state = self.resources.get::<TurnState>().unwrap().clone();
         match current_state {
             TurnState::AwaitingInput => {
@@ -487,6 +487,23 @@ impl GameState for State {
             TurnState::ShowingVendor { vendor: _, mode: _ } => self
                 .input_systems
                 .execute(&mut self.ecs, &mut self.resources),
+            TurnState::TownPortal => {
+                spawn_town_portal(&mut self.ecs, &mut self.resources);
+                let map_depth = self.resources.get::<Map>().unwrap().depth;
+                self.switch_level(-map_depth);
+            }
+            TurnState::LevelTeleport { destination, depth } => {
+                let map_depth = self.resources.get::<Map>().unwrap().depth;
+                self.switch_level(depth - map_depth);
+                <&mut Point>::query()
+                    .filter(component::<Player>())
+                    .iter_mut(&mut self.ecs)
+                    .for_each(|pt| *pt = destination);
+                self.resources
+                    .get_mut::<Camera>()
+                    .unwrap()
+                    .on_player_move(destination);
+            }
         }
         // println!("Tick took {} seconds", tm.elapsed().as_secs_f32());
 
