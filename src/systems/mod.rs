@@ -81,6 +81,7 @@ pub fn build_ticking_scheduler() -> Schedule {
         .add_system(use_items::use_items_system())
         .add_system(hunger::hunger_system())
         .flush()
+        .add_system(inventory::identification_system())
         .add_system(damage::damage_system())
         .flush()
         .add_system(drop_item::drop_item_system())

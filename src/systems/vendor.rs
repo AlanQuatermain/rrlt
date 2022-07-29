@@ -10,6 +10,7 @@ pub fn vendor(
     ecs: &mut SubWorld,
     #[resource] turn_state: &mut TurnState,
     #[resource] key_state: &mut KeyState,
+    #[resource] dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
 ) {
     let player_entity = <Entity>::query()
@@ -21,7 +22,9 @@ pub fn vendor(
     match *turn_state {
         TurnState::ShowingVendor { vendor, mode } => {
             let new_state = match mode {
-                VendorMode::Buy => vendor_buy_menu(ecs, vendor, player_entity, key_state, commands),
+                VendorMode::Buy => {
+                    vendor_buy_menu(ecs, vendor, player_entity, key_state, dm, commands)
+                }
                 VendorMode::Sell => {
                     vendor_sell_menu(ecs, vendor, player_entity, key_state, commands)
                 }
@@ -129,6 +132,7 @@ fn vendor_buy_menu(
     vendor: Entity,
     player: Entity,
     key_state: &mut KeyState,
+    dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
 ) -> Option<TurnState> {
     let vendor_entry = ecs.entry_ref(vendor).unwrap();
@@ -203,6 +207,7 @@ fn vendor_buy_menu(
                         player,
                         ecs,
                         commands,
+                        dm,
                         raws,
                     );
                 }
@@ -235,12 +240,18 @@ fn buy_item(
     player: Entity,
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
+    dm: &MasterDungeonMap,
     raws: &RawMaster,
 ) {
     if let Ok(stats) = ecs.entry_mut(player).unwrap().get_component_mut::<Pools>() {
         if stats.gold >= price {
             stats.gold -= price;
-            spawn_named_item(raws, &name, SpawnType::Carried { by: player }, commands);
+            if let Some(entity) =
+                spawn_named_item(raws, &name, SpawnType::Carried { by: player }, dm, commands)
+            {
+                commands.add_component(entity, IdentifiedItem(name.clone()));
+            }
+
             commands.add_component(player, EquipmentChanged); // trigger encumbrance update
         }
     }

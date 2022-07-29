@@ -15,6 +15,7 @@ pub fn bury_dead(
     #[resource] gamelog: &mut Gamelog,
     #[resource] turn_state: &mut TurnState,
     #[resource] rng: &mut RandomNumberGenerator,
+    #[resource] dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
 ) {
     let player_pools = <&Pools>::query()
@@ -57,7 +58,13 @@ pub fn bury_dead(
         .for_each(|(table, pos)| {
             let raws = &RAWS.lock().unwrap();
             if let Some(drop) = get_drop_item(raws, rng, &table.0) {
-                spawn_named_item(raws, &drop, SpawnType::AtPosition { point: *pos }, commands);
+                spawn_named_item(
+                    raws,
+                    &drop,
+                    SpawnType::AtPosition { point: *pos },
+                    dm,
+                    commands,
+                );
             }
         });
 

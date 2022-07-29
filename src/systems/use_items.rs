@@ -40,6 +40,9 @@ enum Command {
 #[read_component(ProvidesFood)]
 #[read_component(TownPortal)]
 #[write_component(HungerClock)]
+#[read_component(ObfuscatedName)]
+#[read_component(MagicItem)]
+#[write_component(IdentifiedItem)]
 pub fn use_items(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -47,6 +50,7 @@ pub fn use_items(
     #[resource] gamelog: &mut Gamelog,
     #[resource] turn_state: &mut TurnState,
     #[resource] particle_builder: &mut ParticleBuilder,
+    #[resource] dm: &mut MasterDungeonMap,
 ) {
     let mut operations = Vec::new();
     <(Entity, &ActivateItem)>::query().for_each(ecs, |(entity, activate)| {
@@ -81,7 +85,6 @@ pub fn use_items(
             }
 
             if item.get_component::<TownPortal>().is_ok() {
-                println!("Used Town Portal scroll");
                 if map.depth == 0 {
                     gamelog.entries.push(
                         "You are already in the town, so the scroll has no effect.".to_string(),
@@ -143,6 +146,16 @@ pub fn use_items(
                 // remove the item
                 commands.add_component(activate.item, Consumed {});
                 commands.add_component(activate.used_by, EquipmentChanged);
+            }
+
+            if used_item
+                && item.get_component::<MagicItem>().is_ok()
+                && item.get_component::<ObfuscatedName>().is_ok()
+            {
+                // Self-identify the item
+                if let Ok(name) = item.get_component::<Name>() {
+                    commands.add_component(activate.item, IdentifiedItem(name.0.clone()));
+                }
             }
         }
 

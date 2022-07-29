@@ -273,6 +273,10 @@ impl State {
         registry.register::<Chasing>("chasing".to_string());
         registry.register::<Vendor>("vendor".to_string());
         registry.register::<TownPortal>("town_portal".to_string());
+        registry.register::<MagicItemClass>("magic_item_class".to_string());
+        registry.register::<MagicItem>("magic_item".to_string());
+        registry.register::<ObfuscatedName>("obf_name".to_string());
+        registry.register::<IdentifiedItem>("identified_item".to_string());
         registry.on_unknown(Ignore);
     }
 

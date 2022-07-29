@@ -27,4 +27,11 @@ impl Camera {
         self.top_y = player_position.y - CAMERA_HEIGHT / 2; //DISPLAY_HEIGHT / 2;
         self.bottom_y = player_position.y + CAMERA_HEIGHT / 2; //DISPLAY_HEIGHT / 2;
     }
+
+    pub fn center_point(&self) -> Point {
+        Point::new(
+            (self.right_x - self.left_x) / 2,
+            (self.bottom_y - self.top_y) / 2,
+        )
+    }
 }

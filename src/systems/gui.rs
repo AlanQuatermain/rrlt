@@ -11,7 +11,14 @@ use crate::prelude::*;
 #[read_component(Equipped)]
 #[read_component(Consumable)]
 #[read_component(Carried)]
-pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map) {
+#[read_component(MagicItem)]
+#[read_component(ObfuscatedName)]
+pub fn gui(
+    ecs: &SubWorld,
+    #[resource] gamelog: &Gamelog,
+    #[resource] map: &Map,
+    #[resource] dm: &MasterDungeonMap,
+) {
     let mut draw_batch = DrawBatch::new();
     draw_batch.target(2);
 
@@ -123,11 +130,15 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
 
     // Equipped items
     let mut y = 13;
-    <(&Name, &Equipped)>::query()
+    <(&Equipped, Entity)>::query()
         .iter(ecs)
-        .filter(|(_, e)| e.owner == *player_entity)
-        .for_each(|(name, _)| {
-            draw_batch.print_color(Point::new(50, y), &name.0, text_color);
+        .filter(|(e, _)| e.owner == *player_entity)
+        .for_each(|(_, item)| {
+            draw_batch.print_color(
+                Point::new(50, y),
+                truncate(get_item_display_name(ecs, *item, dm), 25),
+                get_item_color(ecs, *item),
+            );
             y += 1;
         });
 
@@ -136,14 +147,18 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
     let yellow = ColorPair::new(YELLOW, BLACK);
     let green = ColorPair::new(GREEN, BLACK);
     let mut index = 1;
-    <(&Carried, &Name)>::query()
+    <(&Carried, Entity)>::query()
         .filter(component::<Consumable>())
         .iter(ecs)
         .filter(|(c, _)| c.0 == *player_entity)
-        .for_each(|(_, name)| {
+        .for_each(|(_, item)| {
             if index < 10 {
                 draw_batch.print_color(Point::new(50, y), &format!("↑{}", index), yellow);
-                draw_batch.print_color(Point::new(53, y), &name.0, green);
+                draw_batch.print_color(
+                    Point::new(53, y),
+                    truncate(get_item_display_name(ecs, *item, dm), 25),
+                    get_item_color(ecs, *item),
+                );
                 y += 1;
                 index += 1;
             }
@@ -178,6 +193,16 @@ pub fn gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map)
     }
 
     draw_batch.submit(9999).expect("Batch error");
+}
+
+fn truncate(str: String, max_len: usize) -> String {
+    if str.len() > max_len {
+        let mut newstr = str.clone();
+        newstr.replace_range(max_len - 1..str.len(), "…");
+        newstr
+    } else {
+        str
+    }
 }
 
 fn draw_attribute(name: &str, attribute: &Attribute, y: i32, batch: &mut DrawBatch) {

@@ -401,3 +401,21 @@ pub struct ApplyTeleport {
     pub destination: Point,
     pub depth: i32,
 }
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum MagicItemClass {
+    Common,
+    Rare,
+    Legendary,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct MagicItem {
+    pub class: MagicItemClass,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ObfuscatedName(pub String);
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct IdentifiedItem(pub String);

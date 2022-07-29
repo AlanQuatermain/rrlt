@@ -139,13 +139,19 @@ pub fn spawn_named_item(
     raws: &RawMaster,
     key: &str,
     pos: SpawnType,
+    dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
-) -> bool {
+) -> Option<Entity> {
     if !raws.item_index.contains_key(key) {
-        return false;
+        return None;
     }
 
     let item_template = &raws.raws.items[raws.item_index[key]];
+    let scroll_names = dm.scroll_mappings.clone();
+    let potion_names = dm.potion_mappings.clone();
+    let identified = dm.identified_items.clone();
+    std::mem::drop(dm);
+
     let item = Item {
         initiative_penalty: item_template.initiative_penalty.unwrap_or(0.0),
         weight_lbs: item_template.weight_lbs.unwrap_or(0.0),
@@ -224,17 +230,41 @@ pub fn spawn_named_item(
         );
     }
 
-    true
+    if let Some(magic) = &item_template.magic {
+        let class = match magic.class.as_str() {
+            "rare" => MagicItemClass::Rare,
+            "legendary" => MagicItemClass::Legendary,
+            _ => MagicItemClass::Common,
+        };
+        commands.add_component(entity, MagicItem { class });
+
+        if !identified.contains(&item_template.name) {
+            match magic.naming.as_str() {
+                "scroll" => commands.add_component(
+                    entity,
+                    ObfuscatedName(scroll_names[&item_template.name].clone()),
+                ),
+                "potion" => commands.add_component(
+                    entity,
+                    ObfuscatedName(potion_names[&item_template.name].clone()),
+                ),
+                _ => commands.add_component(entity, ObfuscatedName(magic.naming.clone())),
+            }
+        }
+    }
+
+    Some(entity)
 }
 
 pub fn spawn_named_mob(
     raws: &RawMaster,
     key: &str,
     pos: SpawnType,
+    dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
-) -> bool {
+) -> Option<Entity> {
     if !raws.mob_index.contains_key(key) {
-        return false;
+        return None;
     }
     let mob_template = &raws.raws.mobs[raws.mob_index[key]];
 
@@ -369,7 +399,7 @@ pub fn spawn_named_mob(
 
     if let Some(wielding) = &mob_template.equipped {
         for tag in wielding.iter() {
-            spawn_named_entity(raws, tag, SpawnType::Equipped { by: entity }, commands);
+            spawn_named_entity(raws, tag, SpawnType::Equipped { by: entity }, dm, commands);
         }
     }
 
@@ -422,7 +452,7 @@ pub fn spawn_named_mob(
     }
     commands.add_component(entity, EquipmentChanged);
 
-    true
+    Some(entity)
 }
 
 pub fn spawn_named_prop(
@@ -430,9 +460,9 @@ pub fn spawn_named_prop(
     key: &str,
     pos: SpawnType,
     commands: &mut CommandBuffer,
-) -> bool {
+) -> Option<Entity> {
     if !raws.prop_index.contains_key(key) {
-        return false;
+        return None;
     }
     let template = &raws.raws.props[raws.prop_index[key]];
 
@@ -489,23 +519,24 @@ pub fn spawn_named_prop(
         );
     }
 
-    true
+    Some(entity)
 }
 
 pub fn spawn_named_entity(
     raws: &RawMaster,
     key: &str,
     pos: SpawnType,
+    dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
-) -> bool {
+) -> Option<Entity> {
     if raws.item_index.contains_key(key) {
-        spawn_named_item(raws, key, pos, commands)
+        spawn_named_item(raws, key, pos, dm, commands)
     } else if raws.mob_index.contains_key(key) {
-        spawn_named_mob(raws, key, pos, commands)
+        spawn_named_mob(raws, key, pos, dm, commands)
     } else if raws.prop_index.contains_key(key) {
         spawn_named_prop(raws, key, pos, commands)
     } else {
-        false
+        None
     }
 }
 
@@ -570,6 +601,81 @@ pub fn get_vendor_items(categories: &[String], raws: &RawMaster) -> Vec<(String,
     }
 
     result
+}
+
+pub fn get_item_color(ecs: &SubWorld, item: Entity) -> ColorPair {
+    let fg = if let Ok(magic) = ecs.entry_ref(item).unwrap().get_component::<MagicItem>() {
+        match magic.class {
+            MagicItemClass::Common => RGB::from_f32(0.5, 1.0, 0.5),
+            MagicItemClass::Rare => RGB::from_f32(0.0, 1.0, 1.0),
+            MagicItemClass::Legendary => RGB::from_f32(0.71, 0.15, 0.93),
+        }
+    } else {
+        RGB::named(WHITE)
+    };
+    ColorPair::new(fg, BLACK)
+}
+
+pub fn get_scroll_tags() -> Vec<String> {
+    let raws = &super::RAWS.lock().unwrap();
+    let mut result = Vec::new();
+
+    for item in raws.raws.items.iter() {
+        if let Some(magic) = &item.magic {
+            if &magic.naming == "scroll" {
+                result.push(item.name.clone());
+            }
+        }
+    }
+
+    result
+}
+
+pub fn get_potion_tags() -> Vec<String> {
+    let raws = &super::RAWS.lock().unwrap();
+    let mut result = Vec::new();
+
+    for item in raws.raws.items.iter() {
+        if let Some(magic) = &item.magic {
+            if &magic.naming == "potion" {
+                result.push(item.name.clone());
+            }
+        }
+    }
+
+    result
+}
+
+pub fn get_item_display_name(ecs: &SubWorld, item: Entity, dm: &MasterDungeonMap) -> String {
+    if let Ok(entry) = ecs.entry_ref(item) {
+        if let Ok(name) = entry.get_component::<Name>() {
+            if entry.get_component::<MagicItem>().is_ok() {
+                if dm.identified_items.contains(&name.0) {
+                    name.0.clone()
+                } else if let Ok(obfuscated) = entry.get_component::<ObfuscatedName>() {
+                    obfuscated.0.clone()
+                } else {
+                    "Unidentified magic item".to_string()
+                }
+            } else {
+                name.0.clone()
+            }
+        } else {
+            "Nameless item (bug)".to_string()
+        }
+    } else {
+        "Unknown item (bug)".to_string()
+    }
+}
+
+pub fn is_tag_magic(tag: &str) -> bool {
+    let raws = &RAWS.lock().unwrap();
+    if let Some(idx) = raws.item_index.get(tag) {
+        let item_template = &raws.raws.items[*idx];
+        item_template.magic.is_some()
+    } else {
+        false
+    }
 }
 
 fn get_renderable(renderable: &super::Renderable) -> crate::components::Render {

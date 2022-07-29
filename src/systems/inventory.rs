@@ -10,11 +10,14 @@ use crate::{prelude::*, KeyState};
 #[read_component(Ranged)]
 #[read_component(Equippable)]
 #[read_component(Equipped)]
+#[read_component(MagicItem)]
+#[read_component(ObfuscatedName)]
 pub fn inventory(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
     #[resource] key_state: &mut KeyState,
     #[resource] turn_state: &mut TurnState,
+    #[resource] dm: &MasterDungeonMap,
 ) {
     match *turn_state {
         TurnState::ShowingInventory | TurnState::ShowingDropItems => {}
@@ -32,8 +35,23 @@ pub fn inventory(
         .count();
     let mut item_query = <(&Item, &Name, &Carried, Entity)>::query();
 
+    // build item/name list
+    let items: Vec<(Entity, String)> = item_query
+        .iter(ecs)
+        .filter(|(_, _, carried, _)| carried.0 == player)
+        .map(|(_, _, _, entity)| (*entity, get_item_display_name(ecs, *entity, dm)))
+        .collect();
+
     let mut draw_batch = DrawBatch::new();
     draw_batch.target(2);
+
+    // determine required width
+    // 2 for each border+margin, 4 for key+space, 3 for space+E+space
+    // 20 was the original width
+    let width = usize::max(
+        items.iter().map(|i| i.1.len()).max().unwrap_or(20) + 2 + 2 + 4 + 3,
+        20,
+    ) as i32;
 
     let title = match *turn_state {
         TurnState::ShowingDropItems => "Drop Item".to_string(),
@@ -42,7 +60,7 @@ pub fn inventory(
 
     let mut y = (25 - (count / 2)) as i32;
     draw_batch.draw_box(
-        Rect::with_size(15, y - 2, 31, (count + 3) as i32),
+        Rect::with_size(15, y - 2, width, (count + 3) as i32),
         ColorPair::new(WHITE, BLACK),
     );
     draw_batch.print_color(Point::new(18, y - 2), title, ColorPair::new(YELLOW, BLACK));
@@ -54,11 +72,7 @@ pub fn inventory(
 
     let mut usable: Vec<Entity> = Vec::new();
     let mut j = 0;
-    for (name, entity) in item_query
-        .iter(ecs)
-        .filter(|(_, _, carried, _)| carried.0 == player)
-        .map(|(_, name, _, entity)| (&name.0, entity))
-    {
+    for (entity, name) in items.iter() {
         draw_batch.set(
             Point::new(17, y),
             ColorPair::new(WHITE, BLACK),
@@ -75,17 +89,17 @@ pub fn inventory(
             to_cp437(')'),
         );
 
-        draw_batch.print(Point::new(21, y), &name);
+        draw_batch.print_color(Point::new(21, y), &name, get_item_color(ecs, *entity));
         if let Ok(entry) = ecs.entry_ref(*entity) {
             if entry.get_component::<Equipped>().is_ok() {
                 draw_batch.set(
-                    Point::new(44, y),
+                    Point::new(15 + width - 3, y),
                     ColorPair::new(YELLOW, BLACK),
                     to_cp437('E'),
                 );
             } else if entry.get_component::<Equippable>().is_ok() {
                 draw_batch.set(
-                    Point::new(44, y),
+                    Point::new(15 + width - 3, y),
                     ColorPair::new(WHITE, BLACK),
                     to_cp437('E'),
                 );
@@ -143,4 +157,40 @@ pub fn inventory(
         }
         key_state.key = None;
     }
+}
+
+#[system(for_each)]
+#[read_component(IdentifiedItem)]
+#[read_component(MagicItem)]
+#[read_component(Player)]
+#[read_component(Name)]
+pub fn identification(
+    entity: &Entity,
+    id_info: &IdentifiedItem,
+    carried: &Carried,
+    name: &Name,
+    #[resource] dm: &mut MasterDungeonMap,
+    ecs: &SubWorld,
+    commands: &mut CommandBuffer,
+) {
+    let player_entity = <Entity>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .unwrap();
+    if carried.0 != *player_entity {
+        return;
+    }
+
+    if !dm.identified_items.contains(&name.0) && is_tag_magic(&name.0) {
+        dm.identified_items.insert(name.0.clone());
+    }
+
+    <(Entity, &Name)>::query()
+        .filter(component::<ObfuscatedName>())
+        .iter(ecs)
+        .filter(|(_, n)| n.0 == name.0)
+        .for_each(|(e, _)| commands.remove_component::<ObfuscatedName>(*e));
+
+    commands.remove_component::<IdentifiedItem>(*entity);
 }

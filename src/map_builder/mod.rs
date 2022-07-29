@@ -152,9 +152,9 @@ impl BuilderChain {
         }
     }
 
-    pub fn spawn_entities(&mut self, ecs: &mut World) {
+    pub fn spawn_entities(&mut self, ecs: &mut World, dm: &MasterDungeonMap) {
         for entity in self.build_data.spawn_list.iter() {
-            spawn_entity(ecs, &(&entity.0, &entity.1));
+            spawn_entity(ecs, dm, &(&entity.0, &entity.1));
         }
     }
 

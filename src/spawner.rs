@@ -6,7 +6,7 @@ pub enum SpawnType {
     Carried { by: Entity },
 }
 
-pub fn spawn_player(ecs: &mut World, pos: Point) {
+pub fn spawn_player(ecs: &mut World, dm: &MasterDungeonMap, pos: Point) {
     let player = ecs.push((
         Player { map_level: 0 },
         pos,
@@ -57,42 +57,49 @@ pub fn spawn_player(ecs: &mut World, pos: Point) {
         &RAWS.lock().unwrap(),
         "Rusty Longsword",
         SpawnType::Equipped { by: player },
+        dm,
         &mut commands,
     );
     spawn_named_entity(
         &RAWS.lock().unwrap(),
         "Dried Sausage",
         SpawnType::Carried { by: player },
+        dm,
         &mut commands,
     );
     spawn_named_entity(
         &RAWS.lock().unwrap(),
         "Beer",
         SpawnType::Carried { by: player },
+        dm,
         &mut commands,
     );
     spawn_named_entity(
         &RAWS.lock().unwrap(),
         "Stained Tunic",
         SpawnType::Equipped { by: player },
+        dm,
         &mut commands,
     );
     spawn_named_entity(
         &RAWS.lock().unwrap(),
         "Torn Trousers",
         SpawnType::Equipped { by: player },
+        dm,
         &mut commands,
     );
     spawn_named_entity(
         &RAWS.lock().unwrap(),
         "Old Boots",
         SpawnType::Equipped { by: player },
+        dm,
         &mut commands,
     );
     spawn_named_entity(
         &RAWS.lock().unwrap(),
         "Town Portal Scroll",
         SpawnType::Carried { by: player },
+        dm,
         &mut commands,
     );
 
@@ -166,7 +173,7 @@ pub fn spawn_amulet_of_yala(ecs: &mut World, pos: Point) {
     ));
 }
 
-pub fn spawn_entity(ecs: &mut World, spawn: &(&Point, &String)) {
+pub fn spawn_entity(ecs: &mut World, dm: &MasterDungeonMap, spawn: &(&Point, &String)) {
     let pos = *spawn.0;
 
     let mut command_buffer = CommandBuffer::new(ecs);
@@ -174,8 +181,11 @@ pub fn spawn_entity(ecs: &mut World, spawn: &(&Point, &String)) {
         &RAWS.lock().unwrap(),
         &spawn.1,
         SpawnType::AtPosition { point: pos },
+        dm,
         &mut command_buffer,
-    ) {
+    )
+    .is_some()
+    {
         // dummy resources, they won't be needed
         let mut resources = Resources::default();
         command_buffer.flush(ecs, &mut resources);

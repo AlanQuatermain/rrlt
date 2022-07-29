@@ -47,11 +47,14 @@ impl Tooltip {
 #[read_component(Player)]
 #[read_component(Hidden)]
 #[read_component(Attributes)]
+#[read_component(MagicItem)]
+#[read_component(ObfuscatedName)]
 pub fn tooltips(
     ecs: &SubWorld,
     #[resource] key_state: &KeyState,
     #[resource] camera: &Camera,
     #[resource] map: &Map,
+    #[resource] dm: &MasterDungeonMap,
 ) {
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
 
@@ -75,21 +78,24 @@ pub fn tooltips(
         return;
     }
 
+    let mid_point = camera.center_point();
+    // println!("Center point: {:?}", mid_point);
+
     let mut tip_boxes: Vec<Tooltip> = Vec::new();
-    <(Entity, &Name, &Point)>::query()
+    <(Entity, &Point)>::query()
         .filter(!component::<Hidden>())
         .iter(ecs)
-        .filter(|(_, _, pos)| **pos == map_pos)
-        .filter_map(|(e, n, _)| {
+        .filter(|(_, pos)| **pos == map_pos)
+        .filter_map(|(e, _)| {
             if let Ok(entry) = ecs.entry_ref(*e) {
-                Some((entry, n))
+                Some((entry, get_item_display_name(ecs, *e, dm)))
             } else {
                 None
             }
         })
         .for_each(|(entry, name)| {
             let mut tip = Tooltip::new();
-            tip.add(name.0.clone());
+            tip.add(name.clone());
 
             // Comment on attributes
             if let Ok(attr) = entry.get_component::<Attributes>() {
@@ -112,7 +118,7 @@ pub fn tooltips(
 
     let arrow;
     let arrow_pos;
-    if key_state.mouse_pos.x < 40 {
+    if key_state.mouse_pos.x >= mid_point.x {
         // Render to the left
         arrow = to_cp437('→');
         arrow_pos = key_state.mouse_pos + Point::new(-1, 0);
@@ -128,13 +134,15 @@ pub fn tooltips(
     while y + (total_height / 2) > 50 {
         y -= 1;
     }
+    y = i32::max(y, 0);
 
     for tt in tip_boxes.iter() {
-        let x = if key_state.mouse_pos.x < 40 {
+        let mut x = if key_state.mouse_pos.x >= mid_point.x {
             key_state.mouse_pos.x - (1 + tt.width())
         } else {
-            key_state.mouse_pos.x + (1 + tt.width())
+            key_state.mouse_pos.x + 2
         };
+        x = i32::max(x, 0);
         tt.render(&mut draw_batch, Point::new(x, y));
         y += tt.height();
     }

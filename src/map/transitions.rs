@@ -29,7 +29,10 @@ fn transition_to_new_map(
 ) -> Vec<Map> {
     let mut builder = level_builder(new_depth, 80, 50, rng);
     builder.build_map(rng);
-    builder.spawn_entities(ecs);
+
+    let dm = resources.get::<MasterDungeonMap>().unwrap();
+    builder.spawn_entities(ecs, &dm);
+    std::mem::drop(dm);
 
     if let Some(pos) = &builder.build_data.starting_position {
         if new_depth != 0 {
@@ -49,7 +52,8 @@ fn transition_to_new_map(
 
         if !found_user {
             // Need to spawn the player
-            spawn_player(ecs, *pos);
+            let dm = resources.get::<MasterDungeonMap>().unwrap();
+            spawn_player(ecs, &dm, *pos);
         }
 
         // Update the camera

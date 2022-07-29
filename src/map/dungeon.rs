@@ -1,14 +1,42 @@
 use crate::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Default, Serialize, Deserialize, Clone)]
 pub struct MasterDungeonMap {
     maps: HashMap<i32, Map>,
+    available_scroll_names: Vec<String>,
+    available_potion_types: Vec<String>,
+    available_wand_types: Vec<String>,
+
+    pub identified_items: HashSet<String>,
+    pub scroll_mappings: HashMap<String, String>,
+    pub potion_mappings: HashMap<String, String>,
+    pub wand_mappings: HashMap<String, String>,
 }
 
 impl MasterDungeonMap {
     pub fn new() -> MasterDungeonMap {
-        MasterDungeonMap::default()
+        let mut dm = MasterDungeonMap::default();
+
+        dm.build_name_tables();
+
+        let mut rng = RandomNumberGenerator::new();
+        for scroll_tag in get_scroll_tags().iter() {
+            let idx = rng.random_slice_index(&dm.available_scroll_names).unwrap();
+            let masked_name = dm.available_scroll_names.remove(idx);
+            dm.scroll_mappings.insert(
+                scroll_tag.to_string(),
+                format!("Scroll titled {}", masked_name),
+            );
+        }
+        for potion_tag in get_potion_tags().iter() {
+            let idx = rng.random_slice_index(&dm.available_potion_types).unwrap();
+            let masked_name = dm.available_potion_types.remove(idx);
+            dm.potion_mappings
+                .insert(potion_tag.to_string(), format!("{} potion", masked_name));
+        }
+
+        dm
     }
 
     pub fn store_map(&mut self, map: &Map) {
@@ -17,6 +45,101 @@ impl MasterDungeonMap {
 
     pub fn get_map(&self, depth: i32) -> Option<Map> {
         self.maps.get(&depth).map(|m| m.clone())
+    }
+
+    fn build_name_tables(&mut self) {
+        self.available_scroll_names = vec![
+            "ZELGO MER",
+            "JUYED AWK YACC",
+            "NR 9",
+            "XIXAXA XOXAXA XUXAXA",
+            "PRATYAVAYAH",
+            "DAIYEN FOOELS",
+            "LEP GEX VEN ZEA",
+            "PRIRUTSENIE",
+            "ELBIB YLOH",
+            "VERR YED HORRE",
+            "VENZAR BORGAVVE",
+            "THARR",
+            "YUM YUM",
+            "KERNOD WEL",
+            "ELAM EBOW",
+            "DUAM XNAHT",
+            "ANDOVA BEGARIN",
+            "KIRJE",
+            "VE FORBRYDERNE",
+            "HACKEM MUCHE",
+            "VELOX NEB",
+            "FOOBIE BLETCH",
+            "TEMOV",
+            "GARVEN DEH",
+            "READ ME",
+        ]
+        .iter()
+        .map(|a| a.to_string())
+        .collect();
+        self.available_potion_types = vec![
+            "Ruby",
+            "Pink",
+            "Orange",
+            "Yellow",
+            "Emerald",
+            "Dark green",
+            "Cyan",
+            "Sky blue",
+            "Brilliant blue",
+            "Magenta",
+            "Purple-red",
+            "Puce",
+            "Milky",
+            "Swirly",
+            "Bubbly",
+            "Smoky",
+            "Cloudy",
+            "Effervescent",
+            "Black",
+            "Golden",
+            "Brown",
+            "Fizzy",
+            "Dark",
+            "White",
+            "Murky",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        self.available_wand_types = vec![
+            "glass",
+            "balsa",
+            "crystal",
+            "maple",
+            "pine",
+            "oak",
+            "ebony",
+            "marble",
+            "tin",
+            "brass",
+            "copper",
+            "silver",
+            "platinum",
+            "iridium",
+            "zinc",
+            "aluminum",
+            "uranium",
+            "iron",
+            "steel",
+            "hexagonal",
+            "short",
+            "runed",
+            "long",
+            "curved",
+            "forked",
+            "spiked",
+            "jeweled",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
     }
 }
 

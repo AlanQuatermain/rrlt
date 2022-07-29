@@ -86,23 +86,6 @@ pub fn player_input(
             let destination = player_pos + delta;
             match try_move_player(player_entity, player_pos, destination, map, ecs, commands) {
                 MoveResult::Moved => {
-                    camera.on_player_move(destination);
-                    fov.visible_tiles.iter().for_each(|pos| {
-                        let idx = map.point2d_to_index(*pos);
-                        map.revealed_tiles[idx] = true;
-
-                        // Chance to find hidden things.
-                        <(Entity, &Point, &Name)>::query()
-                            .filter(component::<Hidden>())
-                            .iter(ecs)
-                            .filter(|(_, p, _)| *p == pos)
-                            .for_each(|(entity, _, name)| {
-                                if rng.roll_dice(1, 24) == 1 {
-                                    gamelog.entries.push(format!("You spotted a {}.", name.0));
-                                    commands.remove_component::<Hidden>(*entity);
-                                }
-                            });
-                    });
                     *turn_state = TurnState::Ticking;
                 }
                 MoveResult::Stood | MoveResult::OpenedDoor => {
@@ -208,6 +191,15 @@ fn swap_entity(
     commands.add_component(other_entity, EntityMoved);
 }
 
+fn entities_in_tile(ecs: &SubWorld, idx: usize, map: &Map) -> Vec<Entity> {
+    let pos = map.index_to_point2d(idx);
+    <(Entity, &Point)>::query()
+        .iter(ecs)
+        .filter(|(_, p)| **p == pos)
+        .map(|(e, _)| *e)
+        .collect()
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum MoveResult {
     Stood,
@@ -226,44 +218,34 @@ fn try_move_player(
     commands: &mut CommandBuffer,
 ) -> MoveResult {
     let destination_idx = map.point2d_to_index(destination);
-    let mut swap: Option<Entity> = None;
-    let result = crate::spatial::for_each_tile_content_until_result(destination_idx, |entity| {
+
+    for entity in entities_in_tile(ecs, destination_idx, map) {
         let entry = ecs.entry_ref(entity).unwrap();
 
         let reaction: Reaction;
         if let Ok(faction) = entry.get_component::<Faction>() {
             reaction = faction_reaction(&faction.name, "Player", &RAWS.lock().unwrap());
-        } else {
-            return None;
+            if reaction == Reaction::Attack {
+                return MoveResult::Attack { entity };
+            } else if entry.get_component::<Vendor>().is_ok() {
+                return MoveResult::OpenShop { entity };
+            } else {
+                swap_entity(
+                    ecs,
+                    player_entity,
+                    entity,
+                    player_pos,
+                    destination,
+                    map,
+                    commands,
+                );
+                return MoveResult::Moved;
+            }
+        } else if entry.get_component::<Door>().is_ok() {
+            if try_open_door(ecs, entity, destination, commands) {
+                return MoveResult::OpenedDoor;
+            }
         }
-        if reaction == Reaction::Attack {
-            return Some(MoveResult::Attack { entity });
-        } else if entry.get_component::<Vendor>().is_ok() {
-            return Some(MoveResult::OpenShop { entity });
-        } else {
-            swap = Some(entity);
-            return Some(MoveResult::Moved);
-        }
-    });
-
-    if let Some(result) = result {
-        if let Some(entity) = swap {
-            // Do this outside of the lock held by the iterator above
-            swap_entity(
-                ecs,
-                player_entity,
-                entity,
-                player_pos,
-                destination,
-                map,
-                commands,
-            );
-        }
-        return result;
-    }
-
-    if try_open_door(ecs, destination, commands) {
-        return MoveResult::OpenedDoor;
     }
 
     // If destination isn't walkable, don't eat the turn.
@@ -272,37 +254,41 @@ fn try_move_player(
         return MoveResult::Stood;
     }
 
-    let old_idx = map.point2d_to_index(player_pos);
-    crate::spatial::move_entity(player_entity, old_idx, destination_idx);
-    commands.add_component(player_entity, destination);
-    commands.add_component(player_entity, EntityMoved);
-
-    // mark fov as dirty
-    <&mut FieldOfView>::query()
-        .filter(component::<Player>())
-        .for_each_mut(ecs, |fov| fov.is_dirty = true);
-
+    // Fire out the movement intent
+    commands.add_component(player_entity, WantsToMove { destination });
     MoveResult::Moved
 }
 
-fn try_open_door(ecs: &mut SubWorld, destination: Point, commands: &mut CommandBuffer) -> bool {
+fn try_open_door(
+    ecs: &mut SubWorld,
+    door: Entity,
+    location: Point,
+    commands: &mut CommandBuffer,
+) -> bool {
     let mut opened = false;
-    <(Entity, &Point, &mut Door, &mut Render)>::query()
-        .filter(component::<BlocksTile>())
-        .iter_mut(ecs)
-        .filter(|(_, pos, _, _)| **pos == destination)
-        .for_each(|(entity, _, door, render)| {
-            door.open = true;
-            render.glyph = to_cp437('/');
-            commands.remove_component::<BlocksVisibility>(*entity);
-            commands.remove_component::<BlocksTile>(*entity);
+    if let Ok(mut entry) = ecs.entry_mut(door) {
+        if let Ok(door_info) = entry.get_component_mut::<Door>() {
+            if door_info.open {
+                // already open, do nothing
+                return false;
+            }
+            door_info.open = true;
             opened = true;
-        });
+        }
+        if let Ok(render) = entry.get_component_mut::<Render>() {
+            render.glyph = to_cp437('/');
+        }
+    }
+
     if opened {
-        // mark fov as dirty
+        commands.remove_component::<BlocksVisibility>(door);
+        commands.remove_component::<BlocksTile>(door);
+
+        // Update fields of view near the door
         <&mut FieldOfView>::query()
-            .filter(component::<Player>())
-            .for_each_mut(ecs, |fov| fov.is_dirty = true);
+            .iter_mut(ecs)
+            .filter(|fov| fov.visible_tiles.contains(&location))
+            .for_each(|fov| fov.is_dirty = true);
     }
 
     opened
