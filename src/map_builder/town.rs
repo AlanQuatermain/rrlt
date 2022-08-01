@@ -368,14 +368,6 @@ impl TownBuilder {
         build_data.starting_position = Some(player_pos);
         let player_idx = build_data.map.point2d_to_index(player_pos);
 
-        println!(
-            "Pub is {},{} w:{} h:{}",
-            building.x1,
-            building.y1,
-            building.width(),
-            building.height()
-        );
-
         // Place other items
         let mut to_place = vec![
             "Barkeep",

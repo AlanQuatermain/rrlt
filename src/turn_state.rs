@@ -15,6 +15,8 @@ pub enum TurnState {
     ShowingInventory,
     ShowingDropItems,
     ShowingVendor { vendor: Entity, mode: VendorMode },
+    ShowingRemoveCurse,
+    ShowingIdentify,
 
     RangedTargeting { range: i32, item: Entity },
 

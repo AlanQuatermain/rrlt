@@ -25,6 +25,8 @@ use crate::prelude::*;
 #[read_component(MagicItem)]
 #[read_component(SpawnParticleLine)]
 #[read_component(SpawnParticleBurst)]
+#[read_component(ProvidesRemoveCurse)]
+#[read_component(ProvidesIdentify)]
 pub fn effects(
     ecs: &mut SubWorld,
     #[resource] map: &mut Map,

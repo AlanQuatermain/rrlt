@@ -38,4 +38,5 @@ pub struct Wearable {
 pub struct MagicItem {
     pub class: String,
     pub naming: String,
+    pub cursed: Option<bool>,
 }

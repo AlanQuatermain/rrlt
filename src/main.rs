@@ -283,6 +283,9 @@ impl State {
         registry.register::<ObfuscatedName>("obf_name".to_string());
         registry.register::<IdentifiedItem>("identified_item".to_string());
         registry.register::<MasterDungeonMap>("dungeon_master".to_string());
+        registry.register::<CursedItem>("cursed".to_string());
+        registry.register::<ProvidesRemoveCurse>("removes_curse".to_string());
+        registry.register::<ProvidesIdentify>("identifies".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -469,10 +472,10 @@ impl GameState for State {
                         .execute(&mut self.ecs, &mut self.resources);
                 }
             }
-            TurnState::ShowingInventory => self
-                .popup_menu_systems
-                .execute(&mut self.ecs, &mut self.resources),
-            TurnState::ShowingDropItems => self
+            TurnState::ShowingInventory
+            | TurnState::ShowingDropItems
+            | TurnState::ShowingRemoveCurse
+            | TurnState::ShowingIdentify => self
                 .popup_menu_systems
                 .execute(&mut self.ecs, &mut self.resources),
             TurnState::RangedTargeting { range: _, item: _ } => self

@@ -37,7 +37,10 @@
         { "name" : "War Axe", "weight" : 7, "min_depth" : 4, "max_depth" : 6 },
         { "name" : "Mithril Shirt", "weight" : 1, "min_depth" : 4, "max_depth" : 6 },
         { "name" : "Town Portal Scroll", "weight" : 4, "min_depth" : 0, "max_depth" : 100 },
-        { "name" : "Longsword +1", "weight" : 2, "min_depth" : 2, "max_depth" : 100 }
+        { "name" : "Longsword +1", "weight" : 2, "min_depth" : 2, "max_depth" : 100 },
+        { "name" : "Longsword -1", "weight" : 1, "min_depth" : 2, "max_depth" : 100 },
+        { "name" : "Remove Curse Scroll", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Identify Scroll", "weight" : 4, "min_depth" : 0, "max_depth" : 100 }
     ],
     
     "faction_table" : [
@@ -689,6 +692,65 @@
             "initiative_penalty" : 1,
             "vendor_category" : "weapon",
             "magic" : { "class" : "common", "naming" : "Unidentified Longsword" }
+        },
+        
+        {
+            "name" : "Longsword -1",
+            "renderable": {
+                "glyph" : "/",
+                "fg" : "#FFAAFF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "weapon" : {
+                "range" : "melee",
+                "attribute" : "might",
+                "base_damage" : "1d8-1",
+                "hit_bonus" : -1
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 100.0,
+            "initiative_penalty" : 3,
+            "vendor_category" : "weapon",
+            "magic" : { "class" : "common", "naming" : "Unidentified Longsword", "cursed" : true }
+        },
+        
+        {
+            "name" : "Remove Curse Scroll",
+            "renderable": {
+                "glyph" : ")",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : {
+                    "remove_curse" : ""
+                }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy",
+            "magic" : { "class" : "common", "naming" : "scroll" }
+        },
+        
+        {
+            "name" : "Identify Scroll",
+            "renderable": {
+                "glyph" : ")",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : {
+                    "identify" : ""
+                }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 10.0,
+            "vendor_category" : "alchemy",
+            "magic" : { "class" : "common", "naming" : "scroll" }
         }
     ],
     

@@ -4,22 +4,6 @@ use legion::query::*;
 use legion::storage::Component;
 use legion::world::EntryRef;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-struct Operation {
-    command: Command,
-    user: Entity,
-    item: Entity,
-    target: Entity,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-enum Command {
-    Heal { amount: i32 },
-    Damage { amount: i32 },
-    Confuse { duration: i32 },
-    Eat,
-}
-
 #[system(for_each)]
 #[read_component(ProvidesHealing)]
 #[write_component(Pools)]
@@ -106,6 +90,7 @@ pub fn equip(
     use_item: &UseItem,
     equipped: Option<&Equipped>,
     magic: Option<&MagicItem>,
+    cursed: Option<&CursedItem>,
     #[resource] log: &mut Gamelog,
     #[resource] dm: &MasterDungeonMap,
     ecs: &SubWorld,
@@ -121,10 +106,15 @@ pub fn equip(
     };
 
     if equipped.is_some() {
-        // already equipped, so unequip
-        commands.remove_component::<Equipped>(*entity);
-        log.entries
-            .push(format!("{} unequipped {}.", user_name, &name.0));
+        // already equipped, so unequip -- if we can
+        if cursed.is_none() {
+            commands.remove_component::<Equipped>(*entity);
+            log.entries
+                .push(format!("{} unequipped {}.", user_name, &name.0));
+        } else {
+            log.entries
+                .push(format!("You cannot unequip {}, it is cursed", &name.0));
+        }
         return;
     }
 
@@ -132,15 +122,26 @@ pub fn equip(
     let target_slot = equippable.slot;
 
     // Remove anything already in the slot
-    <(Entity, &Equipped, &Name)>::query()
+    let mut equip_blocked = false;
+    <(Entity, &Equipped, &Name, Option<&CursedItem>)>::query()
         .filter(component::<Item>())
         .iter(ecs)
-        .filter(|(_, e, _)| e.owner == use_item.user && e.slot == target_slot)
-        .for_each(|(e, _, n)| {
-            commands.remove_component::<Equipped>(*e);
-            log.entries
-                .push(format!("{} unequipped {}.", user_name, &n.0));
+        .filter(|(_, e, _, _)| e.owner == use_item.user && e.slot == target_slot)
+        .for_each(|(e, _, n, c)| {
+            if c.is_none() {
+                commands.remove_component::<Equipped>(*e);
+                log.entries
+                    .push(format!("{} unequipped {}.", user_name, &n.0));
+            } else {
+                log.entries
+                    .push(format!("You cannot unequip {}, it is cursed", &n.0));
+                equip_blocked = true;
+            }
         });
+
+    if equip_blocked {
+        return;
+    }
 
     // Assign this to the slot
     commands.add_component(
@@ -155,7 +156,6 @@ pub fn equip(
 
     // auto-identify if it's magic
     if magic.is_some() && !dm.identified_items.contains(&name.0) {
-        println!("Identifying item");
         add_effect(
             Some(use_item.user),
             EffectType::Identify,

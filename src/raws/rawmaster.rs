@@ -180,6 +180,8 @@ macro_rules! apply_effects {
                 "single_activation" => $cmd.add_component($e, SingleActivation),
                 "particle_line" => $cmd.add_component($e, parse_particle_line(&effect.1)),
                 "particle" => $cmd.add_component($e, parse_particle(&effect.1)),
+                "remove_curse" => $cmd.add_component($e, ProvidesRemoveCurse),
+                "identify" => $cmd.add_component($e, ProvidesIdentify),
                 _ => log(format!(
                     "Warning: consumable effect {} not implemented.",
                     effect_name
@@ -274,6 +276,12 @@ pub fn spawn_named_item(
                     ObfuscatedName(potion_names[&item_template.name].clone()),
                 ),
                 _ => commands.add_component(entity, ObfuscatedName(magic.naming.clone())),
+            }
+        }
+
+        if let Some(cursed) = magic.cursed {
+            if cursed {
+                commands.add_component(entity, CursedItem);
             }
         }
     }
@@ -620,8 +628,17 @@ pub fn get_vendor_items(categories: &[String], raws: &RawMaster) -> Vec<(String,
     result
 }
 
-pub fn get_item_color(ecs: &SubWorld, item: Entity) -> ColorPair {
-    let fg = if let Ok(magic) = ecs.entry_ref(item).unwrap().get_component::<MagicItem>() {
+pub fn get_item_color(ecs: &SubWorld, item: Entity, dm: &MasterDungeonMap) -> ColorPair {
+    let entry = ecs.entry_ref(item).unwrap();
+    if entry.get_component::<CursedItem>().is_ok() {
+        if let Ok(name) = entry.get_component::<Name>() {
+            if dm.identified_items.contains(&name.0) {
+                return ColorPair::new(RED, BLACK);
+            }
+        }
+    }
+
+    let fg = if let Ok(magic) = entry.get_component::<MagicItem>() {
         match magic.class {
             MagicItemClass::Common => RGB::from_f32(0.5, 1.0, 0.5),
             MagicItemClass::Rare => RGB::from_f32(0.0, 1.0, 1.0),

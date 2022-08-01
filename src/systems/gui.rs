@@ -13,6 +13,7 @@ use crate::prelude::*;
 #[read_component(Carried)]
 #[read_component(MagicItem)]
 #[read_component(ObfuscatedName)]
+#[read_component(CursedItem)]
 pub fn gui(
     ecs: &SubWorld,
     #[resource] gamelog: &Gamelog,
@@ -137,7 +138,7 @@ pub fn gui(
             draw_batch.print_color(
                 Point::new(50, y),
                 truncate(get_item_display_name(ecs, *item, dm), 25),
-                get_item_color(ecs, *item),
+                get_item_color(ecs, *item, dm),
             );
             y += 1;
         });
@@ -157,7 +158,7 @@ pub fn gui(
                 draw_batch.print_color(
                     Point::new(53, y),
                     truncate(get_item_display_name(ecs, *item, dm), 25),
-                    get_item_color(ecs, *item),
+                    get_item_color(ecs, *item, dm),
                 );
                 y += 1;
                 index += 1;

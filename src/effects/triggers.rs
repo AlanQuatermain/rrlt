@@ -1,7 +1,5 @@
 use crate::prelude::*;
 
-use super::particles;
-
 pub fn item_trigger(
     creator: Option<Entity>,
     item: Entity,
@@ -126,6 +124,18 @@ fn event_trigger(
             },
             targets.clone(),
         );
+        did_something = true;
+    }
+
+    // Remove Curse
+    if entry.get_component::<ProvidesRemoveCurse>().is_ok() {
+        *turn_state = TurnState::ShowingRemoveCurse;
+        did_something = true;
+    }
+
+    // Identify Scroll
+    if entry.get_component::<ProvidesIdentify>().is_ok() {
+        *turn_state = TurnState::ShowingIdentify;
         did_something = true;
     }
 

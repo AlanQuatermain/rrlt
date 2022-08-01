@@ -41,7 +41,7 @@ pub fn spawn_player(ecs: &mut World, dm: &MasterDungeonMap, pos: Point) {
             god_mode: false,
         },
         LightSource {
-            color: RGB::from_f32(1.0, 1.0, 0.7),
+            color: RGB::from_f32(1.0, 1.0, 0.9),
             range: 8,
         },
         Initiative { current: 0 },

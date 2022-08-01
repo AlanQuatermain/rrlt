@@ -12,6 +12,7 @@ use crate::{prelude::*, KeyState};
 #[read_component(Equipped)]
 #[read_component(MagicItem)]
 #[read_component(ObfuscatedName)]
+#[read_component(CursedItem)]
 pub fn inventory(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -20,7 +21,10 @@ pub fn inventory(
     #[resource] dm: &MasterDungeonMap,
 ) {
     match *turn_state {
-        TurnState::ShowingInventory | TurnState::ShowingDropItems => {}
+        TurnState::ShowingInventory
+        | TurnState::ShowingDropItems
+        | TurnState::ShowingRemoveCurse
+        | TurnState::ShowingIdentify => {}
         _ => return,
     }
 
@@ -33,12 +37,23 @@ pub fn inventory(
         .iter(ecs)
         .filter(|(_, carried)| carried.0 == player)
         .count();
-    let mut item_query = <(&Item, &Name, &Carried, Entity)>::query();
+    let mut item_query = <(
+        &Carried,
+        Option<&CursedItem>,
+        Option<&ObfuscatedName>,
+        Entity,
+    )>::query()
+    .filter(component::<Item>());
 
     // build item/name list
     let items: Vec<(Entity, String)> = item_query
         .iter(ecs)
-        .filter(|(_, _, carried, _)| carried.0 == player)
+        .filter(|(carried, _, _, _)| carried.0 == player)
+        .filter(|(_, cursed, obfname, _)| match *turn_state {
+            TurnState::ShowingRemoveCurse => cursed.is_some(),
+            TurnState::ShowingIdentify => obfname.is_some(),
+            _ => true,
+        })
         .map(|(_, _, _, entity)| (*entity, get_item_display_name(ecs, *entity, dm)))
         .collect();
 
@@ -55,6 +70,8 @@ pub fn inventory(
 
     let title = match *turn_state {
         TurnState::ShowingDropItems => "Drop Item".to_string(),
+        TurnState::ShowingRemoveCurse => "Remove Curse".to_string(),
+        TurnState::ShowingIdentify => "Identify".to_string(),
         _ => "Inventory".to_string(),
     };
 
@@ -89,7 +106,7 @@ pub fn inventory(
             to_cp437(')'),
         );
 
-        draw_batch.print_color(Point::new(21, y), &name, get_item_color(ecs, *entity));
+        draw_batch.print_color(Point::new(21, y), &name, get_item_color(ecs, *entity, dm));
         if let Ok(entry) = ecs.entry_ref(*entity) {
             if entry.get_component::<Equipped>().is_ok() {
                 draw_batch.set(
@@ -147,6 +164,18 @@ pub fn inventory(
                                 },
                             ));
                         }
+                        TurnState::ShowingRemoveCurse => {
+                            let item = usable[selection as usize];
+                            commands.remove_component::<CursedItem>(item);
+                        }
+                        TurnState::ShowingIdentify => {
+                            let item = usable[selection as usize];
+                            add_effect(
+                                Some(player),
+                                EffectType::Identify,
+                                Targets::Single { target: item },
+                            );
+                        }
                         _ => return,
                     }
 
@@ -165,7 +194,7 @@ pub fn inventory(
 #[read_component(Name)]
 pub fn identification(
     entity: &Entity,
-    id_info: &IdentifiedItem,
+    _id_info: &IdentifiedItem,
     carried: &Carried,
     name: &Name,
     #[resource] dm: &mut MasterDungeonMap,
