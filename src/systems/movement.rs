@@ -6,16 +6,28 @@ use crate::prelude::*;
 #[read_component(Point)]
 #[read_component(WantsToMove)]
 #[write_component(FieldOfView)]
+#[write_component(Confusion)]
 pub fn movement(
     entity: &Entity,
     want_move: &WantsToMove,
     fov: &mut FieldOfView,
     pos: &mut Point,
     player: Option<&Player>,
+    confusion: Option<&mut Confusion>,
     #[resource] map: &mut Map,
     #[resource] camera: &mut Camera,
     commands: &mut CommandBuffer,
 ) {
+    if let Some(confusion) = confusion {
+        let duration = confusion.0 - 1;
+        if duration < 1 {
+            commands.remove_component::<Confusion>(*entity);
+        } else {
+            confusion.0 = duration;
+        }
+        return;
+    }
+
     let to_idx = map.point2d_to_index(want_move.destination);
     if !crate::spatial::is_blocked(to_idx) {
         fov.is_dirty = true;
@@ -55,15 +67,13 @@ pub fn teleport(
                 destination: teleport.destination,
             },
         );
-    }
-    else if player.is_some() {
+    } else if player.is_some() {
         *turn_state = TurnState::LevelTeleport {
             destination: teleport.destination,
             depth: teleport.depth,
         };
         return;
-    }
-    else {
+    } else {
         let from_idx = map.point2d_to_index(*pos);
         crate::spatial::remove_entity(*entity, from_idx);
         commands.add_component(

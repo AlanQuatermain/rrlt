@@ -10,7 +10,12 @@ use crate::prelude::*;
 #[read_component(TeleportTo)]
 #[read_component(SingleActivation)]
 #[read_component(Player)]
-pub fn trigger(ecs: &SubWorld, commands: &mut CommandBuffer, #[resource] gamelog: &mut Gamelog) {
+pub fn trigger(
+    ecs: &SubWorld,
+    commands: &mut CommandBuffer,
+    #[resource] gamelog: &mut Gamelog,
+    #[resource] map: &Map,
+) {
     let moved_entities: Vec<(Entity, Point)> = <(Entity, &Point)>::query()
         .filter(component::<EntityMoved>())
         .iter(ecs)
@@ -19,54 +24,27 @@ pub fn trigger(ecs: &SubWorld, commands: &mut CommandBuffer, #[resource] gamelog
 
     let mut teleports: Vec<Entity> = Vec::new();
     for (entity, pos) in moved_entities {
-        let is_player = ecs
-            .entry_ref(entity)
-            .unwrap()
-            .get_component::<Player>()
-            .is_ok();
+        // Remove the movement marker
+        commands.remove_component::<EntityMoved>(entity);
 
-        <(Entity, &Point, &Name, Option<&Damage>, Option<&TeleportTo>)>::query()
+        <(Entity, &Point, &Name)>::query()
             .filter(component::<EntryTrigger>())
             .iter(ecs)
-            .filter(|(_, p, _, _, _)| pos == **p)
-            .for_each(|(trigger_entity, _, trigger_name, damage, teleport)| {
-                commands.remove_component::<Hidden>(*trigger_entity);
-                if let Some(damage) = damage {
-                    gamelog
-                        .entries
-                        .push(format!("{} triggers!", trigger_name.0));
-                    commands.push((
-                        (),
-                        InflictDamage {
-                            target: entity,
-                            user_entity: *trigger_entity,
-                            damage: damage.0,
-                            item_entity: None,
-                        },
-                    ));
-                } else if let Some(teleport) = teleport {
-                    if !teleport.player_only || is_player {
-                        commands.add_component(
-                            entity,
-                            ApplyTeleport {
-                                destination: teleport.position,
-                                depth: teleport.depth,
-                            },
-                        );
-                        teleports.push(entity);
-                    }
-                }
-            });
-    }
+            .filter(|(_, p, _)| pos == **p)
+            .for_each(|(trigger_entity, _, trigger_name)| {
+                gamelog
+                    .entries
+                    .push(format!("{} triggers!", trigger_name.0));
 
-    for entity in teleports {
-        if ecs
-            .entry_ref(entity)
-            .unwrap()
-            .get_component::<SingleActivation>()
-            .is_ok()
-        {
-            commands.remove(entity);
-        }
+                // add into the effects system
+                let tile_idx = map.point2d_to_index(pos);
+                add_effect(
+                    Some(entity),
+                    EffectType::TriggerFire {
+                        trigger: *trigger_entity,
+                    },
+                    Targets::Tile { tile_idx },
+                )
+            });
     }
 }

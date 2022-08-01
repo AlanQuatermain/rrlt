@@ -139,15 +139,14 @@ fn use_consumable_hotkey(
                 };
             }
 
-            // Otherwise, register intent to use
-            commands.push((
-                (),
-                ActivateItem {
-                    used_by: *player_entity,
-                    item: carried_consumables[hotkey as usize],
+            let item = carried_consumables[hotkey as usize];
+            commands.add_component(
+                item,
+                UseItem {
+                    user: *player_entity,
                     target: None,
                 },
-            ));
+            );
         }
     }
 

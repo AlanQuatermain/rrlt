@@ -135,6 +135,60 @@ fn string_to_slot(name: &str) -> EquipmentSlot {
     }
 }
 
+fn parse_particle_line(n: &str) -> SpawnParticleLine {
+    let tokens: Vec<_> = n.split(';').collect();
+    SpawnParticleLine {
+        glyph: to_cp437(tokens[0].chars().next().unwrap()),
+        color: RGB::from_hex(tokens[1]).expect("Bad RGB"),
+        lifetime_ms: tokens[2].parse::<f32>().unwrap(),
+    }
+}
+
+fn parse_particle(n: &str) -> SpawnParticleBurst {
+    let tokens: Vec<_> = n.split(';').collect();
+    SpawnParticleBurst {
+        glyph: to_cp437(tokens[0].chars().next().unwrap()),
+        color: RGB::from_hex(tokens[1]).expect("Bad RGB"),
+        lifetime_ms: tokens[2].parse::<f32>().unwrap(),
+    }
+}
+
+macro_rules! i32_component {
+    ( $name:ident, $item:expr ) => {
+        $name($item.1.parse::<i32>().unwrap())
+    };
+}
+
+macro_rules! apply_effects {
+    ( $e:expr, $effects:expr, $cmd:expr ) => {
+        for effect in $effects.iter() {
+            let effect_name = effect.0.as_str();
+            match effect_name {
+                "provides_healing" => $cmd.add_component(
+                    $e,
+                    ProvidesHealing {
+                        amount: effect.1.parse::<i32>().unwrap(),
+                    },
+                ),
+                "ranged" => $cmd.add_component($e, i32_component!(Ranged, effect)),
+                "damage" => $cmd.add_component($e, i32_component!(Damage, effect)),
+                "area_of_effect" => $cmd.add_component($e, i32_component!(AreaOfEffect, effect)),
+                "confusion" => $cmd.add_component($e, i32_component!(Confusion, effect)),
+                "magic_mapping" => $cmd.add_component($e, ProvidesDungeonMap),
+                "town_portal" => $cmd.add_component($e, TownPortal),
+                "food" => $cmd.add_component($e, ProvidesFood),
+                "single_activation" => $cmd.add_component($e, SingleActivation),
+                "particle_line" => $cmd.add_component($e, parse_particle_line(&effect.1)),
+                "particle" => $cmd.add_component($e, parse_particle(&effect.1)),
+                _ => log(format!(
+                    "Warning: consumable effect {} not implemented.",
+                    effect_name
+                )),
+            }
+        }
+    };
+}
+
 pub fn spawn_named_item(
     raws: &RawMaster,
     key: &str,
@@ -157,7 +211,7 @@ pub fn spawn_named_item(
         weight_lbs: item_template.weight_lbs.unwrap_or(0.0),
         base_value: item_template.base_value.unwrap_or(0.0),
     };
-    let entity = commands.push((item, Name(item_template.name.clone())));
+    let entity = commands.push((item, Name(item_template.name.clone()), SerializeMe));
 
     // Spawn in the specified location
     set_position(&entity, pos, key, raws, commands);
@@ -168,36 +222,7 @@ pub fn spawn_named_item(
 
     if let Some(consumable) = &item_template.consumable {
         commands.add_component(entity, Consumable {});
-        for effect in consumable.effects.iter() {
-            let effect_name = effect.0.as_str();
-            match effect_name {
-                "provides_healing" => commands.add_component(
-                    entity,
-                    ProvidesHealing {
-                        amount: effect.1.parse::<i32>().unwrap(),
-                    },
-                ),
-                "ranged" => {
-                    commands.add_component(entity, Ranged(effect.1.parse::<i32>().unwrap()))
-                }
-                "damage" => {
-                    commands.add_component(entity, Damage(effect.1.parse::<i32>().unwrap()))
-                }
-                "area_of_effect" => {
-                    commands.add_component(entity, AreaOfEffect(effect.1.parse::<i32>().unwrap()))
-                }
-                "confusion" => {
-                    commands.add_component(entity, Confusion(effect.1.parse::<i32>().unwrap()))
-                }
-                "magic_mapping" => commands.add_component(entity, ProvidesDungeonMap),
-                "food" => commands.add_component(entity, ProvidesFood),
-                "town_portal" => commands.add_component(entity, TownPortal),
-                _ => log(format!(
-                    "Warning: consumable effect {} not implemented",
-                    effect_name
-                )),
-            }
-        }
+        apply_effects!(entity, consumable.effects, commands);
     }
 
     if let Some(weapon) = &item_template.weapon {
@@ -268,7 +293,7 @@ pub fn spawn_named_mob(
     }
     let mob_template = &raws.raws.mobs[raws.mob_index[key]];
 
-    let entity = commands.push(((), Name(mob_template.name.clone())));
+    let entity = commands.push(((), Name(mob_template.name.clone()), SerializeMe));
     set_position(&entity, pos, key, raws, commands);
 
     match mob_template.movement.as_ref() {
@@ -466,7 +491,7 @@ pub fn spawn_named_prop(
     }
     let template = &raws.raws.props[raws.prop_index[key]];
 
-    let entity = commands.push(((), Name(template.name.clone())));
+    let entity = commands.push(((), Name(template.name.clone()), SerializeMe));
     set_position(&entity, pos, key, raws, commands);
 
     if let Some(renderable) = &template.renderable {
@@ -491,15 +516,7 @@ pub fn spawn_named_prop(
     }
     if let Some(entry_trigger) = &template.entry_trigger {
         commands.add_component(entity, EntryTrigger);
-        for effect in entry_trigger.effects.iter() {
-            match effect.0.as_str() {
-                "damage" => {
-                    commands.add_component(entity, Damage(effect.1.parse::<i32>().unwrap()))
-                }
-                "single_activation" => commands.add_component(entity, SingleActivation),
-                _ => {}
-            }
-        }
+        apply_effects!(entity, entry_trigger.effects, commands);
     }
     if let Some(light) = &template.light {
         commands.add_component(

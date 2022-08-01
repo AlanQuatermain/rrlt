@@ -6,6 +6,7 @@ use crate::{prelude::*, KeyState};
 #[read_component(Carried)]
 #[write_component(Pools)]
 #[read_component(Name)]
+#[read_component(ObfuscatedName)]
 pub fn vendor(
     ecs: &mut SubWorld,
     #[resource] turn_state: &mut TurnState,
@@ -50,11 +51,12 @@ fn vendor_sell_menu(
         .nth(0)
         .unwrap();
 
-    let inventory: Vec<(Name, Item, Entity)> = <(&Carried, &Name, &Item, Entity)>::query()
-        .iter(ecs)
-        .filter(|(c, _, _, _)| c.0 == *player_entity)
-        .map(|(_, n, i, e)| (n.clone(), i.clone(), *e))
-        .collect();
+    let inventory: Vec<(Name, Option<ObfuscatedName>, Item, Entity)> =
+        <(&Carried, &Name, Option<&ObfuscatedName>, &Item, Entity)>::query()
+            .iter(ecs)
+            .filter(|(c, _, _, _, _)| c.0 == *player_entity)
+            .map(|(_, n, o, i, e)| (n.clone(), o.map(|v| v.clone()), i.clone(), *e))
+            .collect();
     let count = inventory.len();
 
     let mut y = (25 - (count / 2)) as i32;
@@ -78,7 +80,7 @@ fn vendor_sell_menu(
 
     let mut equippable: Vec<Entity> = Vec::new();
     let mut j = 0;
-    for (name, item, entity) in inventory {
+    for (name, oname, item, entity) in inventory {
         batch.set(
             Point::new(17, y),
             ColorPair::new(WHITE, BLACK),
@@ -95,7 +97,11 @@ fn vendor_sell_menu(
             to_cp437(')'),
         );
 
-        batch.print(Point::new(21, y), &name.0.clone());
+        if let Some(obfuscated) = oname {
+            batch.print(Point::new(21, y), &obfuscated.0.clone());
+        } else {
+            batch.print(Point::new(21, y), &name.0.clone());
+        }
         batch.print(
             Point::new(50, y),
             &format!("{:.1} gp", item.base_value * 0.8),

@@ -1,5 +1,7 @@
 use crate::{prelude::*, KeyState};
 
+use super::SystemCondition;
+
 const ALLOW_SHOW_COORDINATES: bool = false;
 
 #[derive(Clone, Debug)]
@@ -49,13 +51,18 @@ impl Tooltip {
 #[read_component(Attributes)]
 #[read_component(MagicItem)]
 #[read_component(ObfuscatedName)]
+#[read_component(ParticleLifetime)]
 pub fn tooltips(
     ecs: &SubWorld,
     #[resource] key_state: &KeyState,
     #[resource] camera: &Camera,
     #[resource] map: &Map,
     #[resource] dm: &MasterDungeonMap,
+    #[state] condition: &SystemCondition,
 ) {
+    if *condition == SystemCondition::RequiresShiftKey && !key_state.shift {
+        return;
+    }
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
 
     let offset = Point::new(camera.left_x, camera.top_y);
@@ -88,7 +95,12 @@ pub fn tooltips(
         .filter(|(_, pos)| **pos == map_pos)
         .filter_map(|(e, _)| {
             if let Ok(entry) = ecs.entry_ref(*e) {
-                Some((entry, get_item_display_name(ecs, *e, dm)))
+                // No tooltips for particle effects
+                if entry.get_component::<ParticleLifetime>().is_err() {
+                    Some((entry, get_item_display_name(ecs, *e, dm)))
+                } else {
+                    None
+                }
             } else {
                 None
             }

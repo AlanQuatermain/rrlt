@@ -69,14 +69,13 @@ pub fn ranged_target(
             }
         }
         if key_state.mouse_clicked {
-            commands.push((
-                (),
-                ActivateItem {
-                    used_by: *player,
-                    item: item_entity,
+            commands.add_component(
+                item_entity,
+                UseItem {
+                    user: *player,
                     target: Some(map_pos),
                 },
-            ));
+            );
             *turn_state = TurnState::Ticking;
             return;
         }

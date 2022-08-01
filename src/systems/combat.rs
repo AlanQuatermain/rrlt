@@ -22,7 +22,6 @@ pub fn combat(
     ecs: &mut SubWorld,
     #[resource] log: &mut Gamelog,
     #[resource] rng: &mut RandomNumberGenerator,
-    #[resource] particle_builder: &mut ParticleBuilder,
     commands: &mut CommandBuffer,
 ) {
     let (attacker, victim) = (wants_attack.attacker, wants_attack.victim);
@@ -99,27 +98,26 @@ pub fn combat(
         let attr_damage_bonus = attacker_attrs.might.bonus;
         let skill_damage_bonus = skill_bonus(Skill::Melee, attacker_skills);
 
-        let damage = i32::max(0, base_damage + attr_damage_bonus + skill_damage_bonus);
-        commands.push((
-            (),
-            InflictDamage {
-                target: victim,
-                user_entity: attacker,
-                damage,
-                item_entity: None,
-            },
-        ));
+        let amount = i32::max(0, base_damage + attr_damage_bonus + skill_damage_bonus);
+        add_effect(
+            Some(attacker),
+            EffectType::Damage { amount },
+            Targets::Single { target: victim },
+        );
     } else if natural_roll == 1 {
         // Natural 1 miss
         log.entries.push(format!(
             "{} considers attacking {}, but misjudges the timing.",
             attacker_name, victim_name
         ));
-        particle_builder.request(
-            *(victim_entry.get_component::<Point>().unwrap()),
-            ColorPair::new(BLUE, BLACK),
-            to_cp437('‼'),
-            200.0,
+        add_effect(
+            None,
+            EffectType::Particle {
+                glyph: to_cp437('‼'),
+                color: ColorPair::new(BLUE, BLACK),
+                lifespan: 200.0,
+            },
+            Targets::Single { target: victim },
         );
     } else {
         // Miss
@@ -127,11 +125,14 @@ pub fn combat(
             "{} attacks {}, but can't connect.",
             attacker_name, victim_name
         ));
-        particle_builder.request(
-            *(victim_entry.get_component::<Point>().unwrap()),
-            ColorPair::new(CYAN, BLACK),
-            to_cp437('‼'),
-            200.0,
+        add_effect(
+            None,
+            EffectType::Particle {
+                glyph: to_cp437('‼'),
+                color: ColorPair::new(CYAN, BLACK),
+                lifespan: 200.0,
+            },
+            Targets::Single { target: victim },
         );
     }
 

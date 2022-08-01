@@ -71,6 +71,13 @@ impl TownBuilder {
 
         self.spawn_dockers(build_data, rng);
         self.spawn_townsfolk(build_data, rng, &mut available_building_tiles);
+
+        // We know what our own hometown looks like, thanks.
+        build_data
+            .map
+            .revealed_tiles
+            .iter_mut()
+            .for_each(|t| *t = true);
     }
 
     fn grass_layer(&mut self, build_data: &mut BuilderMap) {
@@ -393,6 +400,7 @@ impl TownBuilder {
         // Place items
         let mut to_place: Vec<&str> = vec![
             "Priest",
+            "Altar",
             "Parishioner",
             "Parishioner",
             "Chair",

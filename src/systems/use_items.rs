@@ -17,12 +17,10 @@ enum Command {
     Heal { amount: i32 },
     Damage { amount: i32 },
     Confuse { duration: i32 },
-    Equip { slot: EquipmentSlot },
     Eat,
 }
 
-#[system]
-#[read_component(ActivateItem)]
+#[system(for_each)]
 #[read_component(ProvidesHealing)]
 #[write_component(Pools)]
 #[read_component(ProvidesDungeonMap)]
@@ -43,173 +41,130 @@ enum Command {
 #[read_component(ObfuscatedName)]
 #[read_component(MagicItem)]
 #[write_component(IdentifiedItem)]
+#[filter(!component::<Equippable>())]
 pub fn use_items(
+    entity: &Entity,
+    use_item: &UseItem,
+    aoe: Option<&AreaOfEffect>,
     ecs: &mut SubWorld,
-    commands: &mut CommandBuffer,
     #[resource] map: &mut Map,
-    #[resource] gamelog: &mut Gamelog,
-    #[resource] turn_state: &mut TurnState,
-    #[resource] particle_builder: &mut ParticleBuilder,
-    #[resource] dm: &mut MasterDungeonMap,
+    commands: &mut CommandBuffer,
 ) {
-    let mut operations = Vec::new();
-    <(Entity, &ActivateItem)>::query().for_each(ecs, |(entity, activate)| {
-        let item = ecs.entry_ref(activate.item);
-        if let Ok(item) = item {
-            let mut used_item = false;
-            if let Ok(healing) = item.get_component::<ProvidesHealing>() {
-                let targets = if let Some(target) = activate.target {
-                    find_targets::<Pools>(ecs, &item, &target, map)
+    commands.remove_component::<UseItem>(*entity);
+
+    let player_entity = <Entity>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .unwrap();
+
+    if use_item.user == *player_entity {
+        add_effect(
+            Some(*player_entity),
+            EffectType::Identify,
+            Targets::Single { target: *entity },
+        );
+    }
+
+    // Call into the effects system
+    add_effect(
+        Some(use_item.user),
+        EffectType::ItemUse { item: *entity },
+        match use_item.target {
+            None => Targets::Single {
+                target: *player_entity,
+            },
+            Some(target) => {
+                if let Some(aoe) = aoe {
+                    Targets::Tiles {
+                        tiles: aoe_tiles(&*map, target, aoe.0),
+                    }
                 } else {
-                    vec![activate.used_by]
-                };
-
-                operations.extend(targets.iter().map(|target| Operation {
-                    command: Command::Heal {
-                        amount: healing.amount,
-                    },
-                    user: activate.used_by,
-                    item: activate.item,
-                    target: *target,
-                }));
-                used_item = true;
-            }
-
-            if item.get_component::<ProvidesDungeonMap>().is_ok() {
-                // map.revealed_tiles.iter_mut().for_each(|t| *t = true);
-                gamelog
-                    .entries
-                    .push("The map is revealed to you!".to_string());
-                used_item = true;
-                *turn_state = TurnState::RevealMap { row: 0 };
-            }
-
-            if item.get_component::<TownPortal>().is_ok() {
-                if map.depth == 0 {
-                    gamelog.entries.push(
-                        "You are already in the town, so the scroll has no effect.".to_string(),
-                    );
-                } else {
-                    used_item = true;
-                    *turn_state = TurnState::TownPortal;
+                    Targets::Tile {
+                        tile_idx: map.point2d_to_index(target),
+                    }
                 }
             }
-
-            if let Ok(equippable) = item.get_component::<Equippable>() {
-                operations.push(Operation {
-                    command: Command::Equip {
-                        slot: equippable.slot,
-                    },
-                    user: activate.used_by,
-                    item: activate.item,
-                    target: activate.used_by,
-                });
-                used_item = true;
-            }
-
-            if item.get_component::<ProvidesFood>().is_ok() {
-                operations.push(Operation {
-                    command: Command::Eat,
-                    user: activate.used_by,
-                    item: activate.item,
-                    target: activate.used_by,
-                });
-                used_item = true;
-            }
-
-            if let Some(target) = activate.target {
-                if let Ok(damage) = item.get_component::<Damage>() {
-                    let targets = find_all_targets(ecs, &item, &target, map);
-                    operations.extend(targets.iter().map(|target| Operation {
-                        command: Command::Damage { amount: damage.0 },
-                        user: activate.used_by,
-                        item: activate.item,
-                        target: *target,
-                    }));
-                    used_item = true;
-                }
-                if let Ok(confusion) = item.get_component::<Confusion>() {
-                    let targets = find_targets::<Pools>(ecs, &item, &target, map);
-                    operations.extend(targets.iter().map(|target| Operation {
-                        command: Command::Confuse {
-                            duration: confusion.0,
-                        },
-                        user: activate.used_by,
-                        item: activate.item,
-                        target: *target,
-                    }));
-                    used_item = true;
-                }
-            }
-
-            if used_item && item.get_component::<Consumable>().is_ok() {
-                // remove the item
-                commands.add_component(activate.item, Consumed {});
-                commands.add_component(activate.used_by, EquipmentChanged);
-            }
-
-            if used_item
-                && item.get_component::<MagicItem>().is_ok()
-                && item.get_component::<ObfuscatedName>().is_ok()
-            {
-                // Self-identify the item
-                if let Ok(name) = item.get_component::<Name>() {
-                    commands.add_component(activate.item, IdentifiedItem(name.0.clone()));
-                }
-            }
-        }
-
-        // remove the use-item command
-        commands.remove(*entity);
-    });
-
-    operations
-        .iter()
-        .for_each(|operation| match operation.command {
-            Command::Heal { amount } => {
-                if let Some(logs) = apply_healing(
-                    ecs,
-                    operation.item,
-                    operation.target,
-                    operation.user,
-                    amount,
-                    particle_builder,
-                ) {
-                    gamelog.entries.extend(logs);
-                }
-            }
-            Command::Damage { amount } => {
-                commands.push((
-                    (),
-                    InflictDamage {
-                        target: operation.target,
-                        user_entity: operation.user,
-                        damage: amount,
-                        item_entity: Some(operation.item),
-                    },
-                ));
-            }
-            Command::Confuse { duration } => {
-                if let Some(logs) =
-                    apply_confusion(ecs, operation.target, commands, duration, particle_builder)
-                {
-                    gamelog.entries.extend(logs);
-                }
-            }
-            Command::Equip { slot } => {
-                if let Some(logs) =
-                    equip_item(ecs, operation.item, operation.target, commands, slot)
-                {
-                    gamelog.entries.extend(logs);
-                }
-            }
-            Command::Eat => {
-                if let Some(logs) = eat(ecs, operation.item, operation.user) {
-                    gamelog.entries.extend(logs);
-                }
-            }
-        });
+        },
+    );
 }
+
+#[system(for_each)]
+#[read_component(Item)]
+#[read_component(Carried)]
+#[write_component(Equipped)]
+#[read_component(Equippable)]
+#[read_component(Name)]
+#[read_component(MagicItem)]
+#[read_component(UseItem)]
+#[read_component(Player)]
+pub fn equip(
+    entity: &Entity,
+    name: &Name,
+    equippable: &Equippable,
+    carried: &Carried,
+    use_item: &UseItem,
+    equipped: Option<&Equipped>,
+    magic: Option<&MagicItem>,
+    #[resource] log: &mut Gamelog,
+    #[resource] dm: &MasterDungeonMap,
+    ecs: &SubWorld,
+    commands: &mut CommandBuffer,
+) {
+    commands.remove_component::<UseItem>(*entity);
+
+    let target_name = name_for(&use_item.user, ecs);
+    let user_name = if target_name.1 {
+        "You".to_string()
+    } else {
+        target_name.0
+    };
+
+    if equipped.is_some() {
+        // already equipped, so unequip
+        commands.remove_component::<Equipped>(*entity);
+        log.entries
+            .push(format!("{} unequipped {}.", user_name, &name.0));
+        return;
+    }
+
+    // Equip the item
+    let target_slot = equippable.slot;
+
+    // Remove anything already in the slot
+    <(Entity, &Equipped, &Name)>::query()
+        .filter(component::<Item>())
+        .iter(ecs)
+        .filter(|(_, e, _)| e.owner == use_item.user && e.slot == target_slot)
+        .for_each(|(e, _, n)| {
+            commands.remove_component::<Equipped>(*e);
+            log.entries
+                .push(format!("{} unequipped {}.", user_name, &n.0));
+        });
+
+    // Assign this to the slot
+    commands.add_component(
+        *entity,
+        Equipped {
+            owner: carried.0,
+            slot: target_slot,
+        },
+    );
+    log.entries
+        .push(format!("{} equipped {}.", user_name, &name.0));
+
+    // auto-identify if it's magic
+    if magic.is_some() && !dm.identified_items.contains(&name.0) {
+        println!("Identifying item");
+        add_effect(
+            Some(use_item.user),
+            EffectType::Identify,
+            Targets::Single { target: *entity },
+        );
+    }
+}
+
+////////////////////////////////////////////////////////////
 
 fn find_targets<T: Component>(
     ecs: &SubWorld,
@@ -333,54 +288,6 @@ fn apply_confusion(
             particle_builder.request(*pos, ColorPair::new(MAGENTA, BLACK), to_cp437('?'), 200.0);
         }
         return Some(vec![log]);
-    }
-    None
-}
-
-fn equip_item(
-    ecs: &mut SubWorld,
-    item_entity: Entity,
-    target_entity: Entity,
-    commands: &mut CommandBuffer,
-    slot: EquipmentSlot,
-) -> Option<Vec<String>> {
-    let target_name = name_for(&target_entity, ecs);
-    let user_name = if target_name.1 {
-        "You".to_string()
-    } else {
-        target_name.0
-    };
-    let item_name = name_for(&item_entity, ecs).0;
-
-    if let Ok(item) = ecs.entry_ref(item_entity) {
-        if item.get_component::<Equipped>().is_ok() {
-            // unequip and leave
-            commands.remove_component::<Equipped>(item_entity);
-            return Some(vec![format!("{} unequipped {}.", user_name, item_name)]);
-        }
-    }
-
-    if ecs.entry_ref(target_entity).is_ok() {
-        let mut logs = Vec::new();
-        // Remove anything currently equipped in the same slot
-        <(Entity, &Equipped, &Name)>::query()
-            .iter_mut(ecs)
-            .filter(|(entity, equipped, _)| {
-                equipped.owner == target_entity && **entity != item_entity && equipped.slot == slot
-            })
-            .for_each(|(old_item, _, name)| {
-                commands.remove_component::<Equipped>(*old_item);
-                logs.push(format!("{} unequipped {}.", user_name, name.0));
-            });
-        commands.add_component(
-            item_entity,
-            Equipped {
-                owner: target_entity,
-                slot: slot,
-            },
-        );
-        logs.push(format!("{} equipped {}.", user_name, item_name));
-        return Some(logs);
     }
     None
 }

@@ -1,5 +1,6 @@
 mod camera;
 mod components;
+mod effects;
 mod gamelog;
 mod gamesystem;
 mod map;
@@ -33,6 +34,7 @@ mod prelude {
 
     pub use crate::camera::*;
     pub use crate::components::*;
+    pub use crate::effects::*;
     pub use crate::gamelog::*;
     pub use crate::gamesystem::*;
     pub use crate::map::*;
@@ -227,11 +229,13 @@ impl State {
         registry.register::<Name>("name".to_string());
         registry.register::<Item>("item".to_string());
         registry.register::<AmuletOfYala>("amulet_of_yala".to_string());
+        registry.register::<FieldOfView>("fov".to_string());
         registry.register::<ProvidesHealing>("provides_healing".to_string());
         registry.register::<ProvidesDungeonMap>("provides_map".to_string());
+        registry.register::<Carried>("carried_by".to_string());
         registry.register::<Damage>("damage".to_string());
-        registry.register::<MeleeWeapon>("melee_weapon".to_string());
         registry.register::<WeaponAttribute>("wattr".to_string());
+        registry.register::<MeleeWeapon>("melee_weapon".to_string());
         registry.register::<Wearable>("wearable".to_string());
         registry.register::<BlocksTile>("blocks_tile".to_string());
         registry.register::<Consumable>("consumable".to_string());
@@ -239,9 +243,7 @@ impl State {
         registry.register::<AreaOfEffect>("aoe".to_string());
         registry.register::<Confusion>("confusion".to_string());
         registry.register::<Map>("map".to_string());
-        registry.register::<FieldOfView>("fov".to_string());
         registry.register::<MapTheme>("theme".to_string());
-        registry.register::<Carried>("carried_by".to_string());
         registry.register::<SerializeMe>("serialize".to_string());
         registry.register::<EquipmentSlot>("slot".to_string());
         registry.register::<Equippable>("equippable".to_string());
@@ -253,20 +255,23 @@ impl State {
         registry.register::<Hidden>("hidden".to_string());
         registry.register::<EntryTrigger>("entry_trigger".to_string());
         registry.register::<SingleActivation>("one_shot".to_string());
-        registry.register::<Door>("door".to_string());
         registry.register::<BlocksVisibility>("blocks_visibility".to_string());
+        registry.register::<Door>("door".to_string());
         registry.register::<AlwaysVisible>("always_visible".to_string());
         registry.register::<Quips>("quips".to_string());
         registry.register::<Attribute>("attr".to_string());
         registry.register::<Attributes>("attrs".to_string());
         registry.register::<Skill>("skill".to_string());
         registry.register::<Skills>("skills".to_string());
+        registry.register::<Pool>("pool".to_string());
+        registry.register::<Pools>("pools".to_string());
         registry.register::<NaturalAttack>("nattack".to_string());
         registry.register::<NaturalAttackDefense>("natkdef".to_string());
         registry.register::<LootTable>("loot_tbl".to_string());
         registry.register::<OtherLevelPosition>("olpos".to_string());
         registry.register::<LightSource>("light_source".to_string());
         registry.register::<Initiative>("initiative".to_string());
+        registry.register::<MyTurn>("my_turn".to_string());
         registry.register::<Faction>("faction".to_string());
         registry.register::<Movement>("movement".to_string());
         registry.register::<MoveMode>("move_mode".to_string());
@@ -277,6 +282,7 @@ impl State {
         registry.register::<MagicItem>("magic_item".to_string());
         registry.register::<ObfuscatedName>("obf_name".to_string());
         registry.register::<IdentifiedItem>("identified_item".to_string());
+        registry.register::<MasterDungeonMap>("dungeon_master".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -336,6 +342,7 @@ impl State {
                 .nth(0)
                 .unwrap();
             self.resources.insert(map.clone());
+            spatial::set_size(map.width * map.height);
             to_remove.push(*map_entity);
 
             let (dm, dm_entity) = <(&MasterDungeonMap, Entity)>::query()
@@ -360,8 +367,11 @@ impl State {
         let mut gamelog = Gamelog::default();
         gamelog.entries.push("Loaded game.".to_string());
 
+        let mut rng = RandomNumberGenerator::new();
+
+        self.resources.insert(rng);
         self.resources.insert(Camera::new(*player_pos));
-        self.resources.insert(TurnState::AwaitingInput);
+        self.resources.insert(TurnState::Ticking);
         self.resources.insert(gamelog);
         self.resources.insert(RexAssets::new());
 

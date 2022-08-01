@@ -42,15 +42,11 @@ fn update_hunger(
                 gamelog
                     .entries
                     .push("Your hunger pangs are getting painful!".to_string());
-                commands.push((
-                    (),
-                    InflictDamage {
-                        target: *entity,
-                        user_entity: *entity,
-                        damage: 1,
-                        item_entity: None,
-                    },
-                ));
+                add_effect(
+                    None,
+                    EffectType::Damage { amount: 1 },
+                    Targets::Single { target: *entity },
+                );
             }
         }
     }

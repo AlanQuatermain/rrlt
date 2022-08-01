@@ -71,13 +71,6 @@ pub struct ProvidesDungeonMap;
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Carried(pub Entity);
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ActivateItem {
-    pub used_by: Entity,
-    pub item: Entity,
-    pub target: Option<Point>,
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Damage(pub i32);
 
@@ -419,3 +412,23 @@ pub struct ObfuscatedName(pub String);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdentifiedItem(pub String);
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct UseItem {
+    pub user: Entity,
+    pub target: Option<Point>,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SpawnParticleLine {
+    pub glyph: FontCharType,
+    pub color: RGB,
+    pub lifetime_ms: f32,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SpawnParticleBurst {
+    pub glyph: FontCharType,
+    pub color: RGB,
+    pub lifetime_ms: f32,
+}

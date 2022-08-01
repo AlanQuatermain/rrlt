@@ -129,14 +129,13 @@ pub fn inventory(
                                 };
                                 return;
                             } else {
-                                commands.push((
-                                    (),
-                                    ActivateItem {
-                                        used_by: player,
-                                        item: usable[selection as usize],
+                                commands.add_component(
+                                    usable[selection as usize],
+                                    UseItem {
+                                        user: player,
                                         target: None,
                                     },
-                                ));
+                                );
                             }
                         }
                         TurnState::ShowingDropItems => {
