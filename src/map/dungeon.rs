@@ -29,11 +29,19 @@ impl MasterDungeonMap {
                 format!("Scroll titled {}", masked_name),
             );
         }
+
         for potion_tag in get_potion_tags().iter() {
             let idx = rng.random_slice_index(&dm.available_potion_types).unwrap();
             let masked_name = dm.available_potion_types.remove(idx);
             dm.potion_mappings
                 .insert(potion_tag.to_string(), format!("{} potion", masked_name));
+        }
+
+        for wand_tag in get_wand_tags().iter() {
+            let idx = rng.random_slice_index(&dm.available_wand_types).unwrap();
+            let masked_name = dm.available_wand_types.remove(idx);
+            dm.wand_mappings
+                .insert(wand_tag.to_string(), format!("{} wand", masked_name));
         }
 
         dm

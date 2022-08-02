@@ -8,11 +8,11 @@ use crate::prelude::*;
 #[write_component(EntityMoved)]
 #[filter(component::<MyTurn>())]
 pub fn flee(
-    ecs: &SubWorld,
+    _ecs: &SubWorld,
     entity: &Entity,
     flee: &WantsToFlee,
     pos: &mut Point,
-    fov: &mut FieldOfView,
+    _fov: &mut FieldOfView,
     #[resource] map: &mut Map,
     commands: &mut CommandBuffer,
 ) {

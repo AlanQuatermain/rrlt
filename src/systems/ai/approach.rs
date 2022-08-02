@@ -8,10 +8,10 @@ use crate::prelude::*;
 #[write_component(EntityMoved)]
 #[filter(component::<MyTurn>())]
 pub fn approach(
-    ecs: &SubWorld,
+    _ecs: &SubWorld,
     entity: &Entity,
     wants_approach: &WantsToApproach,
-    fov: &mut FieldOfView,
+    _fov: &mut FieldOfView,
     pos: &mut Point,
     #[resource] map: &mut Map,
     commands: &mut CommandBuffer,

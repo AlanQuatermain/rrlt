@@ -95,13 +95,27 @@ pub fn spawn_player(ecs: &mut World, dm: &MasterDungeonMap, pos: Point) {
         dm,
         &mut commands,
     );
-    spawn_named_entity(
-        &RAWS.lock().unwrap(),
-        "Town Portal Scroll",
-        SpawnType::Carried { by: player },
-        dm,
-        &mut commands,
-    );
+    // spawn_named_entity(
+    //     &RAWS.lock().unwrap(),
+    //     "Strength Potion",
+    //     SpawnType::Carried { by: player },
+    //     dm,
+    //     &mut commands,
+    // );
+
+    // Starting hangover
+    commands.push((
+        StatusEffect { target: player },
+        Duration(10),
+        Name("Hangover".to_string()),
+        AttributeBonus {
+            might: Some(-1),
+            fitness: None,
+            quickness: Some(-1),
+            intelligence: Some(-1),
+        },
+        SerializeMe,
+    ));
 
     let mut resources = Resources::default(); // unused in this instance
     commands.flush(ecs, &mut resources);

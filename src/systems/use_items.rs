@@ -1,8 +1,6 @@
 use super::name_for;
 use crate::prelude::*;
 use legion::query::*;
-use legion::storage::Component;
-use legion::world::EntryRef;
 
 #[system(for_each)]
 #[read_component(ProvidesHealing)]
@@ -153,6 +151,7 @@ pub fn equip(
     );
     log.entries
         .push(format!("{} equipped {}.", user_name, &name.0));
+    commands.add_component(use_item.user, EquipmentChanged);
 
     // auto-identify if it's magic
     if magic.is_some() && !dm.identified_items.contains(&name.0) {
@@ -162,151 +161,4 @@ pub fn equip(
             Targets::Single { target: *entity },
         );
     }
-}
-
-////////////////////////////////////////////////////////////
-
-fn find_targets<T: Component>(
-    ecs: &SubWorld,
-    item: &EntryRef,
-    target: &Point,
-    map: &Map,
-) -> Vec<Entity> {
-    let mut entities: Vec<Entity> = Vec::new();
-
-    if let Ok(area_of_effect) = item.get_component::<AreaOfEffect>() {
-        // Area target -- can aim anywhere
-        let blast_tiles = field_of_view_set(*target, area_of_effect.0, map);
-        <(Entity, &Point)>::query()
-            .filter(component::<T>())
-            .iter(ecs)
-            .filter(|(_, p)| blast_tiles.contains(*p))
-            .for_each(|(e, _)| entities.push(*e));
-    } else {
-        // Single target -- must have one valid target
-        <(Entity, &Point)>::query()
-            .filter(component::<T>())
-            .iter(ecs)
-            .filter(|(_, p)| **p == *target)
-            .for_each(|(e, _)| entities.push(*e));
-    }
-
-    entities
-}
-
-fn find_all_targets(ecs: &SubWorld, item: &EntryRef, target: &Point, map: &Map) -> Vec<Entity> {
-    let mut entities: Vec<Entity> = Vec::new();
-
-    if let Ok(area_of_effect) = item.get_component::<AreaOfEffect>() {
-        // Area target -- can aim anywhere
-        let blast_tiles = field_of_view_set(*target, area_of_effect.0, map);
-        <(Entity, &Point)>::query()
-            .iter(ecs)
-            .filter(|(_, p)| blast_tiles.contains(*p))
-            .for_each(|(e, _)| entities.push(*e));
-    } else {
-        // Single target -- must have one valid target
-        <(Entity, &Point)>::query()
-            .iter(ecs)
-            .filter(|(_, p)| **p == *target)
-            .for_each(|(e, _)| entities.push(*e));
-    }
-
-    entities
-}
-
-fn apply_healing(
-    ecs: &mut SubWorld,
-    item_entity: Entity,
-    target_entity: Entity,
-    user_entity: Entity,
-    amount: i32,
-    particle_builder: &mut ParticleBuilder,
-) -> Option<Vec<String>> {
-    let user_name = name_for(&user_entity, ecs);
-    let target_name = name_for(&target_entity, ecs);
-    let item_name = name_for(&item_entity, ecs).0;
-
-    if let Ok(mut target) = ecs.entry_mut(target_entity) {
-        if let Ok(pos) = target.get_component::<Point>() {
-            particle_builder.request(*pos, ColorPair::new(GREEN, BLACK), to_cp437('♥'), 200.0);
-        }
-        if let Ok(stats) = target.get_component_mut::<Pools>() {
-            let amount_healed = i32::min(amount, stats.hit_points.max - stats.hit_points.current);
-            stats.hit_points.current += amount_healed;
-
-            let log_entry = if user_name.1 {
-                if target_name.1 {
-                    format!("You used {}, healing {} hp.", item_name, amount_healed)
-                } else {
-                    format!(
-                        "You used {} on {}, healing {} hp.",
-                        item_name, target_name.0, amount_healed
-                    )
-                }
-            } else {
-                if target_name.1 {
-                    format!(
-                        "{} used {} on you, healing {} hp.",
-                        user_name.0, item_name, amount_healed
-                    )
-                } else if user_entity == target_entity {
-                    format!(
-                        "{} used {}, healing {} hp.",
-                        user_name.0, item_name, amount_healed
-                    )
-                } else {
-                    format!(
-                        "{} used {} on {}, healing {} hp.",
-                        user_name.0, item_name, target_name.0, amount_healed
-                    )
-                }
-            };
-            return Some(vec![log_entry]);
-        }
-    }
-    return None;
-}
-
-fn apply_confusion(
-    ecs: &mut SubWorld,
-    target_entity: Entity,
-    commands: &mut CommandBuffer,
-    duration: i32,
-    particle_builder: &mut ParticleBuilder,
-) -> Option<Vec<String>> {
-    let target_name = name_for(&target_entity, ecs);
-
-    if let Ok(target) = ecs.entry_ref(target_entity) {
-        commands.add_component(target_entity, Confusion(duration));
-        let log = if target_name.1 {
-            format!("You are confused!")
-        } else {
-            format!("{} is confused!", target_name.0)
-        };
-        if let Ok(pos) = target.get_component::<Point>() {
-            particle_builder.request(*pos, ColorPair::new(MAGENTA, BLACK), to_cp437('?'), 200.0);
-        }
-        return Some(vec![log]);
-    }
-    None
-}
-
-fn eat(ecs: &mut SubWorld, item_entity: Entity, user_entity: Entity) -> Option<Vec<String>> {
-    let item_name = name_for(&item_entity, ecs).0;
-    let user_name = name_for(&user_entity, ecs);
-
-    if let Ok(mut user) = ecs.entry_mut(user_entity) {
-        if let Ok(mut clock) = user.get_component_mut::<HungerClock>() {
-            clock.state = HungerState::WellFed;
-            clock.duration = 20;
-            let log_line = if user_name.1 {
-                format!("You eat the {}.", item_name)
-            } else {
-                format!("{} eats the {}.", user_name.0, item_name)
-            };
-            return Some(vec![log_line]);
-        }
-    }
-    None
 }

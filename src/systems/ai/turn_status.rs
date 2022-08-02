@@ -1,8 +1,11 @@
+use std::collections::HashSet;
+
 use crate::prelude::*;
 
 #[system]
 #[write_component(MyTurn)]
 #[write_component(Confusion)]
+#[read_component(StatusEffect)]
 pub fn turn_status(
     ecs: &mut SubWorld,
     #[resource] turn_state: &mut TurnState,
@@ -12,14 +15,33 @@ pub fn turn_status(
         return;
     }
 
-    <(Entity, &mut Confusion)>::query()
+    let statuses: Vec<_> = <(Entity, &StatusEffect)>::query()
+        .iter(ecs)
+        .map_while(|(ent, eff)| ecs.entry_ref(*ent).ok().map(|v| (v, eff.clone())))
+        .collect();
+    let active_entities: HashSet<_> = <Entity>::query()
         .filter(component::<MyTurn>())
-        .for_each_mut(ecs, |(entity, confused)| {
-            confused.0 -= 1;
-            if confused.0 < 1 {
-                commands.remove_component::<Confusion>(*entity);
-            } else {
-                commands.remove_component::<MyTurn>(*entity);
-            }
-        });
+        .iter(ecs)
+        .map(|e| *e)
+        .collect();
+
+    for (entry, effect) in statuses {
+        if !active_entities.contains(&effect.target) {
+            continue;
+        }
+        if entry.get_component::<Confusion>().is_ok() {
+            commands.remove_component::<MyTurn>(effect.target);
+            add_effect(
+                None,
+                EffectType::Particle {
+                    glyph: to_cp437('?'),
+                    color: ColorPair::new(CYAN, BLACK),
+                    lifespan: 200.0,
+                },
+                Targets::Single {
+                    target: effect.target,
+                },
+            );
+        }
+    }
 }

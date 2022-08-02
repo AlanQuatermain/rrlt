@@ -21,8 +21,6 @@ use crate::{prelude::*, KeyState};
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] camera: &mut Camera,
-    #[resource] rng: &mut RandomNumberGenerator,
     #[resource] map: &mut Map,
     #[resource] gamelog: &mut Gamelog,
     #[resource] key_state: &mut KeyState,
@@ -54,7 +52,7 @@ pub fn player_input(
             }
         }
 
-        let (player_entity, player_pos, fov) = <(Entity, &Point, &FieldOfView)>::query()
+        let (player_entity, player_pos, _) = <(Entity, &Point, &FieldOfView)>::query()
             .filter(component::<Player>())
             .iter(ecs)
             .find_map(|(entity, pos, fov)| Some((*entity, *pos, fov.clone())))

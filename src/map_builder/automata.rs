@@ -12,7 +12,7 @@ impl InitialMapBuilder for CellularAutomataBuilder {
 
 impl MetaMapBuilder for CellularAutomataBuilder {
     #[allow(dead_code)]
-    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, _rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.iteration(&mut build_data.map);
         build_data.take_snapshot();
     }
@@ -68,7 +68,7 @@ impl CellularAutomataBuilder {
         map.tiles = new_tiles;
     }
 
-    fn find_start(&self, map: &Map) -> Point {
-        map.closest_floor(Point::new(map.width / 2, map.height / 2))
+    fn __find_start(&self, map: &Map) -> Point {
+        map.find_closest_floor(Point::new(map.width / 2, map.height / 2))
     }
 }

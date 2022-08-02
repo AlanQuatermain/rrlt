@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 pub fn particle_to_tile(
-    ecs: &mut SubWorld,
+    _ecs: &mut SubWorld,
     tile_idx: usize,
     effect: &EffectSpawner,
     map: &Map,

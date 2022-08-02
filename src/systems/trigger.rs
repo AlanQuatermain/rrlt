@@ -22,7 +22,6 @@ pub fn trigger(
         .map(|(e, p)| (*e, *p))
         .collect();
 
-    let mut teleports: Vec<Entity> = Vec::new();
     for (entity, pos) in moved_entities {
         // Remove the movement marker
         commands.remove_component::<EntityMoved>(entity);

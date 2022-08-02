@@ -2,6 +2,7 @@ use crate::{prelude::*, KeyState};
 
 use super::SystemCondition;
 
+#[allow(dead_code)]
 const ALLOW_SHOW_COORDINATES: bool = false;
 
 #[derive(Clone, Debug)]
@@ -52,6 +53,8 @@ impl Tooltip {
 #[read_component(MagicItem)]
 #[read_component(ObfuscatedName)]
 #[read_component(ParticleLifetime)]
+#[read_component(StatusEffect)]
+#[read_component(Duration)]
 pub fn tooltips(
     ecs: &SubWorld,
     #[resource] key_state: &KeyState,
@@ -97,7 +100,7 @@ pub fn tooltips(
             if let Ok(entry) = ecs.entry_ref(*e) {
                 // No tooltips for particle effects
                 if entry.get_component::<ParticleLifetime>().is_err() {
-                    Some((entry, get_item_display_name(ecs, *e, dm)))
+                    Some((*e, entry, get_item_display_name(ecs, *e, dm)))
                 } else {
                     None
                 }
@@ -105,7 +108,7 @@ pub fn tooltips(
                 None
             }
         })
-        .for_each(|(entry, name)| {
+        .for_each(|(entity, entry, name)| {
             let mut tip = Tooltip::new();
             tip.add(name.clone());
 
@@ -118,6 +121,12 @@ pub fn tooltips(
             if let Ok(stats) = entry.get_component::<Pools>() {
                 tip.add(format!("Level: {}", stats.level));
             }
+
+            // Status effects
+            <(&StatusEffect, &Duration, &Name)>::query()
+                .iter(ecs)
+                .filter(|(effect, _, _)| effect.target == entity)
+                .for_each(|(_, duration, name)| tip.add(format!("{} ({})", &name.0, duration.0)));
 
             tip_boxes.push(tip);
         });

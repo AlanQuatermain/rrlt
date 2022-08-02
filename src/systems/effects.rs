@@ -20,13 +20,16 @@ use crate::prelude::*;
 #[read_component(Hidden)]
 #[read_component(Carried)]
 #[read_component(Equipped)]
-#[read_component(Consumable)]
+#[write_component(Consumable)]
 #[read_component(SingleActivation)]
 #[read_component(MagicItem)]
 #[read_component(SpawnParticleLine)]
 #[read_component(SpawnParticleBurst)]
 #[read_component(ProvidesRemoveCurse)]
 #[read_component(ProvidesIdentify)]
+#[read_component(Duration)]
+#[read_component(StatusEffect)]
+#[read_component(AttributeBonus)]
 pub fn effects(
     ecs: &mut SubWorld,
     #[resource] map: &mut Map,

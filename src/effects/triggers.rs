@@ -11,6 +11,20 @@ pub fn item_trigger(
     map: &Map,
     commands: &mut CommandBuffer,
 ) {
+    let mut entry = ecs.entry_mut(item).unwrap();
+    if let Ok(c) = entry.get_component_mut::<Consumable>() {
+        if c.charges < 1 {
+            let name = entry.get_component::<Name>().unwrap();
+            gamelog
+                .entries
+                .push(format!("{} is out of charges!", &name.0));
+            return;
+        } else {
+            c.charges -= 1;
+        }
+    }
+    std::mem::drop(entry);
+
     // use the item via generic system
     let did_something = event_trigger(
         creator,
@@ -27,8 +41,10 @@ pub fn item_trigger(
     // If it was a consumable, then it gets deleted.
     if did_something {
         if let Ok(entry) = ecs.entry_ref(item) {
-            if entry.get_component::<Consumable>().is_ok() {
-                commands.remove(item);
+            if let Ok(consumable) = entry.get_component::<Consumable>() {
+                if consumable.max_charges == 0 {
+                    commands.remove(item);
+                }
             }
         }
     }
@@ -40,10 +56,10 @@ fn event_trigger(
     targets: &Targets,
     ecs: &mut SubWorld,
     gamelog: &mut Gamelog,
-    particle_builder: &mut ParticleBuilder,
+    _particle_builder: &mut ParticleBuilder,
     turn_state: &mut TurnState,
     map: &Map,
-    commands: &mut CommandBuffer,
+    _commands: &mut CommandBuffer,
 ) -> bool {
     let entry = ecs.entry_ref(item).unwrap();
     let mut did_something = false;
@@ -104,13 +120,15 @@ fn event_trigger(
     }
 
     // Confusion
-    if let Ok(confusion) = entry.get_component::<Confusion>() {
-        add_effect(
-            creator,
-            EffectType::Confusion { turns: confusion.0 },
-            targets.clone(),
-        );
-        did_something = true;
+    if entry.get_component::<Confusion>().is_ok() {
+        if let Ok(duration) = entry.get_component::<Duration>() {
+            add_effect(
+                creator,
+                EffectType::Confusion { turns: duration.0 },
+                targets.clone(),
+            );
+            did_something = true;
+        }
     }
 
     // Teleport
@@ -137,6 +155,22 @@ fn event_trigger(
     if entry.get_component::<ProvidesIdentify>().is_ok() {
         *turn_state = TurnState::ShowingIdentify;
         did_something = true;
+    }
+
+    // Attribute Modifiers
+    if let Ok(attr) = entry.get_component::<AttributeBonus>() {
+        if let Ok(name) = entry.get_component::<Name>() {
+            add_effect(
+                creator,
+                EffectType::AttributeEffect {
+                    bonus: attr.clone(),
+                    name: name.0.clone(),
+                    duration: 10,
+                },
+                targets.clone(),
+            );
+            did_something = true;
+        }
     }
 
     // Simple particle spawn
@@ -219,7 +253,7 @@ pub fn trigger(
 }
 
 fn spawn_line_particles(
-    ecs: &SubWorld,
+    _ecs: &SubWorld,
     start: usize,
     end: usize,
     part: &SpawnParticleLine,

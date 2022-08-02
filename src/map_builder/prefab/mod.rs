@@ -37,6 +37,7 @@ impl InitialMapBuilder for PrefabBuilder {
 }
 
 impl PrefabBuilder {
+    #[allow(dead_code)]
     pub fn rex_level(template: &'static str) -> Box<PrefabBuilder> {
         Box::new(PrefabBuilder {
             mode: PrefabMode::RexLevel { template },
@@ -61,7 +62,7 @@ impl PrefabBuilder {
         })
     }
 
-    fn build_initial(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_initial(&mut self, _rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         match self.mode {
             PrefabMode::RexLevel { template } => self.load_rex_map(template, build_data),
             PrefabMode::Constant { level } => self.load_ascii_map(&level, build_data),
@@ -135,7 +136,7 @@ impl PrefabBuilder {
     fn apply_sectional(
         &mut self,
         section: &PrefabSection,
-        rng: &mut RandomNumberGenerator,
+        _rng: &mut RandomNumberGenerator,
         build_data: &mut BuilderMap,
     ) {
         let string_vec = PrefabBuilder::read_ascii_to_vec(section.template);

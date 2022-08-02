@@ -311,7 +311,7 @@ impl TownBuilder {
         buildings: &[Rect],
         building_index: &[(usize, i32, BuildingTag)],
     ) {
-        for (idx, area, build_type) in building_index.iter() {
+        for (idx, _, build_type) in building_index.iter() {
             let building = &buildings[*idx];
             match build_type {
                 BuildingTag::Pub => self.build_pub(building, build_data, rng),
@@ -506,7 +506,7 @@ impl TownBuilder {
         available_building_tiles: &mut HashSet<usize>,
     ) {
         for idx in available_building_tiles.iter() {
-            if rng.roll_dice(1, 14) == 1 {
+            if rng.roll_dice(1, 20) == 1 {
                 let pos = build_data.map.index_to_point2d(*idx);
                 match rng.roll_dice(1, 4) {
                     1 => build_data.spawn_list.push((pos, "Peasant".to_string())),

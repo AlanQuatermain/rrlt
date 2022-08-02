@@ -8,10 +8,10 @@ use crate::prelude::*;
 #[write_component(EntityMoved)]
 #[filter(component::<MyTurn>()&!component::<Player>())]
 pub fn default_movement(
-    ecs: &SubWorld,
+    _ecs: &SubWorld,
     entity: &Entity,
     pos: &mut Point,
-    fov: &mut FieldOfView,
+    _fov: &mut FieldOfView,
     mode: &mut MoveMode,
     #[resource] map: &mut Map,
     #[resource] rng: &mut RandomNumberGenerator,

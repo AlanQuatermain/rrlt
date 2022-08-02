@@ -4,7 +4,7 @@ use crate::prelude::*;
 pub struct RoomCornerRounder {}
 
 impl MetaMapBuilder for RoomCornerRounder {
-    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build_map(&mut self, _rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         self.build(build_data);
     }
 }

@@ -13,7 +13,7 @@ pub fn adjacent(
     entity: &Entity,
     faction: &Faction,
     pos: &Point,
-    name: &Name,
+    _name: &Name,
     #[resource] map: &Map,
     commands: &mut CommandBuffer,
 ) {

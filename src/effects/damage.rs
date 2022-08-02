@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub fn inflict_damage(ecs: &mut SubWorld, damage: &EffectSpawner, map: &Map, target: Entity) {
+pub fn inflict_damage(ecs: &mut SubWorld, damage: &EffectSpawner, _map: &Map, target: Entity) {
     if let Ok(mut entry) = ecs.entry_mut(target) {
         if let Ok(mut stats) = entry.get_component_mut::<Pools>() {
             if !stats.god_mode {
@@ -59,7 +59,40 @@ pub fn add_confusion(
     commands: &mut CommandBuffer,
 ) {
     if let EffectType::Confusion { turns } = &effect.effect_type {
-        commands.add_component(target, Confusion(*turns));
+        commands.push((
+            StatusEffect { target },
+            Confusion,
+            Duration(*turns),
+            Name("Confusion".to_string()),
+            SerializeMe,
+        ));
+    }
+}
+
+pub fn attribute_effect(
+    _ecs: &mut SubWorld,
+    effect: &EffectSpawner,
+    target: Entity,
+    commands: &mut CommandBuffer,
+) {
+    if let EffectType::AttributeEffect {
+        bonus,
+        name,
+        duration,
+    } = &effect.effect_type
+    {
+        println!(
+            "Applying attribute effect '{}' to entity {:?}",
+            &name, target
+        );
+        commands.push((
+            StatusEffect { target },
+            bonus.clone(),
+            Duration(*duration),
+            Name(name.clone()),
+            SerializeMe,
+        ));
+        commands.add_component(target, EquipmentChanged);
     }
 }
 

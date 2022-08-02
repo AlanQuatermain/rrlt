@@ -31,7 +31,7 @@ impl AreaEndingPosition {
         Box::new(AreaEndingPosition { x, y })
     }
 
-    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
+    fn build(&mut self, _rng: &mut RandomNumberGenerator, build_data: &mut BuilderMap) {
         let mut seed = Point::zero();
 
         match self.x {

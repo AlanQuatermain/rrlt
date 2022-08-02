@@ -160,7 +160,8 @@ impl Map {
         mask
     }
 
-    pub fn closest_floor(&self, pos: Point) -> Point {
+    #[allow(dead_code)] // not actually unused, but the compiler whinges anyway
+    pub fn find_closest_floor(&self, pos: Point) -> Point {
         let closest_point = self
             .tiles
             .iter()

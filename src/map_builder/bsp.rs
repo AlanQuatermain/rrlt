@@ -101,8 +101,6 @@ impl BSPDungeonBuilder {
         expanded.x2 += 2;
         expanded.y2 += 2;
 
-        let mut can_build = true;
-
         for r in rooms.iter() {
             if r.intersect(&rect) {
                 return false;

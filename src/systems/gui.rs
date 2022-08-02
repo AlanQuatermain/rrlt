@@ -14,6 +14,9 @@ use crate::prelude::*;
 #[read_component(MagicItem)]
 #[read_component(ObfuscatedName)]
 #[read_component(CursedItem)]
+#[read_component(StatusEffect)]
+#[read_component(Duration)]
+#[read_component(Name)]
 pub fn gui(
     ecs: &SubWorld,
     #[resource] gamelog: &Gamelog,
@@ -101,9 +104,9 @@ pub fn gui(
     // Attributes
     if let Ok(attrs) = player.get_component::<Attributes>() {
         draw_attribute("Might:", &attrs.might, 4, &mut draw_batch);
-        draw_attribute("Quickness:", &attrs.might, 5, &mut draw_batch);
-        draw_attribute("Fitness:", &attrs.might, 6, &mut draw_batch);
-        draw_attribute("Intelligence:", &attrs.might, 7, &mut draw_batch);
+        draw_attribute("Quickness:", &attrs.quickness, 5, &mut draw_batch);
+        draw_attribute("Fitness:", &attrs.fitness, 6, &mut draw_batch);
+        draw_attribute("Intelligence:", &attrs.intelligence, 7, &mut draw_batch);
 
         // Initiative, weight, and gold
         if let Ok(stats) = player.get_component::<Pools>() {
@@ -166,23 +169,36 @@ pub fn gui(
         });
 
     // Status
+    let mut y = 44;
     let orange = ColorPair::new(ORANGE, BLACK);
     let red = ColorPair::new(RED, BLACK);
-    if let Ok(hunger) = player.get_component::<HungerClock>() {
-        let pos = Point::new(50, 44);
-        match hunger.state {
-            HungerState::WellFed => {
-                draw_batch.print_color(pos, "Well Fed", green);
-            }
-            HungerState::Normal => {}
-            HungerState::Hungry => {
-                draw_batch.print_color(pos, "Hungry", orange);
-            }
-            HungerState::Starving => {
-                draw_batch.print_color(pos, "Starving", red);
-            }
+    let hclock = player.get_component::<HungerClock>().unwrap();
+    match hclock.state {
+        HungerState::WellFed => {
+            draw_batch.print_color(Point::new(50, y), "Well Fed", green);
+            y -= 1;
+        }
+        HungerState::Normal => {}
+        HungerState::Hungry => {
+            draw_batch.print_color(Point::new(50, y), "Hungry", orange);
+            y -= 1;
+        }
+        HungerState::Starving => {
+            draw_batch.print_color(Point::new(50, y), "Starving", red);
+            y -= 1;
         }
     }
+    <(&StatusEffect, &Duration, &Name)>::query()
+        .iter(ecs)
+        .filter(|(s, _, _)| s.target == *player_entity)
+        .for_each(|(_, duration, name)| {
+            draw_batch.print_color(
+                Point::new(50, y),
+                &format!("{} ({})", &name.0, duration.0),
+                red,
+            );
+            y -= 1;
+        });
 
     // Logs
     let mut y = 46;
@@ -208,8 +224,6 @@ fn truncate(str: String, max_len: usize) -> String {
 
 fn draw_attribute(name: &str, attribute: &Attribute, y: i32, batch: &mut DrawBatch) {
     let name_color = ColorPair::new(GRAY80, BLACK);
-    let pos_color = ColorPair::new(GREEN, BLACK);
-    let mid_color = ColorPair::new(WHITE, BLACK);
 
     batch.print_color(Point::new(50, y), name, name_color);
     let color = if attribute.modifiers < 0 {
@@ -238,7 +252,7 @@ fn draw_attribute(name: &str, attribute: &Attribute, y: i32, batch: &mut DrawBat
 #[read_component(Name)]
 #[read_component(Pools)]
 #[read_component(HungerClock)]
-fn old_gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] map: &Map) {
+fn old_gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] _map: &Map) {
     let mut draw_batch = DrawBatch::new();
     draw_batch.target(2);
 

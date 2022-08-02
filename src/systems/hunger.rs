@@ -15,7 +15,7 @@ fn update_hunger(
     clock: &mut HungerClock,
     entity: &Entity,
     gamelog: &mut Gamelog,
-    commands: &mut CommandBuffer,
+    _commands: &mut CommandBuffer,
 ) {
     clock.duration -= 1;
     if clock.duration < 1 {

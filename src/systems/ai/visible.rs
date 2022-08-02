@@ -1,4 +1,4 @@
-use crate::{prelude::*, systems::name_for};
+use crate::prelude::*;
 
 #[system(for_each)]
 #[read_component(MyTurn)]
@@ -14,8 +14,8 @@ pub fn visible(
     ecs: &mut SubWorld,
     entity: &Entity,
     faction: &Faction,
-    pos: &Point,
-    name: &Name,
+    _pos: &Point,
+    _name: &Name,
     fov: &FieldOfView,
     #[resource] map: &Map,
     commands: &mut CommandBuffer,

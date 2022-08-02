@@ -26,6 +26,7 @@ pub fn set_size(map_tile_count: usize) {
     lock.tile_content = vec![Vec::new(); map_tile_count];
 }
 
+#[allow(dead_code)]
 pub fn set_blocked(idx: usize, by_entity: bool) {
     let mut lock = SPATIAL_MAP.lock().unwrap();
     lock.blocked[idx] = (true, by_entity);
@@ -62,6 +63,7 @@ pub fn is_blocked(idx: usize) -> bool {
     lock.blocked[idx].0 || lock.blocked[idx].1
 }
 
+#[allow(dead_code)]
 pub fn is_blocked_by_entity(idx: usize) -> bool {
     SPATIAL_MAP.lock().unwrap().blocked[idx].1
 }
@@ -70,6 +72,7 @@ pub fn is_blocked_by_tile(idx: usize) -> bool {
     SPATIAL_MAP.lock().unwrap().blocked[idx].0
 }
 
+#[allow(dead_code)]
 pub fn for_each_tile_content<F>(idx: usize, mut f: F)
 where
     F: FnMut(Entity),
@@ -80,6 +83,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 pub fn for_each_tile_content_until_result<T, F>(idx: usize, mut f: F) -> Option<T>
 where
     F: FnMut(Entity) -> Option<T>,

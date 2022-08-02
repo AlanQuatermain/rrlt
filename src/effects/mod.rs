@@ -45,9 +45,15 @@ pub enum EffectType {
         depth: i32,
         player_only: bool,
     },
+    AttributeEffect {
+        bonus: AttributeBonus,
+        name: String,
+        duration: i32,
+    },
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub enum Targets {
     Single { target: Entity },
     Area { targets: Vec<Entity> },
@@ -196,6 +202,7 @@ fn tile_effect_hits_entities(effect: &EffectType) -> bool {
         EffectType::Healing { .. } => true,
         EffectType::Confusion { .. } => true,
         EffectType::TeleportTo { .. } => true,
+        EffectType::AttributeEffect { .. } => true,
         _ => false,
     }
 }
@@ -249,7 +256,7 @@ fn affect_entity(
     map: &mut Map,
     particle_builder: &mut ParticleBuilder,
     gamelog: &mut Gamelog,
-    turn_state: &mut TurnState,
+    _turn_state: &mut TurnState,
     dm: &mut MasterDungeonMap,
     commands: &mut CommandBuffer,
 ) {
@@ -271,6 +278,9 @@ fn affect_entity(
         EffectType::Healing { .. } => damage::heal_damage(ecs, effect, target),
         EffectType::Confusion { .. } => damage::add_confusion(ecs, effect, target, commands),
         EffectType::TeleportTo { .. } => movement::apply_teleport(ecs, effect, target, commands),
+        EffectType::AttributeEffect { .. } => {
+            damage::attribute_effect(ecs, effect, target, commands)
+        }
         _ => {}
     }
 }

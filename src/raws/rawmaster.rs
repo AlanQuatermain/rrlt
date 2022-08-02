@@ -173,7 +173,10 @@ macro_rules! apply_effects {
                 "ranged" => $cmd.add_component($e, i32_component!(Ranged, effect)),
                 "damage" => $cmd.add_component($e, i32_component!(Damage, effect)),
                 "area_of_effect" => $cmd.add_component($e, i32_component!(AreaOfEffect, effect)),
-                "confusion" => $cmd.add_component($e, i32_component!(Confusion, effect)),
+                "confusion" => {
+                    $cmd.add_component($e, Confusion);
+                    $cmd.add_component($e, i32_component!(Duration, effect));
+                }
                 "magic_mapping" => $cmd.add_component($e, ProvidesDungeonMap),
                 "town_portal" => $cmd.add_component($e, TownPortal),
                 "food" => $cmd.add_component($e, ProvidesFood),
@@ -205,6 +208,7 @@ pub fn spawn_named_item(
     let item_template = &raws.raws.items[raws.item_index[key]];
     let scroll_names = dm.scroll_mappings.clone();
     let potion_names = dm.potion_mappings.clone();
+    let wand_names = dm.wand_mappings.clone();
     let identified = dm.identified_items.clone();
     std::mem::drop(dm);
 
@@ -223,7 +227,14 @@ pub fn spawn_named_item(
     }
 
     if let Some(consumable) = &item_template.consumable {
-        commands.add_component(entity, Consumable {});
+        let max_charges = consumable.charges.unwrap_or(0);
+        commands.add_component(
+            entity,
+            Consumable {
+                max_charges,
+                charges: i32::max(max_charges, 1),
+            },
+        );
         apply_effects!(entity, consumable.effects, commands);
     }
 
@@ -275,6 +286,10 @@ pub fn spawn_named_item(
                     entity,
                     ObfuscatedName(potion_names[&item_template.name].clone()),
                 ),
+                "wand" => commands.add_component(
+                    entity,
+                    ObfuscatedName(wand_names[&item_template.name].clone()),
+                ),
                 _ => commands.add_component(entity, ObfuscatedName(magic.naming.clone())),
             }
         }
@@ -284,6 +299,18 @@ pub fn spawn_named_item(
                 commands.add_component(entity, CursedItem);
             }
         }
+    }
+
+    if let Some(ab) = &item_template.attributes {
+        commands.add_component(
+            entity,
+            AttributeBonus {
+                might: ab.might,
+                fitness: ab.fitness,
+                quickness: ab.quickness,
+                intelligence: ab.intelligence,
+            },
+        )
     }
 
     Some(entity)
@@ -680,12 +707,35 @@ pub fn get_potion_tags() -> Vec<String> {
     result
 }
 
+pub fn get_wand_tags() -> Vec<String> {
+    let raws = &super::RAWS.lock().unwrap();
+    let mut result = Vec::new();
+
+    for item in raws.raws.items.iter() {
+        if let Some(magic) = &item.magic {
+            if &magic.naming == "wand" {
+                result.push(item.name.clone());
+            }
+        }
+    }
+
+    result
+}
+
 pub fn get_item_display_name(ecs: &SubWorld, item: Entity, dm: &MasterDungeonMap) -> String {
     if let Ok(entry) = ecs.entry_ref(item) {
         if let Ok(name) = entry.get_component::<Name>() {
             if entry.get_component::<MagicItem>().is_ok() {
                 if dm.identified_items.contains(&name.0) {
-                    name.0.clone()
+                    if let Ok(c) = entry.get_component::<Consumable>() {
+                        if c.max_charges > 0 {
+                            format!("{} ({})", &name.0, c.charges).to_string()
+                        } else {
+                            name.0.clone()
+                        }
+                    } else {
+                        name.0.clone()
+                    }
                 } else if let Ok(obfuscated) = entry.get_component::<ObfuscatedName>() {
                     obfuscated.0.clone()
                 } else {

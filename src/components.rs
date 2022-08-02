@@ -1,4 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::Sum,
+    ops::Add,
+};
 
 use crate::prelude::*;
 
@@ -47,14 +51,6 @@ impl FieldOfView {
         Self {
             visible_tiles: HashSet::new(),
             radius,
-            is_dirty: true,
-        }
-    }
-
-    pub fn clone_dirty(&self) -> Self {
-        Self {
-            visible_tiles: HashSet::new(),
-            radius: self.radius,
             is_dirty: true,
         }
     }
@@ -118,16 +114,16 @@ pub struct WantsToDrop {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Consumable;
+pub struct Consumable {
+    pub max_charges: i32,
+    pub charges: i32,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Ranged(pub i32);
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AreaOfEffect(pub i32);
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Confusion(pub i32);
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SerializeMe;
@@ -228,7 +224,7 @@ impl Default for Attribute {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Attributes {
     pub might: Attribute,
     pub fitness: Attribute,
@@ -236,20 +232,30 @@ pub struct Attributes {
     pub intelligence: Attribute,
 }
 
-impl Default for Attributes {
-    fn default() -> Self {
-        Self {
-            might: Default::default(),
-            fitness: Default::default(),
-            quickness: Default::default(),
-            intelligence: Default::default(),
-        }
+impl Add<AttributeBonus> for Attributes {
+    type Output = Attributes;
+
+    fn add(self, modifiers: AttributeBonus) -> Self {
+        let mut result = self.clone();
+        result.might.modifiers = modifiers.might.unwrap_or(0);
+        result.fitness.modifiers = modifiers.fitness.unwrap_or(0);
+        result.quickness.modifiers = modifiers.quickness.unwrap_or(0);
+        result.intelligence.modifiers = modifiers.intelligence.unwrap_or(0);
+        result.update_bonuses();
+        result
     }
 }
 
 impl Attributes {
     pub fn max_weight(&self) -> i32 {
         (self.might.base + self.might.modifiers) * 15
+    }
+
+    pub fn update_bonuses(&mut self) {
+        self.might.bonus = attr_bonus(self.might.base + self.might.modifiers);
+        self.fitness.bonus = attr_bonus(self.fitness.base + self.fitness.modifiers);
+        self.quickness.bonus = attr_bonus(self.quickness.base + self.quickness.modifiers);
+        self.intelligence.bonus = attr_bonus(self.intelligence.base + self.intelligence.modifiers);
     }
 }
 
@@ -441,3 +447,40 @@ pub struct ProvidesRemoveCurse;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProvidesIdentify;
+
+#[derive(Default, Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AttributeBonus {
+    pub might: Option<i32>,
+    pub fitness: Option<i32>,
+    pub quickness: Option<i32>,
+    pub intelligence: Option<i32>,
+}
+
+impl Add for AttributeBonus {
+    type Output = AttributeBonus;
+    fn add(self, other: AttributeBonus) -> AttributeBonus {
+        AttributeBonus {
+            might: Some(self.might.unwrap_or(0) + other.might.unwrap_or(0)),
+            fitness: Some(self.fitness.unwrap_or(0) + other.fitness.unwrap_or(0)),
+            quickness: Some(self.quickness.unwrap_or(0) + other.quickness.unwrap_or(0)),
+            intelligence: Some(self.intelligence.unwrap_or(0) + other.intelligence.unwrap_or(0)),
+        }
+    }
+}
+
+impl Sum for AttributeBonus {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|a, b| a + b).unwrap_or_default()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Confusion;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Duration(pub i32);
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StatusEffect {
+    pub target: Entity,
+}

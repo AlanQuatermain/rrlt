@@ -286,6 +286,7 @@ impl State {
         registry.register::<CursedItem>("cursed".to_string());
         registry.register::<ProvidesRemoveCurse>("removes_curse".to_string());
         registry.register::<ProvidesIdentify>("identifies".to_string());
+        registry.register::<AttributeBonus>("attr_bonus".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -370,7 +371,7 @@ impl State {
         let mut gamelog = Gamelog::default();
         gamelog.entries.push("Loaded game.".to_string());
 
-        let mut rng = RandomNumberGenerator::new();
+        let rng = RandomNumberGenerator::new();
 
         self.resources.insert(rng);
         self.resources.insert(Camera::new(*player_pos));
