@@ -4,7 +4,7 @@ use crate::prelude::*;
 #[read_component(Player)]
 #[read_component(Point)]
 #[write_component(Pools)]
-#[read_component(Attributes)]
+#[write_component(Attributes)]
 #[read_component(FieldOfView)]
 #[read_component(Item)]
 #[read_component(Name)]
@@ -36,6 +36,8 @@ use crate::prelude::*;
 #[write_component(KnownSpells)]
 #[read_component(Slow)]
 #[read_component(DamageOverTime)]
+#[read_component(TileSize)]
+#[write_component(Skills)]
 pub fn effects(
     ecs: &mut SubWorld,
     #[resource] map: &mut Map,

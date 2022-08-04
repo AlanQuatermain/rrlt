@@ -539,3 +539,15 @@ pub struct SpecialAbility {
 pub struct SpecialAbilities {
     pub abilities: Vec<SpecialAbility>,
 }
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TileSize {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Default for TileSize {
+    fn default() -> Self {
+        TileSize { x: 1, y: 1 }
+    }
+}

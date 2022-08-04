@@ -10,6 +10,7 @@ use crate::prelude::*;
 #[read_component(Name)]
 #[read_component(Player)]
 #[read_component(SpecialAbilities)]
+#[read_component(SpellTemplate)]
 #[filter(component::<MyTurn>()&!component::<Player>())]
 pub fn visible(
     ecs: &mut SubWorld,
@@ -18,6 +19,7 @@ pub fn visible(
     pos: &Point,
     _name: &Name,
     fov: &FieldOfView,
+    stats: &Pools,
     abilities: Option<&SpecialAbilities>,
     #[resource] map: &Map,
     #[resource] rng: &mut RandomNumberGenerator,
@@ -47,14 +49,19 @@ pub fn visible(
                             && range <= ability.range
                             && rng.roll_dice(1, 100) >= (ability.chance * 100.0) as i32
                         {
-                            commands.add_component(
-                                *entity,
-                                WantsToCastSpell {
-                                    spell: find_spell_entity(ecs, &ability.spell).unwrap(),
-                                    target: Some(end),
-                                },
-                            );
-                            return;
+                            let spell = find_spell_entity(ecs, &ability.spell).unwrap();
+                            let spell_entry = ecs.entry_ref(spell).unwrap();
+                            let template = spell_entry.get_component::<SpellTemplate>().unwrap();
+                            if stats.mana.current >= template.mana_cost {
+                                commands.add_component(
+                                    *entity,
+                                    WantsToCastSpell {
+                                        spell: find_spell_entity(ecs, &ability.spell).unwrap(),
+                                        target: Some(end),
+                                    },
+                                );
+                                return;
+                            }
                         }
                     }
                 }

@@ -214,8 +214,10 @@ pub fn spawn_entity(ecs: &mut World, dm: &MasterDungeonMap, spawn: &(&Point, &St
         return;
     }
 
-    log(format!(
-        "WARNING: We don't know how to spawn [{}]!",
-        spawn.1
-    ));
+    if spawn.1 != "None" {
+        log(format!(
+            "WARNING: We don't know how to spawn [{}]!",
+            spawn.1
+        ));
+    }
 }

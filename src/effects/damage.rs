@@ -1,10 +1,36 @@
 use crate::prelude::*;
 
-pub fn inflict_damage(ecs: &mut SubWorld, damage: &EffectSpawner, _map: &Map, target: Entity) {
+pub fn inflict_damage(
+    ecs: &mut SubWorld,
+    damage: &EffectSpawner,
+    _map: &Map,
+    gamelog: &mut Gamelog,
+    target: Entity,
+) {
+    let attacker_name = damage.creator.map(|c| name_for(&c, ecs).0);
+    let target_name = name_for(&target, ecs).0;
+
     if let Ok(mut entry) = ecs.entry_mut(target) {
         if let Ok(mut stats) = entry.get_component_mut::<Pools>() {
             if !stats.god_mode {
+                if let Some(creator) = damage.creator {
+                    if creator == target {
+                        // Avoid hurting yourself
+                        return;
+                    }
+                }
                 if let EffectType::Damage { amount } = damage.effect_type {
+                    if let Some(attacker_name) = attacker_name {
+                        gamelog.entries.push(format!(
+                            "{} hits {} for {} hp",
+                            attacker_name, target_name, amount
+                        ));
+                    } else {
+                        gamelog
+                            .entries
+                            .push(format!("{} is hit for {} hp", target_name, amount));
+                    }
+
                     stats.hit_points.current -= amount;
                     if stats.hit_points.current < 1 {
                         add_effect(
@@ -29,8 +55,10 @@ pub fn inflict_damage(ecs: &mut SubWorld, damage: &EffectSpawner, _map: &Map, ta
     }
 }
 
-pub fn bloodstain(map: &mut Map, tile_idx: usize) {
-    map.bloodstains.insert(tile_idx);
+pub fn bloodstain(map: &mut Map, indices: Vec<usize>) {
+    for tile_idx in indices {
+        map.bloodstains.insert(tile_idx);
+    }
 }
 
 pub fn heal_damage(ecs: &mut SubWorld, heal: &EffectSpawner, target: Entity) {
@@ -161,8 +189,10 @@ pub fn death(
     let mut xp_gain = 0;
     let mut gold_gain = 0.0f32;
 
-    if let Some(idx) = entity_position(ecs, target, map) {
-        crate::spatial::remove_entity(target, idx);
+    if let Some(idxes) = entity_position(ecs, target, map) {
+        for idx in idxes {
+            crate::spatial::remove_entity(target, idx);
+        }
     }
 
     if let Some(source) = effect.creator {
@@ -180,9 +210,9 @@ pub fn death(
             }
 
             if xp_gain != 0 || gold_gain != 0.0 {
-                if let Ok(mut player) = ecs.entry_mut(source) {
-                    let attrs = player.get_component::<Attributes>().unwrap().clone();
-                    if let Ok(mut stats) = player.get_component_mut::<Pools>() {
+                <(&mut Attributes, &mut Pools, &mut Skills, &Point)>::query()
+                    .filter(component::<Player>())
+                    .for_each_mut(ecs, |(attrs, stats, skills, pos)| {
                         stats.xp += xp_gain;
                         stats.gold += gold_gain;
                         if stats.xp >= stats.level * 1000 {
@@ -193,6 +223,33 @@ pub fn death(
                                 "Congratulations, you are now level {}",
                                 stats.level
                             ));
+
+                            // Improve a random attribute
+                            let mut rng = RandomNumberGenerator::new();
+                            match rng.roll_dice(1, 4) {
+                                1 => {
+                                    attrs.might.base += 1;
+                                    gamelog.entries.push("You feel stronger!".to_string());
+                                }
+                                2 => {
+                                    attrs.fitness.base += 1;
+                                    gamelog.entries.push("You feel healthier!".to_string());
+                                }
+                                3 => {
+                                    attrs.quickness.base += 1;
+                                    gamelog.entries.push("You feel quicker!".to_string());
+                                }
+                                _ => {
+                                    attrs.intelligence.base += 1;
+                                    gamelog.entries.push("You feel smarter!".to_string());
+                                }
+                            }
+
+                            // Improve all skills
+                            for skill in skills.0.iter_mut() {
+                                *skill.1 += 1;
+                            }
+
                             stats.hit_points.max = player_hp_at_level(
                                 attrs.fitness.base + attrs.fitness.modifiers,
                                 stats.level,
@@ -204,27 +261,23 @@ pub fn death(
                             );
                             stats.mana.current = stats.mana.max;
 
-                            if let Ok(pos) = player.get_component::<Point>() {
-                                for i in 0..10 {
-                                    if pos.y - i > 1 {
-                                        add_effect(
-                                            None,
-                                            EffectType::Particle {
-                                                glyph: to_cp437('░'),
-                                                color: ColorPair::new(GOLD, BLACK),
-                                                lifespan: 400.0,
-                                            },
-                                            Targets::Tile {
-                                                tile_idx: map
-                                                    .point2d_to_index(*pos - Point::new(0, i)),
-                                            },
-                                        );
-                                    }
+                            for i in 0..10 {
+                                if pos.y - i > 1 {
+                                    add_effect(
+                                        None,
+                                        EffectType::Particle {
+                                            glyph: to_cp437('░'),
+                                            color: ColorPair::new(GOLD, BLACK),
+                                            lifespan: 400.0,
+                                        },
+                                        Targets::Tile {
+                                            tile_idx: map.point2d_to_index(*pos - Point::new(0, i)),
+                                        },
+                                    );
                                 }
                             }
                         }
-                    }
-                }
+                    });
             }
         }
     }

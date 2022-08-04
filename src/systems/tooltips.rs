@@ -55,6 +55,7 @@ impl Tooltip {
 #[read_component(ParticleLifetime)]
 #[read_component(StatusEffect)]
 #[read_component(Duration)]
+#[read_component(TileSize)]
 pub fn tooltips(
     ecs: &SubWorld,
     #[resource] key_state: &KeyState,
@@ -92,11 +93,17 @@ pub fn tooltips(
     // println!("Center point: {:?}", mid_point);
 
     let mut tip_boxes: Vec<Tooltip> = Vec::new();
-    <(Entity, &Point)>::query()
+    <(Entity, &Point, Option<&TileSize>)>::query()
         .filter(!component::<Hidden>())
         .iter(ecs)
-        .filter(|(_, pos)| **pos == map_pos)
-        .filter_map(|(e, _)| {
+        .filter(|(_, pos, s)| {
+            if let Some(size) = s {
+                Rect::with_size(pos.x, pos.y, size.x, size.y).point_in_rect(map_pos)
+            } else {
+                **pos == map_pos
+            }
+        })
+        .filter_map(|(e, _, _)| {
             if let Ok(entry) = ecs.entry_ref(*e) {
                 // No tooltips for particle effects
                 if entry.get_component::<ParticleLifetime>().is_err() {

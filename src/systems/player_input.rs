@@ -19,6 +19,7 @@ use crate::{prelude::*, KeyState};
 #[read_component(Name)]
 #[read_component(Vendor)]
 #[read_component(KnownSpells)]
+#[read_component(TileSize)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -255,10 +256,17 @@ fn swap_entity(
 
 fn entities_in_tile(ecs: &SubWorld, idx: usize, map: &Map) -> Vec<Entity> {
     let pos = map.index_to_point2d(idx);
-    <(Entity, &Point)>::query()
+    <(Entity, &Point, Option<&TileSize>)>::query()
         .iter(ecs)
-        .filter(|(_, p)| **p == pos)
-        .map(|(e, _)| *e)
+        .filter(|(_, p, s)| {
+            if let Some(size) = s {
+                let rect = Rect::with_size(p.x, p.y, size.x, size.y);
+                rect.point_in_rect(pos)
+            } else {
+                **p == pos
+            }
+        })
+        .map(|(e, _, _)| *e)
         .collect()
 }
 

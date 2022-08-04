@@ -289,13 +289,13 @@ fn event_trigger(
                 }),
                 Targets::Single { target } => {
                     if let Some(end_pos) = entity_position(ecs, *target, map) {
-                        spawn_line_particles(ecs, start_pos, end_pos, part, map);
+                        spawn_line_particles(ecs, start_pos, end_pos[0], part, map);
                     }
                 }
                 Targets::Area { targets } => {
                     targets.iter().for_each(|target| {
                         if let Some(end_pos) = entity_position(ecs, *target, map) {
-                            spawn_line_particles(ecs, start_pos, end_pos, part, map);
+                            spawn_line_particles(ecs, start_pos, end_pos[0], part, map);
                         }
                     });
                 }

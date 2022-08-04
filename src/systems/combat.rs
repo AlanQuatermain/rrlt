@@ -73,6 +73,10 @@ pub fn combat(
     }
     let modified_hit_roll =
         natural_roll + attr_hit_bonus + skill_hit_bonus + weapon_hit_bonus + status_hit_bonus;
+    // println!(
+    //     "Natural hit roll: {}, modified: {}",
+    //     natural_roll, modified_hit_roll
+    // );
 
     let armor_item_bonus_f: f32 = <(&Wearable, &Equipped)>::query()
         .iter(ecs)
@@ -89,15 +93,20 @@ pub fn combat(
     let armor_item_bonus = armor_item_bonus_f as i32;
     let armor_class =
         base_armor_class + armor_quickness_bonus + armor_skill_bonus + armor_item_bonus;
+    // println!("Armor class: {}", armor_class);
 
     if natural_roll != 1 && (natural_roll == 20 || modified_hit_roll > armor_class) {
         let base_damage = rng
-            .roll_str(weapon_info.damage_die)
+            .roll_str(&weapon_info.damage_die)
             .expect("Failed to parse die roll");
         let attr_damage_bonus = attacker_attrs.might.bonus;
         let skill_damage_bonus = skill_bonus(Skill::Melee, attacker_skills);
 
         let amount = i32::max(0, base_damage + attr_damage_bonus + skill_damage_bonus);
+        // println!(
+        //     "Damage: {} + {}attr + {}skill + {}weapon = {}",
+        //     base_damage, attr_damage_bonus, skill_damage_bonus, &weapon_info.damage_die, amount,
+        // );
         add_effect(
             Some(attacker),
             EffectType::Damage { amount },

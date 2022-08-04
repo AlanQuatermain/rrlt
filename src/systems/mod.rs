@@ -165,7 +165,7 @@ pub fn map_reveal_scheduler() -> Schedule {
         .build()
 }
 
-fn name_for(entity: &Entity, ecs: &SubWorld) -> (String, bool) {
+pub fn name_for(entity: &Entity, ecs: &SubWorld) -> (String, bool) {
     if let Ok(name) = ecs.entry_ref(*entity).unwrap().get_component::<Name>() {
         (name.0.clone(), false)
     } else if ecs

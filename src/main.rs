@@ -135,6 +135,7 @@ impl State {
         self.resources.insert(gamelog);
 
         if SHOW_MAPGEN_VISUALIZER {
+            self.real_map = self.resources.get::<Map>().unwrap().clone();
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
     }
@@ -184,6 +185,7 @@ impl State {
             .for_each(|fov| fov.is_dirty = true);
 
         if SHOW_MAPGEN_VISUALIZER {
+            self.real_map = self.resources.get::<Map>().unwrap().clone();
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
 
@@ -298,6 +300,7 @@ impl State {
         registry.register::<DamageOverTime>("dot".to_string());
         registry.register::<SpecialAbility>("sp_ability".to_string());
         registry.register::<SpecialAbilities>("sp_abilities".to_string());
+        registry.register::<TileSize>("tile_size".to_string());
         registry.on_unknown(Ignore);
     }
 

@@ -1,8 +1,19 @@
 use crate::prelude::*;
 
-pub fn entity_position(ecs: &SubWorld, target: Entity, map: &Map) -> Option<usize> {
-    if let Ok(pos) = ecs.entry_ref(target).unwrap().get_component::<Point>() {
-        Some(map.point2d_to_index(*pos))
+pub fn entity_position(ecs: &SubWorld, target: Entity, map: &Map) -> Option<Vec<usize>> {
+    let entry = ecs.entry_ref(target).unwrap();
+    if let Ok(pos) = entry.get_component::<Point>() {
+        if let Ok(size) = entry.get_component::<TileSize>() {
+            let rect = Rect::with_size(pos.x, pos.y, size.x, size.y);
+            Some(
+                rect.point_set()
+                    .iter()
+                    .map(|p| map.point2d_to_index(*p))
+                    .collect(),
+            )
+        } else {
+            Some(vec![map.point2d_to_index(*pos)])
+        }
     } else {
         None
     }

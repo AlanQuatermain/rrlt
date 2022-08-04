@@ -1,5 +1,8 @@
 use crate::prelude::*;
-use std::{collections::VecDeque, sync::Mutex};
+use std::{
+    collections::{HashSet, VecDeque},
+    sync::Mutex,
+};
 
 mod damage;
 mod hunger;
@@ -255,10 +258,16 @@ fn affect_tile(
 ) {
     if tile_effect_hits_entities(&effect.effect_type) {
         let pos = map.index_to_point2d(tile_idx);
-        let content: Vec<Entity> = <(Entity, &Point)>::query()
+        let content: HashSet<Entity> = <(Entity, &Point, Option<&TileSize>)>::query()
             .iter(ecs)
-            .filter(|(_, p)| **p == pos)
-            .map(|(e, _)| *e)
+            .filter(|(_, p, s)| {
+                if let Some(size) = s {
+                    Rect::with_size(p.x, p.y, size.x, size.y).point_in_rect(pos)
+                } else {
+                    **p == pos
+                }
+            })
+            .map(|(e, _, _)| *e)
             .collect();
         content.iter().for_each(|entity| {
             affect_entity(
@@ -276,9 +285,9 @@ fn affect_tile(
     }
 
     match &effect.effect_type {
-        EffectType::Bloodstain => damage::bloodstain(map, tile_idx),
+        EffectType::Bloodstain => damage::bloodstain(map, vec![tile_idx]),
         EffectType::Particle { .. } => {
-            particles::particle_to_tile(ecs, tile_idx, effect, map, particle_builder)
+            particles::particle_to_tile(ecs, vec![tile_idx], effect, map, particle_builder)
         }
         _ => {}
     }
@@ -296,7 +305,7 @@ fn affect_entity(
     commands: &mut CommandBuffer,
 ) {
     match &effect.effect_type {
-        EffectType::Damage { .. } => damage::inflict_damage(ecs, effect, map, target),
+        EffectType::Damage { .. } => damage::inflict_damage(ecs, effect, map, gamelog, target),
         EffectType::EntityDeath => damage::death(ecs, effect, target, map, gamelog),
         EffectType::Bloodstain => {
             if let Some(pos) = entity_position(ecs, target, map) {

@@ -5,6 +5,12 @@ use crate::prelude::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+pub enum SpawnTableType {
+    Item,
+    Mob,
+    Prop,
+}
+
 pub struct RawMaster {
     raws: Raws,
     item_index: HashMap<String, usize>,
@@ -404,6 +410,15 @@ pub fn spawn_named_mob(
 
     if let Some(renderable) = &mob_template.renderable {
         commands.add_component(entity, get_renderable(renderable));
+        if renderable.x_size.is_some() && renderable.y_size.is_some() {
+            commands.add_component(
+                entity,
+                TileSize {
+                    x: renderable.x_size.unwrap(),
+                    y: renderable.y_size.unwrap(),
+                },
+            );
+        }
     }
 
     if let Some(categories) = &mob_template.vendor {
@@ -666,7 +681,7 @@ pub fn spawn_named_entity(
     }
 }
 
-pub fn spawn_table_for_depth(raws: &RawMaster, depth: i32) -> RandomTable {
+pub fn spawn_table_for_depth(raws: &RawMaster, depth: i32) -> MasterTable {
     use super::spawn_table_structs::SpawnTableEntry;
     let available_options: Vec<&SpawnTableEntry> = raws
         .raws
@@ -675,13 +690,13 @@ pub fn spawn_table_for_depth(raws: &RawMaster, depth: i32) -> RandomTable {
         .filter(|a| depth >= a.min_depth && depth <= a.max_depth)
         .collect();
 
-    let mut rt = RandomTable::new();
+    let mut rt = MasterTable::new();
     for e in available_options.iter() {
         let mut weight = e.weight;
         if e.add_map_depth_to_weight.is_some() {
             weight += depth;
         }
-        rt = rt.add(e.name.clone(), weight);
+        rt.add(e.name.clone(), weight, raws);
     }
     rt
 }
@@ -695,7 +710,7 @@ pub fn get_drop_item(
         let mut rt = RandomTable::new();
         let available_options = &raws.raws.loot_tables[*idx];
         for item in available_options.drops.iter() {
-            rt = rt.add(item.name.clone(), item.weight);
+            rt.add(item.name.clone(), item.weight);
         }
         rt.roll(rng)
     })
@@ -833,6 +848,16 @@ pub fn is_tag_magic(tag: &str) -> bool {
         item_template.magic.is_some()
     } else {
         false
+    }
+}
+
+pub fn spawn_type_by_name(raws: &RawMaster, key: &str) -> SpawnTableType {
+    if raws.item_index.contains_key(key) {
+        SpawnTableType::Item
+    } else if raws.mob_index.contains_key(key) {
+        SpawnTableType::Mob
+    } else {
+        SpawnTableType::Prop
     }
 }
 

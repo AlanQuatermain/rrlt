@@ -32,11 +32,23 @@ pub fn set_blocked(idx: usize, by_entity: bool) {
     lock.blocked[idx] = (true, by_entity);
 }
 
-pub fn index_entity(entity: Entity, idx: usize, blocks_tile: bool) {
+pub fn index_entity(
+    entity: Entity,
+    idx: usize,
+    blocks_tile: bool,
+    size_x: i32,
+    size_y: i32,
+    map_width: usize,
+) {
     let mut lock = SPATIAL_MAP.lock().unwrap();
-    lock.tile_content[idx].push((entity, blocks_tile));
-    if blocks_tile {
-        lock.blocked[idx].1 = true;
+    for x in 0..size_x as usize {
+        for y in 0..size_y as usize {
+            let off_idx = idx + x + (y * map_width);
+            lock.tile_content[off_idx].push((entity, blocks_tile));
+            if blocks_tile {
+                lock.blocked[off_idx].1 = true;
+            }
+        }
     }
 }
 
@@ -70,6 +82,50 @@ pub fn is_blocked_by_entity(idx: usize) -> bool {
 
 pub fn is_blocked_by_tile(idx: usize) -> bool {
     SPATIAL_MAP.lock().unwrap().blocked[idx].0
+}
+
+#[allow(dead_code)]
+pub fn is_blocked_ignoring_entity(idx: usize, entity: Entity) -> bool {
+    if is_blocked_by_tile(idx) {
+        return true;
+    }
+
+    if is_blocked_by_entity(idx) {
+        // is there anything other than the current entity blocking in here?
+        SPATIAL_MAP.lock().unwrap().tile_content[idx]
+            .iter()
+            .filter(|(ent, blocks)| *ent != entity && *blocks)
+            .count()
+            != 0
+    } else {
+        false
+    }
+}
+
+#[allow(dead_code)]
+pub fn tiles_blocked_ignoring_entity(tiles: Vec<usize>, entity: Entity) -> bool {
+    let lock = SPATIAL_MAP.lock().unwrap();
+    for idx in tiles.iter() {
+        if lock.blocked[*idx].0 {
+            return true;
+        }
+    }
+
+    for idx in tiles.iter() {
+        if lock.blocked[*idx].1 {
+            // is there anything other than the current entity blocking in here?
+            if lock.tile_content[*idx]
+                .iter()
+                .filter(|(ent, blocks)| *ent != entity && *blocks)
+                .count()
+                != 0
+            {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 #[allow(dead_code)]

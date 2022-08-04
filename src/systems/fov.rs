@@ -5,6 +5,7 @@ use crate::prelude::*;
 #[write_component(FieldOfView)]
 #[read_component(Player)]
 #[read_component(BlocksVisibility)]
+#[read_component(TileSize)]
 pub fn fov(ecs: &mut SubWorld, #[resource] map: &mut Map) {
     let mut updated_locations: Vec<Point> = Vec::new();
 
@@ -16,12 +17,21 @@ pub fn fov(ecs: &mut SubWorld, #[resource] map: &mut Map) {
             map.view_blocked.insert(idx);
         });
 
-    let mut views = <(&Point, &mut FieldOfView, Entity)>::query();
+    let mut views = <(&Point, Option<&TileSize>, &mut FieldOfView, Entity)>::query();
     views
         .iter_mut(ecs)
-        .filter(|(_, fov, _)| fov.is_dirty)
-        .for_each(|(pos, mut fov, _)| {
-            fov.visible_tiles = field_of_view_set(*pos, fov.radius, map);
+        .filter(|(_, _, fov, _)| fov.is_dirty)
+        .for_each(|(pos, size, mut fov, _)| {
+            if let Some(size) = size {
+                fov.visible_tiles.clear();
+                let rect = Rect::with_size(pos.x, pos.y, size.x, size.y);
+                for loc in rect.point_set().iter() {
+                    fov.visible_tiles
+                        .extend(&field_of_view_set(*loc, fov.radius, map));
+                }
+            } else {
+                fov.visible_tiles = field_of_view_set(*pos, fov.radius, map);
+            }
             fov.is_dirty = false;
             updated_locations.push(*pos);
         });

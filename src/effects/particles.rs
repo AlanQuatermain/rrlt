@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 pub fn particle_to_tile(
     _ecs: &mut SubWorld,
-    tile_idx: usize,
+    indices: Vec<usize>,
     effect: &EffectSpawner,
     map: &Map,
     particle_builder: &mut ParticleBuilder,
@@ -13,7 +13,9 @@ pub fn particle_to_tile(
         lifespan,
     } = effect.effect_type
     {
-        let pos = map.index_to_point2d(tile_idx);
-        particle_builder.request(pos, color, glyph, lifespan);
+        for tile_idx in indices {
+            let pos = map.index_to_point2d(tile_idx);
+            particle_builder.request(pos, color, glyph, lifespan);
+        }
     }
 }

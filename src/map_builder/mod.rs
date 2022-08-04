@@ -11,6 +11,7 @@ use self::{
     dla::DLABuilder,
     door_placement::DoorPlacement,
     drunkard::DrunkardsWalkBuilder,
+    dwarf_fort::dwarf_fort_builder,
     maze::MazeBuilder,
     nearest_corridors::NearestCorridors,
     prefab::PrefabBuilder,
@@ -44,6 +45,7 @@ mod distant_exit;
 mod dla;
 mod door_placement;
 mod drunkard;
+mod dwarf_fort;
 mod forest;
 mod maze;
 mod nearest_corridors;
@@ -334,6 +336,7 @@ pub fn level_builder(
         2 => limestone_cavern_builder(new_depth, rng, width, height),
         3 => limestone_deep_cavern_builder(new_depth, rng, width, height),
         4 => limestone_transition_builder(new_depth, rng, width, height),
+        5 => dwarf_fort_builder(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

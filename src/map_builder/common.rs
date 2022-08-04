@@ -13,7 +13,7 @@ pub enum Symmetry {
     Both,
 }
 
-fn room_table(map_depth: i32) -> RandomTable {
+fn room_table(map_depth: i32) -> MasterTable {
     spawn_table_for_depth(&RAWS.lock().unwrap(), map_depth)
 }
 
