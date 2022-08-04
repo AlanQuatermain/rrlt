@@ -10,6 +10,8 @@ use crate::prelude::*;
 #[read_component(StatusEffect)]
 #[write_component(Duration)]
 #[read_component(Confusion)]
+#[read_component(DamageOverTime)]
+#[read_component(StatusEffect)]
 pub fn initiative(
     ecs: &mut SubWorld,
     #[resource] rng: &mut RandomNumberGenerator,
@@ -84,15 +86,27 @@ pub fn initiative(
 
     // Handle durations, if we've hit the player's turn
     if *turn_state == TurnState::AwaitingInput {
-        <(Entity, &mut Duration, &StatusEffect)>::query().for_each_mut(
-            ecs,
-            |(ent, duration, effect)| {
-                duration.0 -= 1;
-                if duration.0 < 1 {
-                    commands.add_component(effect.target, EquipmentChanged);
-                    commands.remove(*ent);
-                }
-            },
-        );
+        <(
+            Entity,
+            &mut Duration,
+            &StatusEffect,
+            Option<&DamageOverTime>,
+        )>::query()
+        .for_each_mut(ecs, |(ent, duration, effect, maybe_dot)| {
+            duration.0 -= 1;
+            if let Some(dot) = maybe_dot {
+                add_effect(
+                    None,
+                    EffectType::Damage { amount: dot.damage },
+                    Targets::Single {
+                        target: effect.target,
+                    },
+                );
+            }
+            if duration.0 < 1 {
+                commands.add_component(effect.target, EquipmentChanged);
+                commands.remove(*ent);
+            }
+        });
     }
 }

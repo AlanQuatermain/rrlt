@@ -17,7 +17,12 @@ pub fn aoe_tiles(map: &Map, target: Point, radius: i32) -> Vec<usize> {
         .collect()
 }
 
-pub fn find_item_position(ecs: &SubWorld, target: Entity, map: &Map) -> Option<usize> {
+pub fn find_item_position(
+    ecs: &SubWorld,
+    target: Entity,
+    creator: Option<Entity>,
+    map: &Map,
+) -> Option<usize> {
     if let Ok(entry) = ecs.entry_ref(target) {
         // Easy - it has a position
         if let Ok(pos) = entry.get_component::<Point>() {
@@ -39,6 +44,15 @@ pub fn find_item_position(ecs: &SubWorld, target: Entity, map: &Map) -> Option<u
                 if let Ok(pos) = other_entry.get_component::<Point>() {
                     return Some(map.point2d_to_index(*pos));
                 }
+            }
+        }
+    }
+
+    // Maybe the creator has a position?
+    if let Some(creator) = creator {
+        if let Ok(entry) = ecs.entry_ref(creator) {
+            if let Ok(pos) = entry.get_component::<Point>() {
+                return Some(map.point2d_to_index(*pos));
             }
         }
     }

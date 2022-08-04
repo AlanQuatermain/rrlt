@@ -4,7 +4,7 @@
         { "name" : "Orc", "weight" : 1, "min_depth" : 3, "max_depth" : 100 },
         { "name" : "Health Potion", "weight" : 7, "min_depth" : 0, "max_depth" : 100 },
         { "name" : "Fireball Scroll", "weight" : 1, "min_depth" : 0, "max_depth" : 100, "add_map_depth_to_weight" : true },
-        { "name" : "Confusion Scroll", "weight" : 100, "min_depth" : 0, "max_depth" : 100, "add_map_depth_to_weight" : true },
+        { "name" : "Confusion Scroll", "weight" : 2, "min_depth" : 0, "max_depth" : 100, "add_map_depth_to_weight" : true },
         { "name" : "Magic Missile Scroll", "weight" : 4, "min_depth" : 0, "max_depth" : 100 },
         { "name" : "Dagger", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
         { "name" : "Shield", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
@@ -43,7 +43,17 @@
         { "name" : "Identify Scroll", "weight" : 4, "min_depth" : 0, "max_depth" : 100 },
         { "name" : "Gauntlets of Ogre Power", "weight" : 2, "min_depth" : 3, "max_depth" : 100 },
         { "name" : "Wand of Fireballs", "weight" : 2, "min_depth" : 2, "max_depth" : 100 },
-        { "name" : "Strength Potion", "weight" : 2, "min_depth" : 2, "max_depth" : 100 }
+        { "name" : "Strength Potion", "weight" : 2, "min_depth" : 2, "max_depth" : 100 },
+        { "name" : "Mana Potion", "weight" : 7, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Beginner's Magic", "weight" : 5, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Poison Potion", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Slow Potion", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Haste Potion", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Web Scroll", "weight" : 2, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Wand of Venom", "weight" : 2, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Arachnophilia 101", "weight" : 2, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Venom 101", "weight" : 2, "min_depth" : 0, "max_depth" : 100 },
+        { "name" : "Dagger of Venom", "weight" : 1, "min_depth" : 0, "max_depth" : 100 }
     ],
     
     "faction_table" : [
@@ -76,6 +86,39 @@
         }
     ],
     
+    "spells" : [
+        {
+            "name" : "Zap",
+            "mana_cost" : 1,
+            "effects" : {
+                "ranged" : "6",
+                "damage" : "5",
+                "particle_line" : "▓;#00FFFF;200.0"
+            }
+        },
+        
+        {
+            "name" : "Web",
+            "mana_cost" : 2,
+            "effects" : {
+                "ranged" : "6",
+                "slow" : "10",
+                "area_of_effect" : "3",
+                "particle_line" : "☼;#FFFFFF;400.0"
+            }
+        },
+        
+        {
+            "name" : "Venom",
+            "mana_cost" : 2,
+            "effects" : {
+                "ranged" : "6",
+                "damage_over_time" : "4",
+                "particle_line" : "▓;#00FF00;400.0"
+            }
+        }
+    ],
+    
     "items" : [
         {
             "name" : "Health Potion",
@@ -92,6 +135,122 @@
             "base_value" : 50.0,
             "vendor_category" : "alchemy",
             "magic": { "class" : "common", "naming" : "potion" }
+        },
+        
+        {
+            "name" : "Mana Potion",
+            "renderable": {
+                "glyph" : "!",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "provides_mana" : "4" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy",
+            "magic" : { "class" : "common", "naming" : "potion" }
+        },
+        
+        {
+            "name" : "Poison Potion",
+            "renderable": {
+                "glyph" : "!",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "damage_over_time" : "2" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy",
+            "magic": { "class" : "common", "naming" : "potion" }
+        },
+        
+        {
+            "name" : "Slow Potion",
+            "renderable": {
+                "glyph" : "!",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "slow" : "2.0" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy",
+            "magic": { "class" : "common", "naming" : "potion" }
+        },
+        
+        {
+            "name" : "Haste Potion",
+            "renderable": {
+                "glyph" : "!",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "slow" : "-2.0" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy",
+            "magic": { "class" : "common", "naming" : "potion" }
+        },
+        
+        {
+            "name" : "Beginner's Magic",
+            "renderable": {
+                "glyph" : "¶",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "teach_spell" : "Zap" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy"
+        },
+        
+        {
+            "name" : "Arachnophilia 101",
+            "renderable": {
+                "glyph" : "¶",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "teach_spell" : "Web" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy"
+        },
+        
+        {
+            "name" : "Venom 101",
+            "renderable": {
+                "glyph" : "¶",
+                "fg" : "#FF00FF",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : { "teach_spell" : "Venom" }
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 50.0,
+            "vendor_category" : "alchemy"
         },
         
         {
@@ -780,7 +939,7 @@
         {
             "name" : "Wand of Fireballs",
             "renderable": {
-                "glyph" : "/",
+                "glyph" : "\\",
                 "fg" : "#FFAAAA",
                 "bg" : "#000000",
                 "order" : 2
@@ -791,6 +950,50 @@
                     "damage" : "20",
                     "area_of_effect" : "3",
                     "particle" : "▓;#FFA500;200.0"
+                },
+                "charges" : 5
+            },
+            "weight_lbs" : 0.5,
+            "base_value" : 500.0,
+            "vendor_category" : "alchemy",
+            "magic" : { "class" : "common", "naming" : "wand" }
+        },
+        
+        {
+            "name" : "Web Scroll",
+            "renderable": {
+                "glyph" : ")",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : {
+                    "ranged" : "6",
+                    "slow" : "10.0",
+                    "area_of_effect" : "3",
+                    "particle_line" : "☼;#FFFFFF;200.0"
+                }
+            },
+            "weight_lbs" : 0.1,
+            "base_value" : 500.0,
+            "vendor_category" : "alchemy",
+            "magic" : { "class" : "common", "naming" : "scroll" }
+        },
+        
+        {
+            "name" : "Wand of Venom",
+            "renderable": {
+                "glyph" : "\\",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "consumable" : {
+                "effects" : {
+                    "ranged" : "6",
+                    "damage_over_time" : "1",
+                    "particle_line" : "▓;#00FF00;200.0"
                 },
                 "charges" : 5
             },
@@ -816,6 +1019,29 @@
             "vendor_category" : "alchemy",
             "magic" : { "class" : "common", "naming" : "potion" },
             "attributes" : { "might" : 5 }
+        },
+        
+        {
+            "name" : "Dagger of Venom",
+            "renderable": {
+                "glyph" : "/",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "weapon" : {
+                "range" : "melee",
+                "attribute" : "Quickness",
+                "base_damage" : "1d4+1",
+                "hit_bonus" : 1,
+                "proc_chance" : 0.5,
+                "proc_target" : "Target",
+                "proc_effects" : { "damage_over_time" : "2" }
+            },
+            "weight_lbs" : 1.0,
+            "base_value" : 75.0,
+            "vendor_category" : "weapon",
+            "magic" : { "class" : "common", "naming" : "Unidentified Dagger" }
         }
     ],
     
@@ -1255,10 +1481,13 @@
             "movement" : "static",
             "natural" : {
                 "armor_class" : 12,
-                "attacks" : [
-                    { "name" : "bite", "hit_bonus" : 1, "damage" : "1d12" }
-                ]   
+                "attacks": [
+                    { "name" : "bite", "hit_bonus" : 1, "damage" : "1d12"  }
+                ]
             },
+            "abilities" : [
+                { "spell" : "Web", "chance" : 0.2, "range" : 6.0, "min_range" : 3.0 }
+            ],
             "faction" : "Carnivores"
         },
         

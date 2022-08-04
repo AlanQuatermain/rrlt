@@ -50,6 +50,49 @@ pub fn item_trigger(
     }
 }
 
+pub fn spell_trigger(
+    creator: Option<Entity>,
+    spell: Entity,
+    targets: &Targets,
+    ecs: &mut SubWorld,
+    gamelog: &mut Gamelog,
+    particle_builder: &mut ParticleBuilder,
+    turn_state: &mut TurnState,
+    map: &Map,
+    commands: &mut CommandBuffer,
+) {
+    let template = ecs
+        .entry_ref(spell)
+        .unwrap()
+        .get_component::<SpellTemplate>()
+        .unwrap()
+        .clone();
+
+    let mut cast_ok = false;
+    if let Some(caster) = creator {
+        if let Ok(stats) = ecs.entry_mut(caster).unwrap().get_component_mut::<Pools>() {
+            if template.mana_cost <= stats.mana.current {
+                stats.mana.current -= template.mana_cost;
+                cast_ok = true;
+            }
+        }
+    }
+
+    if cast_ok {
+        event_trigger(
+            creator,
+            spell,
+            targets,
+            ecs,
+            gamelog,
+            particle_builder,
+            turn_state,
+            map,
+            commands,
+        );
+    }
+}
+
 fn event_trigger(
     creator: Option<Entity>,
     item: Entity,
@@ -173,6 +216,54 @@ fn event_trigger(
         }
     }
 
+    // Restore Mana
+    if let Ok(mana) = entry.get_component::<ProvidesMana>() {
+        add_effect(
+            creator,
+            EffectType::Mana { amount: mana.0 },
+            targets.clone(),
+        );
+        did_something = true;
+    }
+
+    // Teach spell
+    if let Ok(spell) = entry.get_component::<TeachSpell>() {
+        let name = &spell.0;
+        add_effect(
+            creator,
+            EffectType::LearnSpell {
+                name: name.clone(),
+                spell: find_spell_entity(ecs, &name).unwrap(),
+            },
+            targets.clone(),
+        );
+        did_something = true;
+    }
+
+    // Slow / Haste
+    if let Ok(slow) = entry.get_component::<Slow>() {
+        add_effect(
+            creator,
+            EffectType::Slow {
+                initiative_penalty: slow.initiative_penalty,
+            },
+            targets.clone(),
+        );
+        did_something = true;
+    }
+
+    // Ongoing Damage
+    if let Ok(ongoing) = entry.get_component::<DamageOverTime>() {
+        add_effect(
+            creator,
+            EffectType::DamageOverTime {
+                damage: ongoing.damage,
+            },
+            targets.clone(),
+        );
+        did_something = true;
+    }
+
     // Simple particle spawn
     if let Ok(part) = entry.get_component::<SpawnParticleBurst>() {
         add_effect(
@@ -188,7 +279,7 @@ fn event_trigger(
 
     // Line particle spawn
     if let Ok(part) = entry.get_component::<SpawnParticleLine>() {
-        if let Some(start_pos) = find_item_position(ecs, item, map) {
+        if let Some(start_pos) = find_item_position(ecs, item, creator, map) {
             match targets {
                 Targets::Tile { tile_idx } => {
                     spawn_line_particles(ecs, start_pos, *tile_idx, part, map)
@@ -249,6 +340,38 @@ pub fn trigger(
             .is_ok()
     {
         commands.remove(trigger);
+    }
+}
+
+pub fn learn_spell(
+    ecs: &mut SubWorld,
+    effect: &EffectSpawner,
+    name: String,
+    spell: Entity,
+    _commands: &mut CommandBuffer,
+) {
+    if effect.creator.is_none() {
+        return;
+    }
+    let spell_template = <(Entity, &SpellTemplate)>::query()
+        .iter(ecs)
+        .find_map(|(e, s)| if *e == spell { Some(s.clone()) } else { None })
+        .unwrap();
+
+    let mut entry = ecs.entry_mut(effect.creator.unwrap()).unwrap();
+    if let Ok(known) = entry.get_component_mut::<KnownSpells>() {
+        let already_known = known
+            .spells
+            .iter()
+            .filter(|s| s.display_name == name)
+            .count()
+            != 0;
+        if !already_known {
+            known.spells.push(KnownSpell {
+                display_name: name.clone(),
+                mana_cost: spell_template.mana_cost,
+            });
+        }
     }
 }
 

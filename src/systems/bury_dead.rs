@@ -10,6 +10,7 @@ use crate::prelude::*;
 #[read_component(Equipped)]
 #[read_component(LootTable)]
 #[read_component(Point)]
+#[read_component(StatusEffect)]
 pub fn bury_dead(
     ecs: &mut SubWorld,
     #[resource] gamelog: &mut Gamelog,
@@ -37,6 +38,12 @@ pub fn bury_dead(
             gamelog.entries.push(format!("{} is dead!", name.0));
             dead_list.insert(*entity, *pos);
         });
+
+    // Find any effects applying to dead entities and remove them.
+    <(&StatusEffect, Entity)>::query()
+        .iter(ecs)
+        .filter(|(st, _)| dead_list.contains_key(&st.target))
+        .for_each(|(_, e)| commands.remove(*e));
 
     // Have everything carried by dead entities drop to the ground,
     // and potentially spawn items from loot tables

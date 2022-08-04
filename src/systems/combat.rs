@@ -45,11 +45,11 @@ pub fn combat(
     }
 
     // Find the attacker's weapon.
-    let mut weapon_info = <(&MeleeWeapon, &Equipped)>::query()
+    let (mut weapon_info, weapon_entity) = <(&MeleeWeapon, &Equipped, Entity)>::query()
         .iter(ecs)
-        .filter(|(_, e)| e.owner == attacker)
-        .find_map(|(wpn, _)| Some(wpn.clone()))
-        .unwrap_or(MeleeWeapon::default());
+        .filter(|(_, e, _)| e.owner == attacker)
+        .find_map(|(wpn, _, e)| Some((wpn.clone(), Some(*e))))
+        .unwrap_or_default();
     if let Ok(nat) = attacker_entry.get_component::<NaturalAttackDefense>() {
         if !nat.attacks.is_empty() {
             let attack = rng.random_slice_entry(nat.attacks.as_slice()).unwrap();
@@ -91,7 +91,6 @@ pub fn combat(
         base_armor_class + armor_quickness_bonus + armor_skill_bonus + armor_item_bonus;
 
     if natural_roll != 1 && (natural_roll == 20 || modified_hit_roll > armor_class) {
-        // Target hit! Until we support weapons, we're doing with 1d4
         let base_damage = rng
             .roll_str(weapon_info.damage_die)
             .expect("Failed to parse die roll");
@@ -104,6 +103,23 @@ pub fn combat(
             EffectType::Damage { amount },
             Targets::Single { target: victim },
         );
+
+        if let Some(chance) = weapon_info.proc_chance {
+            if rng.roll_dice(1, 100) <= (chance * 100.0) as i32 && weapon_entity.is_some() {
+                let effect_target = if weapon_info.proc_target.unwrap() == "Self" {
+                    Targets::Single { target: attacker }
+                } else {
+                    Targets::Single { target: victim }
+                };
+                add_effect(
+                    Some(attacker),
+                    EffectType::ItemUse {
+                        item: weapon_entity.unwrap(),
+                    },
+                    effect_target,
+                );
+            }
+        }
     } else if natural_roll == 1 {
         // Natural 1 miss
         log.entries.push(format!(

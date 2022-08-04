@@ -9,6 +9,7 @@ use crate::prelude::*;
 #[write_component(Attributes)]
 #[read_component(AttributeBonus)]
 #[read_component(StatusEffect)]
+#[read_component(Slow)]
 #[filter(component::<EquipmentChanged>())]
 pub fn encumbrance(
     ecs: &SubWorld,
@@ -55,6 +56,20 @@ pub fn encumbrance(
     stats.total_initiative_penalty = equipped_totals.1 + carried_totals.1;
 
     *attrs = attrs.clone() + (bonus_totals + effect_totals);
+
+    // Total up haste/slow
+    let slow = <(&StatusEffect, &Slow)>::query()
+        .iter(ecs)
+        .find_map(|(st, sl)| {
+            if st.target == *entity {
+                Some(*sl)
+            } else {
+                None
+            }
+        });
+    if let Some(slow) = slow {
+        stats.total_initiative_penalty += slow.initiative_penalty;
+    }
 
     let capacity = (attrs.might.base + attrs.might.modifiers) * 15;
     if stats.total_weight > capacity as f32 {

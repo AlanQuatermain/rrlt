@@ -72,6 +72,46 @@ pub fn use_items(
 }
 
 #[system(for_each)]
+#[read_component(SpellTemplate)]
+#[read_component(WantsToCastSpell)]
+#[read_component(Name)]
+#[read_component(AreaOfEffect)]
+#[read_component(Player)]
+pub fn spellcasting(
+    entity: &Entity,
+    wants_cast: &WantsToCastSpell,
+    #[resource] map: &Map,
+    ecs: &SubWorld,
+    commands: &mut CommandBuffer,
+) {
+    commands.remove_component::<WantsToCastSpell>(*entity);
+
+    let spell = ecs.entry_ref(wants_cast.spell).unwrap();
+
+    // Call into the effects system
+    add_effect(
+        Some(*entity),
+        EffectType::CastSpell {
+            spell: wants_cast.spell,
+        },
+        match wants_cast.target {
+            None => Targets::Single { target: *entity },
+            Some(target) => {
+                if let Ok(aoe) = spell.get_component::<AreaOfEffect>() {
+                    Targets::Tiles {
+                        tiles: aoe_tiles(&*map, target, aoe.0),
+                    }
+                } else {
+                    Targets::Tile {
+                        tile_idx: map.point2d_to_index(target),
+                    }
+                }
+            }
+        },
+    );
+}
+
+#[system(for_each)]
 #[read_component(Item)]
 #[read_component(Carried)]
 #[write_component(Equipped)]

@@ -17,6 +17,7 @@ use crate::prelude::*;
 #[read_component(StatusEffect)]
 #[read_component(Duration)]
 #[read_component(Name)]
+#[read_component(KnownSpells)]
 pub fn gui(
     ecs: &SubWorld,
     #[resource] gamelog: &Gamelog,
@@ -167,6 +168,23 @@ pub fn gui(
                 index += 1;
             }
         });
+
+    // Spells
+    y += 1;
+    let blue = ColorPair::new(CYAN, BLACK);
+    if let Ok(known) = player.get_component::<KnownSpells>() {
+        let mut index = 1;
+        for spell in known.spells.iter() {
+            draw_batch.print_color(Point::new(50, y), &format!("^{}", index), blue);
+            draw_batch.print_color(
+                Point::new(53, y),
+                &format!("{} ({})", &spell.display_name, spell.mana_cost),
+                blue,
+            );
+            index += 1;
+            y += 1;
+        }
+    }
 
     // Status
     let mut y = 44;

@@ -81,6 +81,8 @@ pub struct MeleeWeapon {
     pub attribute: WeaponAttribute,
     pub damage_die: String,
     pub hit_bonus: i32,
+    pub proc_chance: Option<f32>,
+    pub proc_target: Option<String>,
 }
 
 impl Default for MeleeWeapon {
@@ -89,6 +91,8 @@ impl Default for MeleeWeapon {
             attribute: WeaponAttribute::Might,
             damage_die: "1d4".to_string(),
             hit_bonus: 0,
+            proc_chance: None,
+            proc_target: None,
         }
     }
 }
@@ -483,4 +487,55 @@ pub struct Duration(pub i32);
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StatusEffect {
     pub target: Entity,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct KnownSpell {
+    pub display_name: String,
+    pub mana_cost: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct KnownSpells {
+    pub spells: Vec<KnownSpell>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Copy)]
+pub struct SpellTemplate {
+    pub mana_cost: i32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WantsToCastSpell {
+    pub spell: Entity,
+    pub target: Option<Point>,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProvidesMana(pub i32);
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TeachSpell(pub String);
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct Slow {
+    pub initiative_penalty: f32,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DamageOverTime {
+    pub damage: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecialAbility {
+    pub spell: String,
+    pub chance: f32,
+    pub range: f32,
+    pub min_range: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecialAbilities {
+    pub abilities: Vec<SpecialAbility>,
 }

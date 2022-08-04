@@ -8,6 +8,7 @@ use std::collections::HashSet;
 #[read_component(FieldOfView)]
 #[read_component(Point)]
 #[read_component(AreaOfEffect)]
+#[read_component(SpellTemplate)]
 pub fn ranged_target(
     ecs: &SubWorld,
     #[resource] map: &Map,
@@ -24,7 +25,8 @@ pub fn ranged_target(
     let map_pos = key_state.mouse_pos + offset;
     let mut fov = <&FieldOfView>::query().filter(component::<Player>());
     let player_fov = fov.iter(ecs).nth(0).unwrap();
-    let (player_pos, _, player) = <(&Point, &Player, Entity)>::query()
+    let (player_pos, player) = <(&Point, Entity)>::query()
+        .filter(component::<Player>())
         .iter(ecs)
         .nth(0)
         .unwrap();
@@ -69,13 +71,24 @@ pub fn ranged_target(
             }
         }
         if key_state.mouse_clicked {
-            commands.add_component(
-                item_entity,
-                UseItem {
-                    user: *player,
-                    target: Some(map_pos),
-                },
-            );
+            let entry = ecs.entry_ref(item_entity).unwrap();
+            if entry.get_component::<SpellTemplate>().is_ok() {
+                commands.add_component(
+                    *player,
+                    WantsToCastSpell {
+                        spell: item_entity,
+                        target: Some(map_pos),
+                    },
+                )
+            } else {
+                commands.add_component(
+                    item_entity,
+                    UseItem {
+                        user: *player,
+                        target: Some(map_pos),
+                    },
+                );
+            }
             *turn_state = TurnState::Ticking;
             return;
         }

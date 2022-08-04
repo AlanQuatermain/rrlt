@@ -30,6 +30,12 @@ use crate::prelude::*;
 #[read_component(Duration)]
 #[read_component(StatusEffect)]
 #[read_component(AttributeBonus)]
+#[read_component(SpellTemplate)]
+#[read_component(ProvidesMana)]
+#[read_component(TeachSpell)]
+#[write_component(KnownSpells)]
+#[read_component(Slow)]
+#[read_component(DamageOverTime)]
 pub fn effects(
     ecs: &mut SubWorld,
     #[resource] map: &mut Map,

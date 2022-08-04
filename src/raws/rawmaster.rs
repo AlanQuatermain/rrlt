@@ -12,6 +12,7 @@ pub struct RawMaster {
     prop_index: HashMap<String, usize>,
     loot_index: HashMap<String, usize>,
     faction_index: HashMap<String, HashMap<String, Reaction>>,
+    spell_index: HashMap<String, usize>,
 }
 
 impl RawMaster {
@@ -21,6 +22,7 @@ impl RawMaster {
                 items: Vec::new(),
                 mobs: Vec::new(),
                 props: Vec::new(),
+                spells: Vec::new(),
                 spawn_table: Vec::new(),
                 loot_tables: Vec::new(),
                 faction_table: Vec::new(),
@@ -30,6 +32,7 @@ impl RawMaster {
             prop_index: HashMap::new(),
             loot_index: HashMap::new(),
             faction_index: HashMap::new(),
+            spell_index: HashMap::new(),
         }
     }
 
@@ -76,6 +79,11 @@ impl RawMaster {
         self.loot_index = HashMap::new();
         for (i, loot) in self.raws.loot_tables.iter().enumerate() {
             self.loot_index.insert(loot.name.clone(), i);
+        }
+
+        self.spell_index = HashMap::new();
+        for (i, spell) in self.raws.spells.iter().enumerate() {
+            self.spell_index.insert(spell.name.clone(), i);
         }
 
         for spawn in self.raws.spawn_table.iter() {
@@ -185,6 +193,20 @@ macro_rules! apply_effects {
                 "particle" => $cmd.add_component($e, parse_particle(&effect.1)),
                 "remove_curse" => $cmd.add_component($e, ProvidesRemoveCurse),
                 "identify" => $cmd.add_component($e, ProvidesIdentify),
+                "provides_mana" => $cmd.add_component($e, i32_component!(ProvidesMana, effect)),
+                "teach_spell" => $cmd.add_component($e, TeachSpell(effect.1.to_string())),
+                "slow" => $cmd.add_component(
+                    $e,
+                    Slow {
+                        initiative_penalty: effect.1.parse::<f32>().unwrap(),
+                    },
+                ),
+                "damage_over_time" => $cmd.add_component(
+                    $e,
+                    DamageOverTime {
+                        damage: effect.1.parse::<i32>().unwrap(),
+                    },
+                ),
                 _ => log(format!(
                     "Warning: consumable effect {} not implemented.",
                     effect_name
@@ -192,6 +214,39 @@ macro_rules! apply_effects {
             }
         }
     };
+}
+
+pub fn spawn_named_spell(
+    raws: &RawMaster,
+    key: &str,
+    commands: &mut CommandBuffer,
+) -> Option<Entity> {
+    if let Some(idx) = raws.spell_index.get(key) {
+        let spell_template = &raws.raws.spells[*idx];
+
+        let entity = commands.push((
+            SpellTemplate {
+                mana_cost: spell_template.mana_cost,
+            },
+            Name(spell_template.name.clone()),
+        ));
+        apply_effects!(entity, spell_template.effects, commands);
+    }
+    None
+}
+
+pub fn spawn_all_spells(commands: &mut CommandBuffer) {
+    let raws = &RAWS.lock().unwrap();
+    for spell in raws.raws.spells.iter() {
+        spawn_named_spell(raws, &spell.name, commands);
+    }
+}
+
+pub fn find_spell_entity(ecs: &SubWorld, name: &str) -> Option<Entity> {
+    <(Entity, &Name)>::query()
+        .filter(component::<SpellTemplate>())
+        .iter(ecs)
+        .find_map(|(e, n)| if n.0 == name { Some(*e) } else { None })
 }
 
 pub fn spawn_named_item(
@@ -210,7 +265,6 @@ pub fn spawn_named_item(
     let potion_names = dm.potion_mappings.clone();
     let wand_names = dm.wand_mappings.clone();
     let identified = dm.identified_items.clone();
-    std::mem::drop(dm);
 
     let item = Item {
         initiative_penalty: item_template.initiative_penalty.unwrap_or(0.0),
@@ -249,12 +303,17 @@ pub fn spawn_named_item(
             attribute: WeaponAttribute::Might,
             damage_die: weapon.base_damage.clone(),
             hit_bonus: weapon.hit_bonus,
+            proc_chance: weapon.proc_chance,
+            proc_target: weapon.proc_target.clone(),
         };
         match weapon.attribute.as_str() {
             "Quickness" => wpn.attribute = WeaponAttribute::Quickness,
             _ => wpn.attribute = WeaponAttribute::Might,
         }
         commands.add_component(entity, wpn);
+        if let Some(proc_effects) = &weapon.proc_effects {
+            apply_effects!(entity, proc_effects, commands);
+        }
     }
 
     if let Some(wearable) = &item_template.wearable {
@@ -511,6 +570,21 @@ pub fn spawn_named_mob(
         )
     }
     commands.add_component(entity, EquipmentChanged);
+
+    if let Some(ability_list) = &mob_template.abilities {
+        let mut a = SpecialAbilities {
+            abilities: Vec::new(),
+        };
+        for ability in ability_list.iter() {
+            a.abilities.push(SpecialAbility {
+                spell: ability.spell.clone(),
+                chance: ability.chance,
+                range: ability.range,
+                min_range: ability.min_range,
+            });
+        }
+        commands.add_component(entity, a);
+    }
 
     Some(entity)
 }

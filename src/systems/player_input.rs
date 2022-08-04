@@ -18,6 +18,7 @@ use crate::{prelude::*, KeyState};
 #[read_component(Hidden)]
 #[read_component(Name)]
 #[read_component(Vendor)]
+#[read_component(KnownSpells)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -25,6 +26,7 @@ pub fn player_input(
     #[resource] gamelog: &mut Gamelog,
     #[resource] key_state: &mut KeyState,
     #[resource] turn_state: &mut TurnState,
+    #[resource] rng: &mut RandomNumberGenerator,
 ) {
     // don't process input here if we're in inventory mode.
     if *turn_state != TurnState::AwaitingInput {
@@ -32,21 +34,13 @@ pub fn player_input(
     }
 
     if let Some(key) = key_state.key {
-        if key_state.shift {
-            let hotkey = match key {
-                VirtualKeyCode::Key1 => Some(0),
-                VirtualKeyCode::Key2 => Some(1),
-                VirtualKeyCode::Key3 => Some(2),
-                VirtualKeyCode::Key4 => Some(3),
-                VirtualKeyCode::Key5 => Some(4),
-                VirtualKeyCode::Key6 => Some(5),
-                VirtualKeyCode::Key7 => Some(6),
-                VirtualKeyCode::Key8 => Some(7),
-                VirtualKeyCode::Key9 => Some(8),
-                _ => None,
-            };
-            if let Some(hotkey) = hotkey {
-                *turn_state = use_consumable_hotkey(ecs, commands, hotkey);
+        if key_state.shift || key_state.control {
+            if let Some(hotkey) = get_hotkey(key_state) {
+                if key_state.shift {
+                    *turn_state = use_consumable_hotkey(ecs, commands, hotkey);
+                } else if key_state.control {
+                    *turn_state = use_spell_hotkey(ecs, commands, hotkey, gamelog);
+                }
                 key_state.key = None;
                 return;
             }
@@ -74,7 +68,7 @@ pub fn player_input(
                 try_descend_stairs(map, turn_state, player_pos, gamelog)
             }
             KeyInputResponse::StandStill => {
-                try_wait_player(ecs);
+                try_wait_player(ecs, rng);
                 *turn_state = TurnState::Ticking;
             }
             KeyInputResponse::SaveGame => *turn_state = TurnState::SaveGame,
@@ -108,6 +102,25 @@ pub fn player_input(
             }
         }
         key_state.key = None;
+    }
+}
+
+fn get_hotkey(key_state: &KeyState) -> Option<i32> {
+    if let Some(key) = key_state.key {
+        match key {
+            VirtualKeyCode::Key1 => Some(0),
+            VirtualKeyCode::Key2 => Some(1),
+            VirtualKeyCode::Key3 => Some(2),
+            VirtualKeyCode::Key4 => Some(3),
+            VirtualKeyCode::Key5 => Some(4),
+            VirtualKeyCode::Key6 => Some(5),
+            VirtualKeyCode::Key7 => Some(6),
+            VirtualKeyCode::Key8 => Some(7),
+            VirtualKeyCode::Key9 => Some(8),
+            _ => None,
+        }
+    } else {
+        None
     }
 }
 
@@ -145,6 +158,58 @@ fn use_consumable_hotkey(
                     target: None,
                 },
             );
+        }
+    }
+
+    TurnState::Ticking
+}
+
+fn use_spell_hotkey(
+    ecs: &mut SubWorld,
+    commands: &mut CommandBuffer,
+    hotkey: i32,
+    gamelog: &mut Gamelog,
+) -> TurnState {
+    let player_entity = <Entity>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .unwrap()
+        .clone();
+    let mut player = ecs.entry_mut(player_entity).unwrap();
+    let spells = if let Ok(known) = player.get_component::<KnownSpells>() {
+        known.spells.clone()
+    } else {
+        Vec::new()
+    };
+
+    if (hotkey as usize) < spells.len() {
+        if let Ok(stats) = player.get_component_mut::<Pools>() {
+            let spell = &spells[hotkey as usize];
+            if stats.mana.current >= spell.mana_cost {
+                if let Some(spell_entity) = find_spell_entity(ecs, &spell.display_name) {
+                    let spell_entry = ecs.entry_ref(spell_entity).unwrap();
+                    if let Ok(range) = spell_entry.get_component::<Ranged>() {
+                        return TurnState::RangedTargeting {
+                            range: range.0,
+                            item: spell_entity,
+                        };
+                    }
+
+                    commands.add_component(
+                        player_entity,
+                        WantsToCastSpell {
+                            spell: spell_entity,
+                            target: None,
+                        },
+                    );
+                }
+            } else {
+                gamelog.entries.push(format!(
+                    "You don't have enough mana to cast {}",
+                    spell.display_name
+                ));
+            }
         }
     }
 
@@ -291,7 +356,7 @@ fn try_open_door(
     opened
 }
 
-fn try_wait_player(ecs: &mut SubWorld) {
+fn try_wait_player(ecs: &mut SubWorld, rng: &mut RandomNumberGenerator) {
     // Player is standing still.
     // If well fed, we may heal.
     let hunger_state = <&HungerClock>::query()
@@ -328,6 +393,9 @@ fn try_wait_player(ecs: &mut SubWorld) {
             .for_each_mut(ecs, |stats| {
                 if stats.hit_points.current < stats.hit_points.max {
                     stats.hit_points.current += 1;
+                }
+                if rng.roll_dice(1, 6) == 1 {
+                    stats.mana.current = i32::min(stats.mana.max, stats.mana.current + 1);
                 }
             });
     }

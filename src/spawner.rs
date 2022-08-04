@@ -48,10 +48,18 @@ pub fn spawn_player(ecs: &mut World, dm: &MasterDungeonMap, pos: Point) {
         Faction {
             name: "Player".to_string(),
         },
+        KnownSpells {
+            // spells: vec![KnownSpell {
+            //     display_name: "Zap".to_string(),
+            //     mana_cost: 1,
+            // }],
+            spells: Vec::new(),
+        },
         EquipmentChanged,
     ));
 
     let mut commands = CommandBuffer::new(ecs);
+    spawn_all_spells(&mut commands);
 
     spawn_named_entity(
         &RAWS.lock().unwrap(),

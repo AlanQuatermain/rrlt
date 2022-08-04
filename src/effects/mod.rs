@@ -30,8 +30,14 @@ pub enum EffectType {
     ItemUse {
         item: Entity,
     },
+    CastSpell {
+        spell: Entity,
+    },
     WellFed,
     Healing {
+        amount: i32,
+    },
+    Mana {
         amount: i32,
     },
     Confusion {
@@ -49,6 +55,16 @@ pub enum EffectType {
         bonus: AttributeBonus,
         name: String,
         duration: i32,
+    },
+    LearnSpell {
+        name: String,
+        spell: Entity,
+    },
+    Slow {
+        initiative_penalty: f32,
+    },
+    DamageOverTime {
+        damage: i32,
     },
 }
 
@@ -117,6 +133,21 @@ fn target_applicator(
         triggers::item_trigger(
             effect.creator,
             item,
+            &effect.targets,
+            ecs,
+            gamelog,
+            particle_builder,
+            turn_state,
+            map,
+            commands,
+        );
+        return;
+    }
+
+    if let EffectType::CastSpell { spell } = effect.effect_type {
+        triggers::spell_trigger(
+            effect.creator,
+            spell,
             &effect.targets,
             ecs,
             gamelog,
@@ -203,6 +234,10 @@ fn tile_effect_hits_entities(effect: &EffectType) -> bool {
         EffectType::Confusion { .. } => true,
         EffectType::TeleportTo { .. } => true,
         EffectType::AttributeEffect { .. } => true,
+        EffectType::Mana { .. } => true,
+        EffectType::LearnSpell { .. } => true,
+        EffectType::Slow { .. } => true,
+        EffectType::DamageOverTime { .. } => true,
         _ => false,
     }
 }
@@ -276,10 +311,18 @@ fn affect_entity(
         EffectType::Identify => identify::identify_entity(ecs, effect, target, dm, commands),
         EffectType::WellFed => hunger::well_fed(ecs, target),
         EffectType::Healing { .. } => damage::heal_damage(ecs, effect, target),
+        EffectType::Mana { .. } => damage::restore_mana(ecs, effect, target),
         EffectType::Confusion { .. } => damage::add_confusion(ecs, effect, target, commands),
         EffectType::TeleportTo { .. } => movement::apply_teleport(ecs, effect, target, commands),
         EffectType::AttributeEffect { .. } => {
             damage::attribute_effect(ecs, effect, target, commands)
+        }
+        EffectType::LearnSpell { name, spell } => {
+            triggers::learn_spell(ecs, effect, name.to_string(), *spell, commands)
+        }
+        EffectType::Slow { .. } => damage::slow(ecs, effect, target, commands),
+        EffectType::DamageOverTime { .. } => {
+            damage::damage_over_time(ecs, effect, target, commands)
         }
         _ => {}
     }

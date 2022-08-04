@@ -9,15 +9,18 @@ use crate::prelude::*;
 #[read_component(FieldOfView)]
 #[read_component(Name)]
 #[read_component(Player)]
+#[read_component(SpecialAbilities)]
 #[filter(component::<MyTurn>()&!component::<Player>())]
 pub fn visible(
     ecs: &mut SubWorld,
     entity: &Entity,
     faction: &Faction,
-    _pos: &Point,
+    pos: &Point,
     _name: &Name,
     fov: &FieldOfView,
+    abilities: Option<&SpecialAbilities>,
     #[resource] map: &Map,
+    #[resource] rng: &mut RandomNumberGenerator,
     commands: &mut CommandBuffer,
 ) {
     let mut reactions: Vec<(usize, Reaction, Entity)> = Vec::new();
@@ -36,6 +39,25 @@ pub fn visible(
     for reaction in reactions.iter() {
         match reaction.1 {
             Reaction::Attack => {
+                if let Some(abilities) = abilities {
+                    let end = map.index_to_point2d(reaction.0);
+                    let range = DistanceAlg::Pythagoras.distance2d(*pos, end);
+                    for ability in abilities.abilities.iter() {
+                        if range >= ability.min_range
+                            && range <= ability.range
+                            && rng.roll_dice(1, 100) >= (ability.chance * 100.0) as i32
+                        {
+                            commands.add_component(
+                                *entity,
+                                WantsToCastSpell {
+                                    spell: find_spell_entity(ecs, &ability.spell).unwrap(),
+                                    target: Some(end),
+                                },
+                            );
+                            return;
+                        }
+                    }
+                }
                 commands.add_component(*entity, WantsToApproach { idx: reaction.0 });
                 commands.add_component(*entity, Chasing { target: reaction.2 });
                 // This overrides any other concerns

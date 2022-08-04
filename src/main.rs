@@ -287,6 +287,17 @@ impl State {
         registry.register::<ProvidesRemoveCurse>("removes_curse".to_string());
         registry.register::<ProvidesIdentify>("identifies".to_string());
         registry.register::<AttributeBonus>("attr_bonus".to_string());
+        registry.register::<StatusEffect>("status_effect".to_string());
+        registry.register::<Duration>("duration".to_string());
+        registry.register::<KnownSpell>("spell".to_string());
+        registry.register::<KnownSpells>("known_spells".to_string());
+        registry.register::<SpellTemplate>("spell_template".to_string());
+        registry.register::<ProvidesMana>("provides_mana".to_string());
+        registry.register::<TeachSpell>("teach_spell".to_string());
+        registry.register::<Slow>("slow".to_string());
+        registry.register::<DamageOverTime>("dot".to_string());
+        registry.register::<SpecialAbility>("sp_ability".to_string());
+        registry.register::<SpecialAbilities>("sp_abilities".to_string());
         registry.on_unknown(Ignore);
     }
 

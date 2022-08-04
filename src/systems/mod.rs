@@ -87,6 +87,7 @@ pub fn build_ticking_scheduler() -> Schedule {
         .flush()
         .add_system(combat::combat_system())
         .add_system(use_items::use_items_system())
+        .add_system(use_items::spellcasting_system())
         .add_system(hunger::hunger_system())
         .flush()
         .add_system(damage::damage_system())

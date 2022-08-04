@@ -52,6 +52,24 @@ pub fn heal_damage(ecs: &mut SubWorld, heal: &EffectSpawner, target: Entity) {
     }
 }
 
+pub fn restore_mana(ecs: &mut SubWorld, mana: &EffectSpawner, target: Entity) {
+    let mut entry = ecs.entry_mut(target).unwrap();
+    if let Ok(stats) = entry.get_component_mut::<Pools>() {
+        if let EffectType::Mana { amount } = mana.effect_type {
+            stats.mana.current = i32::min(stats.mana.max, stats.mana.current + amount);
+            add_effect(
+                None,
+                EffectType::Particle {
+                    glyph: to_cp437('‼'),
+                    color: ColorPair::new(BLUE, BLACK),
+                    lifespan: 200.0,
+                },
+                Targets::Single { target },
+            );
+        }
+    }
+}
+
 pub fn add_confusion(
     _ecs: &SubWorld,
     effect: &EffectSpawner,
@@ -81,10 +99,6 @@ pub fn attribute_effect(
         duration,
     } = &effect.effect_type
     {
-        println!(
-            "Applying attribute effect '{}' to entity {:?}",
-            &name, target
-        );
         commands.push((
             StatusEffect { target },
             bonus.clone(),
@@ -93,6 +107,47 @@ pub fn attribute_effect(
             SerializeMe,
         ));
         commands.add_component(target, EquipmentChanged);
+    }
+}
+
+pub fn slow(
+    _ecs: &mut SubWorld,
+    effect: &EffectSpawner,
+    target: Entity,
+    commands: &mut CommandBuffer,
+) {
+    if let EffectType::Slow { initiative_penalty } = &effect.effect_type {
+        commands.push((
+            StatusEffect { target },
+            Slow {
+                initiative_penalty: *initiative_penalty,
+            },
+            Duration(5),
+            if *initiative_penalty > 0.0 {
+                Name("Slowed".to_string())
+            } else {
+                Name("Hasted".to_string())
+            },
+            SerializeMe,
+        ));
+        commands.add_component(target, EquipmentChanged);
+    }
+}
+
+pub fn damage_over_time(
+    _ecs: &mut SubWorld,
+    effect: &EffectSpawner,
+    target: Entity,
+    commands: &mut CommandBuffer,
+) {
+    if let EffectType::DamageOverTime { damage } = &effect.effect_type {
+        commands.push((
+            StatusEffect { target },
+            DamageOverTime { damage: *damage },
+            Duration(5),
+            Name("Ongoing Damage".to_string()),
+            SerializeMe,
+        ));
     }
 }
 
