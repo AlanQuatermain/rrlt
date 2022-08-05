@@ -13,6 +13,7 @@ use self::{
     drunkard::DrunkardsWalkBuilder,
     dwarf_fort::dwarf_fort_builder,
     maze::MazeBuilder,
+    mushroom::mushroom_entrance,
     nearest_corridors::NearestCorridors,
     prefab::PrefabBuilder,
     room_based_spawner::RoomBasedSpawner,
@@ -48,6 +49,7 @@ mod drunkard;
 mod dwarf_fort;
 mod forest;
 mod maze;
+mod mushroom;
 mod nearest_corridors;
 mod prefab;
 mod room_based_spawner;
@@ -337,6 +339,7 @@ pub fn level_builder(
         3 => limestone_deep_cavern_builder(new_depth, rng, width, height),
         4 => limestone_transition_builder(new_depth, rng, width, height),
         5 => dwarf_fort_builder(new_depth, rng, width, height),
+        6 => mushroom_entrance(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

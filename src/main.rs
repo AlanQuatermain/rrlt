@@ -301,6 +301,8 @@ impl State {
         registry.register::<SpecialAbility>("sp_ability".to_string());
         registry.register::<SpecialAbilities>("sp_abilities".to_string());
         registry.register::<TileSize>("tile_size".to_string());
+        registry.register::<OnDeath>("on_death".to_string());
+        registry.register::<AlwaysTargetsSelf>("targets_self".to_string());
         registry.on_unknown(Ignore);
     }
 

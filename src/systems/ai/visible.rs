@@ -20,6 +20,7 @@ pub fn visible(
     _name: &Name,
     fov: &FieldOfView,
     stats: &Pools,
+    movement: &MoveMode,
     abilities: Option<&SpecialAbilities>,
     #[resource] map: &Map,
     #[resource] rng: &mut RandomNumberGenerator,
@@ -47,7 +48,7 @@ pub fn visible(
                     for ability in abilities.abilities.iter() {
                         if range >= ability.min_range
                             && range <= ability.range
-                            && rng.roll_dice(1, 100) >= (ability.chance * 100.0) as i32
+                            && rng.roll_dice(1, 100) <= (ability.chance * 100.0) as i32
                         {
                             let spell = find_spell_entity(ecs, &ability.spell).unwrap();
                             let spell_entry = ecs.entry_ref(spell).unwrap();
@@ -65,9 +66,11 @@ pub fn visible(
                         }
                     }
                 }
-                commands.add_component(*entity, WantsToApproach { idx: reaction.0 });
-                commands.add_component(*entity, Chasing { target: reaction.2 });
-                // This overrides any other concerns
+                if movement.0 != Movement::Immobile {
+                    commands.add_component(*entity, WantsToApproach { idx: reaction.0 });
+                    commands.add_component(*entity, Chasing { target: reaction.2 });
+                    // This overrides any other concerns
+                }
                 return;
             }
             Reaction::Flee => flee.push(reaction.0),
@@ -75,7 +78,7 @@ pub fn visible(
         }
     }
 
-    if !flee.is_empty() {
+    if !flee.is_empty() && movement.0 != Movement::Immobile {
         commands.add_component(*entity, WantsToFlee { indices: flee });
     }
 }

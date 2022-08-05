@@ -38,6 +38,7 @@ use crate::prelude::*;
 #[read_component(DamageOverTime)]
 #[read_component(TileSize)]
 #[write_component(Skills)]
+#[read_component(AlwaysTargetsSelf)]
 pub fn effects(
     ecs: &mut SubWorld,
     #[resource] map: &mut Map,

@@ -20,6 +20,8 @@ use crate::{prelude::*, KeyState};
 #[read_component(Vendor)]
 #[read_component(KnownSpells)]
 #[read_component(TileSize)]
+#[read_component(StatusEffect)]
+#[read_component(Confusion)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -52,6 +54,30 @@ pub fn player_input(
             .iter(ecs)
             .find_map(|(entity, pos, fov)| Some((*entity, *pos, fov.clone())))
             .unwrap();
+
+        // Is the player confused?
+        let confused = <&StatusEffect>::query()
+            .filter(component::<Confusion>())
+            .iter(ecs)
+            .filter(|st| st.target == player_entity)
+            .count()
+            != 0;
+        if confused {
+            // eat the key-press, spawn particle, miss turn.
+            add_effect(
+                None,
+                EffectType::Particle {
+                    glyph: to_cp437('?'),
+                    color: ColorPair::new(CYAN, BLACK),
+                    lifespan: 400.0,
+                },
+                Targets::Single {
+                    target: player_entity,
+                },
+            );
+            *turn_state = TurnState::Ticking;
+            return;
+        }
 
         let mut delta = Point::zero();
         match process_key_input(key, key_state) {

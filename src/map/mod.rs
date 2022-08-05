@@ -96,6 +96,15 @@ impl Map {
         }
     }
 
+    pub fn clone_empty(map: &Map) -> Self {
+        let num_tiles = map.width * map.height;
+        crate::spatial::set_size(num_tiles);
+        let mut new_map = Map::new(map.depth, map.width, map.height, &map.name);
+        new_map.theme = map.theme.clone();
+        new_map.outdoors = map.outdoors;
+        new_map
+    }
+
     pub fn fill(&mut self, tile: TileType) {
         self.tiles.iter_mut().for_each(|t| *t = tile);
     }

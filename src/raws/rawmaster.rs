@@ -213,6 +213,7 @@ macro_rules! apply_effects {
                         damage: effect.1.parse::<i32>().unwrap(),
                     },
                 ),
+                "target_self" => $cmd.add_component($e, AlwaysTargetsSelf),
                 _ => log(format!(
                     "Warning: consumable effect {} not implemented.",
                     effect_name
@@ -401,6 +402,7 @@ pub fn spawn_named_mob(
         "random_waypoint" => {
             commands.add_component(entity, MoveMode(Movement::RandomWaypoint { path: None }))
         }
+        "immobile" => commands.add_component(entity, MoveMode(Movement::Immobile)),
         _ => commands.add_component(entity, MoveMode(Movement::Static)),
     }
 
@@ -588,6 +590,21 @@ pub fn spawn_named_mob(
 
     if let Some(ability_list) = &mob_template.abilities {
         let mut a = SpecialAbilities {
+            abilities: Vec::new(),
+        };
+        for ability in ability_list.iter() {
+            a.abilities.push(SpecialAbility {
+                spell: ability.spell.clone(),
+                chance: ability.chance,
+                range: ability.range,
+                min_range: ability.min_range,
+            });
+        }
+        commands.add_component(entity, a);
+    }
+
+    if let Some(ability_list) = &mob_template.on_death {
+        let mut a = OnDeath {
             abilities: Vec::new(),
         };
         for ability in ability_list.iter() {

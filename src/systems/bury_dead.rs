@@ -11,12 +11,15 @@ use crate::prelude::*;
 #[read_component(LootTable)]
 #[read_component(Point)]
 #[read_component(StatusEffect)]
+#[read_component(OnDeath)]
+#[read_component(SpellTemplate)]
 pub fn bury_dead(
     ecs: &mut SubWorld,
     #[resource] gamelog: &mut Gamelog,
     #[resource] turn_state: &mut TurnState,
     #[resource] rng: &mut RandomNumberGenerator,
     #[resource] dm: &MasterDungeonMap,
+    #[resource] map: &Map,
     commands: &mut CommandBuffer,
 ) {
     let player_pools = <&Pools>::query()
@@ -83,6 +86,37 @@ pub fn bury_dead(
         .filter(component::<EntityMoved>())
         .for_each(ecs, |entity| {
             commands.remove_component::<EntityMoved>(*entity)
+        });
+
+    <(Entity, &OnDeath)>::query()
+        .iter(ecs)
+        .filter_map(|(e, od)| dead_list.get(e).map(|p| (*p, od.clone())))
+        .for_each(|(pos, od)| {
+            for effect in od.abilities.iter() {
+                if rng.roll_dice(1, 100) <= (effect.chance * 100.0) as i32 {
+                    let spell_entity = find_spell_entity(ecs, &effect.spell).unwrap();
+                    let tile_idx = map.point2d_to_index(pos);
+                    let targets = if let Ok(aoe) = ecs
+                        .entry_ref(spell_entity)
+                        .unwrap()
+                        .get_component::<AreaOfEffect>()
+                    {
+                        Targets::Tiles {
+                            tiles: aoe_tiles(map, pos, aoe.0),
+                        }
+                    } else {
+                        Targets::Tile { tile_idx }
+                    };
+
+                    add_effect(
+                        None,
+                        EffectType::CastSpell {
+                            spell: spell_entity,
+                        },
+                        targets,
+                    );
+                }
+            }
         });
 
     // Do deletions last

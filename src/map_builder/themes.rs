@@ -12,6 +12,7 @@ pub enum MapTheme {
     Dungeon,
     Forest,
     LimestoneCavern,
+    MushroomGrove,
     Transition {
         from: Box<MapTheme>,
         to: Box<MapTheme>,
@@ -78,6 +79,18 @@ impl MapTheme {
                 TileType::WoodFloor => (to_cp437('░'), RGB::named(CHOCOLATE2)),
                 _ => self.default_glyph_for_tile(map, idx),
             },
+            MapTheme::MushroomGrove => match map.tiles[idx] {
+                TileType::Wall => (to_cp437('♣'), RGB::from_f32(1.0, 0.0, 1.0)),
+                TileType::Bridge => (to_cp437('.'), RGB::named(GREEN)),
+                TileType::Road => (to_cp437('≡'), RGB::named(CHOCOLATE)),
+                TileType::Grass => (to_cp437('"'), RGB::named(GREEN)),
+                TileType::ShallowWater => (to_cp437('~'), RGB::named(CYAN2)),
+                TileType::DeepWater => (to_cp437('~'), RGB::named(NAVY)),
+                TileType::Gravel => (to_cp437(';'), RGB::named(LIGHTSLATEGREY)),
+                TileType::DownStairs => (to_cp437('>'), RGB::named(CYAN)),
+                TileType::UpStairs => (to_cp437('<'), RGB::named(CYAN)),
+                _ => (to_cp437('"'), RGB::from_f32(0.0, 0.6, 0.0)),
+            },
             MapTheme::Transition { .. } => self
                 .select_transition_theme(map, idx)
                 .tile_to_render(map, idx),
@@ -87,7 +100,7 @@ impl MapTheme {
     fn wall_glyph(&self, map: &Map, idx: usize) -> FontCharType {
         let mask = map.wall_mask(idx);
         match self {
-            MapTheme::Dungeon => {
+            MapTheme::Dungeon | MapTheme::MushroomGrove => {
                 match mask {
                     0 => 9,    // Pillar (we can't see neighbors)
                     1 => 186,  // Wall only to north

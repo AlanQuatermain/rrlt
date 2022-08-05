@@ -366,6 +366,7 @@ pub enum Movement {
     Static,
     Random,
     RandomWaypoint { path: Option<Vec<usize>> },
+    Immobile,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -551,3 +552,11 @@ impl Default for TileSize {
         TileSize { x: 1, y: 1 }
     }
 }
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct OnDeath {
+    pub abilities: Vec<SpecialAbility>,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct AlwaysTargetsSelf;

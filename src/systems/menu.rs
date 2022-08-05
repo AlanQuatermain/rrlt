@@ -117,11 +117,14 @@ pub fn main_menu(#[resource] turn_state: &mut TurnState, #[resource] key_state: 
 #[read_component(Player)]
 #[write_component(Point)]
 #[write_component(Pools)]
+#[write_component(Skills)]
+#[write_component(Attributes)]
 pub fn cheat_menu(
     ecs: &mut SubWorld,
     #[resource] turn_state: &mut TurnState,
     #[resource] key_state: &mut KeyState,
     #[resource] map: &mut Map,
+    #[resource] gamelog: &mut Gamelog,
 ) {
     let mut batch = DrawBatch::new();
     batch.target(2);
@@ -129,7 +132,7 @@ pub fn cheat_menu(
     let yellow = ColorPair::new(YELLOW, BLACK);
     let white = ColorPair::new(WHITE, BLACK);
 
-    let count = 4;
+    let count = 5;
     let mut y = (25 - (count / 2)) as i32;
     batch.draw_box(Rect::with_size(15, y - 2, 31, count + 3), white);
     batch.print_color(Point::new(18, y - 2), "Cheating!", yellow);
@@ -158,6 +161,12 @@ pub fn cheat_menu(
     batch.set(Point::new(19, y), white, to_cp437(')'));
     batch.print(Point::new(21, y), "God Mode (no death)");
 
+    y += 1;
+    batch.set(Point::new(17, y), white, to_cp437('('));
+    batch.set(Point::new(18, y), yellow, to_cp437('L'));
+    batch.set(Point::new(19, y), white, to_cp437(')'));
+    batch.print(Point::new(21, y), "Gain level");
+
     if let Some(key) = key_state.key {
         match key {
             VirtualKeyCode::T => *turn_state = TurnState::NextLevel,
@@ -179,8 +188,77 @@ pub fn cheat_menu(
                     .for_each_mut(ecs, |stats| stats.god_mode = true);
                 *turn_state = TurnState::AwaitingInput;
             }
+            VirtualKeyCode::L => {
+                level_up(ecs, map, gamelog);
+                *turn_state = TurnState::AwaitingInput;
+            }
             VirtualKeyCode::Escape => *turn_state = TurnState::AwaitingInput,
             _ => {}
         }
     }
+}
+
+fn level_up(ecs: &mut SubWorld, map: &Map, gamelog: &mut Gamelog) {
+    <(&Point, &mut Pools, &mut Attributes, &mut Skills)>::query()
+        .filter(component::<Player>())
+        .for_each_mut(ecs, |(pos, stats, attrs, skills)| {
+            // We've gone up a level!
+            stats.xp = stats.level * 1000;
+            stats.level += 1;
+            gamelog.entries.push(format!(
+                "Congratulations, you are now level {}",
+                stats.level
+            ));
+
+            // Improve a random attribute
+            let mut rng = RandomNumberGenerator::new();
+            match rng.roll_dice(1, 4) {
+                1 => {
+                    attrs.might.base += 1;
+                    gamelog.entries.push("You feel stronger!".to_string());
+                }
+                2 => {
+                    attrs.fitness.base += 1;
+                    gamelog.entries.push("You feel healthier!".to_string());
+                }
+                3 => {
+                    attrs.quickness.base += 1;
+                    gamelog.entries.push("You feel quicker!".to_string());
+                }
+                _ => {
+                    attrs.intelligence.base += 1;
+                    gamelog.entries.push("You feel smarter!".to_string());
+                }
+            }
+
+            // Improve all skills
+            for skill in skills.0.iter_mut() {
+                *skill.1 += 1;
+            }
+
+            stats.hit_points.max =
+                player_hp_at_level(attrs.fitness.base + attrs.fitness.modifiers, stats.level);
+            stats.hit_points.current = stats.hit_points.max;
+            stats.mana.max = mana_at_level(
+                attrs.intelligence.base + attrs.intelligence.modifiers,
+                stats.level,
+            );
+            stats.mana.current = stats.mana.max;
+
+            for i in 0..10 {
+                if pos.y - i > 1 {
+                    add_effect(
+                        None,
+                        EffectType::Particle {
+                            glyph: to_cp437('░'),
+                            color: ColorPair::new(GOLD, BLACK),
+                            lifespan: 400.0,
+                        },
+                        Targets::Tile {
+                            tile_idx: map.point2d_to_index(*pos - Point::new(0, i)),
+                        },
+                    );
+                }
+            }
+        });
 }

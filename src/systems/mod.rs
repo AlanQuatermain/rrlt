@@ -139,6 +139,7 @@ pub fn build_cheat_menu_scheduler() -> Schedule {
         .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
+        .add_system(gui::gui_system())
         .add_system(menu::cheat_menu_system())
         .build()
 }

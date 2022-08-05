@@ -19,7 +19,7 @@ pub fn default_movement(
 ) {
     commands.remove_component::<MyTurn>(*entity);
     match &mut mode.0 {
-        Movement::Static => {}
+        Movement::Static | Movement::Immobile => {}
         Movement::Random => {
             let delta = match rng.roll_dice(1, 5) {
                 1 => Point::new(-1, 0),

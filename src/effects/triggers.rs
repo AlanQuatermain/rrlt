@@ -68,12 +68,46 @@ pub fn spell_trigger(
         .unwrap()
         .clone();
 
+    let mut targeting = targets.clone();
+
+    let (self_destruct, targets_self, aoe) = <(
+        Entity,
+        Option<&SingleActivation>,
+        Option<&AlwaysTargetsSelf>,
+        Option<&AreaOfEffect>,
+    )>::query()
+    .iter(ecs)
+    .filter(|(e, _, _, _)| **e == spell)
+    .find_map(|(_, act, trg, aoe)| Some((act.is_some(), trg.is_some(), aoe.map(|x| *x))))
+    .unwrap();
+
     let mut cast_ok = false;
     if let Some(caster) = creator {
+        let pos = ecs
+            .entry_ref(caster)
+            .unwrap()
+            .get_component::<Point>()
+            .ok()
+            .map(|p| *p)
+            .unwrap_or(Point::zero())
+            .clone();
+
         if let Ok(stats) = ecs.entry_mut(caster).unwrap().get_component_mut::<Pools>() {
             if template.mana_cost <= stats.mana.current {
                 stats.mana.current -= template.mana_cost;
                 cast_ok = true;
+
+                if targets_self {
+                    targeting = if let Some(aoe) = aoe {
+                        Targets::Tiles {
+                            tiles: aoe_tiles(map, pos, aoe.0),
+                        }
+                    } else {
+                        Targets::Tile {
+                            tile_idx: map.point2d_to_index(pos),
+                        }
+                    };
+                }
             }
         }
     }
@@ -82,7 +116,7 @@ pub fn spell_trigger(
         event_trigger(
             creator,
             spell,
-            targets,
+            &targeting,
             ecs,
             gamelog,
             particle_builder,
@@ -90,6 +124,16 @@ pub fn spell_trigger(
             map,
             commands,
         );
+    }
+
+    if self_destruct && creator.is_some() {
+        // remove all hit points
+        let mut entry = ecs.entry_mut(creator.unwrap()).unwrap();
+        if let Ok(stats) = entry.get_component_mut::<Pools>() {
+            stats.hit_points.current = 0;
+        }
+        // don't trigger on-death if it self-destructed
+        commands.remove_component::<OnDeath>(creator.unwrap());
     }
 }
 
