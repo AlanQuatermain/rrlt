@@ -279,6 +279,10 @@ impl PrefabBuilder {
             '>' => {
                 build_data.map.tiles[idx] = TileType::DownStairs;
             }
+            'e' => {
+                build_data.map.tiles[idx] = TileType::Floor;
+                build_data.spawn_list.push((pos, "Dark Elf".to_string()))
+            }
             'k' => {
                 build_data.map.tiles[idx] = TileType::Floor;
                 build_data.spawn_list.push((pos, "Kobold".to_string()))

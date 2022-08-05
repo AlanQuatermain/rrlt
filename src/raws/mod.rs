@@ -9,6 +9,7 @@ mod prop_structs;
 mod rawmaster;
 mod spawn_table_structs;
 mod spell_structs;
+mod weapon_traits;
 
 pub use faction_structs::Reaction;
 pub use rawmaster::*;
@@ -28,9 +29,10 @@ pub struct Raws {
     pub spawn_table: Vec<spawn_table_structs::SpawnTableEntry>,
     pub loot_tables: Vec<loot_structs::LootTable>,
     pub faction_table: Vec<faction_structs::FactionInfo>,
+    pub weapon_traits: Vec<weapon_traits::WeaponTrait>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Renderable {
     pub glyph: String,
     pub fg: String,

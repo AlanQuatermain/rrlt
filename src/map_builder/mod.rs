@@ -13,7 +13,7 @@ use self::{
     drunkard::DrunkardsWalkBuilder,
     dwarf_fort::dwarf_fort_builder,
     maze::MazeBuilder,
-    mushroom::mushroom_entrance,
+    mushroom::{mushroom_builder, mushroom_entrance, mushroom_exit},
     nearest_corridors::NearestCorridors,
     prefab::PrefabBuilder,
     room_based_spawner::RoomBasedSpawner,
@@ -340,6 +340,8 @@ pub fn level_builder(
         4 => limestone_transition_builder(new_depth, rng, width, height),
         5 => dwarf_fort_builder(new_depth, rng, width, height),
         6 => mushroom_entrance(new_depth, rng, width, height),
+        7 => mushroom_builder(new_depth, rng, width, height),
+        8 => mushroom_exit(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

@@ -101,3 +101,25 @@ pub const ORC_CAMP_TEXT: &str = "
  ≈≈≈≈o≈≈≈≈≈
             
 ";
+
+#[allow(dead_code)]
+pub const DROW_ENTRY: PrefabSection = PrefabSection {
+    template: DROW_ENTRY_TEXT,
+    width: 12,
+    height: 10,
+    placement: (HorizontalPlacement::Center, VerticalPlacement::Center),
+};
+
+#[allow(dead_code)]
+const DROW_ENTRY_TEXT: &str = "
+            
+ ########## 
+ #        # 
+ #   >    # 
+ #        # 
+ #e       # 
+    e     # 
+ #e       # 
+ ########## 
+            
+";
