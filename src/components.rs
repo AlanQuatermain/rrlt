@@ -77,7 +77,8 @@ pub enum WeaponAttribute {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct MeleeWeapon {
+pub struct Weapon {
+    pub range: Option<i32>,
     pub attribute: WeaponAttribute,
     pub damage_die: String,
     pub hit_bonus: i32,
@@ -85,9 +86,10 @@ pub struct MeleeWeapon {
     pub proc_target: Option<String>,
 }
 
-impl Default for MeleeWeapon {
+impl Default for Weapon {
     fn default() -> Self {
         Self {
+            range: None,
             attribute: WeaponAttribute::Might,
             damage_die: "1d4".to_string(),
             hit_bonus: 0,
@@ -154,8 +156,19 @@ pub struct Equipped {
     pub slot: EquipmentSlot,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ParticleLifetime(pub f32);
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ParticleAnimation {
+    pub step_time: f32,
+    pub path: Vec<Point>,
+    pub current_step: usize,
+    pub timer: f32,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ParticleLifetime {
+    pub lifetime_ms: f32,
+    pub animation: Option<ParticleAnimation>,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub enum HungerState {
@@ -560,3 +573,11 @@ pub struct OnDeath {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct AlwaysTargetsSelf;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct Target;
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct WantsToShoot {
+    pub target: Entity,
+}

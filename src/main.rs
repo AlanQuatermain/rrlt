@@ -237,7 +237,7 @@ impl State {
         registry.register::<Carried>("carried_by".to_string());
         registry.register::<Damage>("damage".to_string());
         registry.register::<WeaponAttribute>("wattr".to_string());
-        registry.register::<MeleeWeapon>("melee_weapon".to_string());
+        registry.register::<Weapon>("melee_weapon".to_string());
         registry.register::<Wearable>("wearable".to_string());
         registry.register::<BlocksTile>("blocks_tile".to_string());
         registry.register::<Consumable>("consumable".to_string());
@@ -251,6 +251,7 @@ impl State {
         registry.register::<Equippable>("equippable".to_string());
         registry.register::<Equipped>("equipped".to_string());
         registry.register::<ParticleLifetime>("particle_lifetime".to_string());
+        registry.register::<ParticleAnimation>("particle_animation".to_string());
         registry.register::<HungerState>("hunger_state".to_string());
         registry.register::<HungerClock>("hunger_clock".to_string());
         registry.register::<ProvidesFood>("provides_food".to_string());
@@ -303,6 +304,8 @@ impl State {
         registry.register::<TileSize>("tile_size".to_string());
         registry.register::<OnDeath>("on_death".to_string());
         registry.register::<AlwaysTargetsSelf>("targets_self".to_string());
+        registry.register::<Target>("target".to_string());
+        registry.register::<WantsToShoot>("wants_shoot".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -487,6 +490,9 @@ impl GameState for State {
                 while self.resources.get::<TurnState>().unwrap().clone() == TurnState::Ticking {
                     self.tick_systems
                         .execute(&mut self.ecs, &mut self.resources);
+                }
+                if self.resources.get::<TurnState>().unwrap().clone() == TurnState::AwaitingInput {
+                    update_targeting_scheduler().execute(&mut self.ecs, &mut self.resources);
                 }
             }
             TurnState::ShowingInventory

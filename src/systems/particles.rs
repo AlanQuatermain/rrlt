@@ -1,27 +1,41 @@
 use crate::prelude::*;
 
-#[system]
+#[system(for_each)]
 #[read_component(Point)]
 #[write_component(ParticleLifetime)]
-pub fn particle_cull(
-    ecs: &mut SubWorld,
+pub fn update(
+    entity: &Entity,
+    particle: &mut ParticleLifetime,
+    pos: &mut Point,
+    _ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
     #[resource] frame_time_ms: &f32,
 ) {
-    <(Entity, &mut ParticleLifetime)>::query().for_each_mut(ecs, |(entity, lifetime)| {
-        lifetime.0 -= frame_time_ms;
-        if lifetime.0 <= 0.0 {
-            commands.remove(*entity);
+    if let Some(animation) = particle.animation.as_mut() {
+        animation.timer += frame_time_ms;
+        if animation.timer > animation.step_time
+            && animation.current_step < animation.path.len() - 2
+        {
+            animation.current_step += 1;
+            *pos = animation.path[animation.current_step];
         }
-    });
+    }
+
+    particle.lifetime_ms -= frame_time_ms;
+    if particle.lifetime_ms <= 0.0 {
+        commands.remove(*entity);
+    }
 }
 
 #[system]
 #[read_component(Point)]
-pub fn particle_spawn(commands: &mut CommandBuffer, #[resource] builder: &mut ParticleBuilder) {
+pub fn spawn(commands: &mut CommandBuffer, #[resource] builder: &mut ParticleBuilder) {
     for request in &builder.requests {
         commands.push((
-            ParticleLifetime(request.lifetime),
+            ParticleLifetime {
+                lifetime_ms: request.lifetime,
+                animation: request.animation.clone(),
+            },
             request.pos.clone(),
             Render {
                 color: request.color.clone(),
@@ -37,6 +51,7 @@ struct ParticleRequest {
     color: ColorPair,
     glyph: FontCharType,
     lifetime: f32,
+    animation: Option<ParticleAnimation>,
 }
 
 #[derive(Default)]
@@ -57,6 +72,29 @@ impl ParticleBuilder {
             color,
             glyph,
             lifetime,
+            animation: None,
+        });
+    }
+
+    pub fn request_animated(
+        &mut self,
+        pos: Point,
+        color: ColorPair,
+        glyph: FontCharType,
+        speed: f32,
+        path: Vec<Point>,
+    ) {
+        self.requests.push(ParticleRequest {
+            pos,
+            color,
+            glyph,
+            lifetime: speed * path.len() as f32,
+            animation: Some(ParticleAnimation {
+                step_time: speed,
+                path: path.clone(),
+                current_step: 0,
+                timer: 0.0,
+            }),
         });
     }
 }

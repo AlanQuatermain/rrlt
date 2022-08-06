@@ -36,14 +36,16 @@ pub fn fov(ecs: &mut SubWorld, #[resource] map: &mut Map) {
             updated_locations.push(*pos);
         });
 
+    let mut is_player = false;
     <(&Point, &FieldOfView)>::query()
         .filter(component::<Player>())
         .iter(ecs)
         .filter(|(pos, _)| updated_locations.contains(*pos))
         .for_each(|(_, fov)| {
+            is_player = true;
             fov.visible_tiles.iter().for_each(|pos| {
                 let idx = map.point2d_to_index(*pos);
                 map.revealed_tiles[idx] = true;
-            })
+            });
         });
 }

@@ -28,6 +28,13 @@ pub enum EffectType {
         color: ColorPair,
         lifespan: f32,
     },
+    ParticleProjectile {
+        glyph: FontCharType,
+        color: ColorPair,
+        lifespan: f32,
+        speed: f32,
+        path: Vec<Point>,
+    },
     EntityDeath,
     Identify,
     ItemUse {
@@ -288,6 +295,9 @@ fn affect_tile(
         EffectType::Bloodstain => damage::bloodstain(map, vec![tile_idx]),
         EffectType::Particle { .. } => {
             particles::particle_to_tile(ecs, vec![tile_idx], effect, map, particle_builder)
+        }
+        EffectType::ParticleProjectile { .. } => {
+            particles::projectile(ecs, tile_idx, effect, map, particle_builder)
         }
         _ => {}
     }

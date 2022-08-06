@@ -36,6 +36,7 @@
         { "name" : "Rat", "weight" : 15, "min_depth" : 1, "max_depth" : 1 },
         { "name" : "Mangy Wolf", "weight" : 13, "min_depth" : 1, "max_depth" : 1 },
         { "name" : "Bandit", "weight" : 9, "min_depth" : 1, "max_depth" : 2 },
+        { "name" : "Bandit Archer", "weight" : 9, "min_depth" : 1, "max_depth" : 2 },
         { "name" : "Bat", "weight" : 15, "min_depth" : 2, "max_depth" : 2 },
         { "name" : "Large Spider", "weight" : 3, "min_depth" : 2, "max_depth" : 2 },
         { "name" : "Gelatinous Cube", "weight" : 3, "min_depth" : 2, "max_depth" : 2 },
@@ -68,7 +69,10 @@
         { "name" : "Cloth Gloves", "weight" : 6, "min_depth" : 0, "max_depth" : 100 },
         { "name" : "Leather Gloves", "weight" : 5, "min_depth" : 0, "max_depth" : 100 },
         { "name" : "Chain Gloves", "weight" : 3, "min_depth" : 0, "max_depth" : 100 },
-        { "name" : "Steel Gauntlets", "weight" : 2, "min_depth" : 4, "max_depth" : 100 }
+        { "name" : "Steel Gauntlets", "weight" : 2, "min_depth" : 4, "max_depth" : 100 },
+        { "name" : "Shortbow", "weight" : 2, "min_depth" : 2, "max_depth" : 100 },
+        { "name" : "Hand Crossbow", "weight" : 2, "min_depth" : 8, "max_depth" : 11 },
+        { "name" : "Dark Elf", "weight" : 9, "min_depth" : 8, "max_depth" : 11 },
         
     ],
     
@@ -1537,6 +1541,58 @@
                 "bonus_max" : 5,
                 "include_cursed" : true
             }
+        },
+        
+        {
+            "name" : "Shortbow",
+            "renderable": {
+                "glyph" : ")",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "weapon" : {
+                "range" : "6",
+                "attribute" : "Quickness",
+                "base_damage" : "1d4",
+                "hit_bonus" : 0
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 5.0,
+            "initiative_penalty" : 1,
+            "vendor_category" : "weapon",
+            "template_magic" : {
+                "unidentified_name" : "Unidentified Shortbow",
+                "bonus_min" : 1,
+                "bonus_max" : 5,
+                "include_cursed" : true
+            }
+        },
+        
+        {
+            "name" : "Hand Crossbow",
+            "renderable": {
+                "glyph" : ")",
+                "fg" : "#FFAAAA",
+                "bg" : "#000000",
+                "order" : 2
+            },
+            "weapon" : {
+                "range" : "6",
+                "attribute" : "Quickness",
+                "base_damage" : "1d6",
+                "hit_bonus" : 0
+            },
+            "weight_lbs" : 2.0,
+            "base_value" : 5.0,
+            "initiative_penalty" : 1,
+            "vendor_category" : "weapon",
+            "template_magic" : {
+                "unidentified_name" : "Unidentified Hand Crossbow",
+                "bonus_min" : 1,
+                "bonus_max" : 5,
+                "include_cursed" : true
+            }
         }
     ],
     
@@ -1920,7 +1976,7 @@
                 "order" : 1
             },
             "blocks_tile" : true,
-            "vision_range" : 4,
+            "vision_range" : 6,
             "movement" : "random_waypoint",
             "attributes" : {},
             "quips": [ "Stand and deliver!", "Alright, hand it over" ],
@@ -1928,6 +1984,28 @@
             "light" : {
                 "range" : 6,
                 "color" : "#FFFFB3"
+            },
+            "faction" : "Bandits",
+            "gold" : "1d6"
+        },
+        
+        {
+            "name" : "Bandit Archer",
+            "renderable": {
+                "glyph" : "☺",
+                "fg" : "#FF5500",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 6,
+            "movement" : "random_waypoint",
+            "attributes" : {},
+            "quips": [ "Stand and deliver!", "Alright, hand it over" ],
+            "equipped" : [ "Shortbow", "Shield", "Leather Armor", "Leather Boots" ],
+            "light" : {
+                "range" : 6,
+                "color" : "#FFFF55"
             },
             "faction" : "Bandits",
             "gold" : "1d6"
@@ -2058,6 +2136,23 @@
             "movement" : "static",
             "attributes" : {},
             "faction" : "Cave Goblins"
+        },
+        
+        {
+            "name" : "Goblin Archer",
+            "renderable": {
+                "glyph" : "g",
+                "fg" : "#FFFF00",
+                "bg" : "#000000",
+                "order" : 1
+            },
+            "blocks_tile" : true,
+            "vision_range" : 8,
+            "movement" : "static",
+            "attributes" : {},
+            "faction" : "Cave Goblins",
+            "gold" : "1d6",
+            "equipped" : [ "Shortbow", "Leather Armor", "Leather Boots" ]
         },
         
         {
@@ -2328,7 +2423,7 @@
             "vision_range" : 8,
             "movement" : "random_waypoint",
             "attributes" : {},
-            "equipped" : [ "Scimitar", "Buckler", "Drow Chain", "Drow Leggings", "Drow Boots" ],
+            "equipped" : [ "Hand Crossbow", "Scimitar", "Buckler", "Drow Chain", "Drow Leggings", "Drow Boots" ],
             "faction" : "DarkElf",
             "gold" : "3d6",
             "level" : 6

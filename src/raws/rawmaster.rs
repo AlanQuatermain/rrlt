@@ -453,7 +453,8 @@ pub fn spawn_named_item(
                 slot: EquipmentSlot::Melee,
             },
         );
-        let mut wpn = MeleeWeapon {
+        let mut wpn = Weapon {
+            range: weapon.range.parse::<i32>().ok(),
             attribute: WeaponAttribute::Might,
             damage_die: weapon.base_damage.clone(),
             hit_bonus: weapon.hit_bonus,

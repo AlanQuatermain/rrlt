@@ -103,6 +103,13 @@ pub fn spawn_player(ecs: &mut World, dm: &MasterDungeonMap, pos: Point) {
         dm,
         &mut commands,
     );
+    spawn_named_entity(
+        &RAWS.lock().unwrap(),
+        "Shortbow",
+        SpawnType::Carried { by: player },
+        dm,
+        &mut commands,
+    );
     // spawn_named_entity(
     //     &RAWS.lock().unwrap(),
     //     "Strength Potion",

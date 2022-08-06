@@ -2,7 +2,7 @@ use super::*;
 use crate::prelude::*;
 
 #[system(for_each)]
-#[read_component(WantsToAttack)]
+#[read_component(WantsToShoot)]
 #[read_component(Player)]
 #[read_component(Pools)]
 #[read_component(Damage)]
@@ -16,24 +16,34 @@ use crate::prelude::*;
 #[read_component(Skills)]
 #[read_component(HungerClock)]
 #[read_component(NaturalAttackDefense)]
-pub fn melee_combat(
-    message: &Entity,
-    wants_attack: &WantsToAttack,
+pub fn ranged_combat(
+    attacker: &Entity,
+    wants_attack: &WantsToShoot,
+    player: Option<&Player>,
+    attacker_pos: &Point,
+    attacker_stats: &Pools,
+    attacker_attrs: &Attributes,
+    attacker_skills: &Skills,
+    attacker_name: Option<&Name>,
+    attacker_natural: Option<&NaturalAttackDefense>,
+    hunger_clock: Option<&HungerClock>,
     ecs: &mut SubWorld,
     #[resource] log: &mut Gamelog,
     #[resource] rng: &mut RandomNumberGenerator,
+    #[resource] map: &Map,
     commands: &mut CommandBuffer,
 ) {
-    let (attacker, victim) = (wants_attack.attacker, wants_attack.victim);
-    let attacker_name = name_for(&attacker, ecs).0;
+    let victim = wants_attack.target;
+    let attacker_name = if player.is_some() {
+        "You".to_string()
+    } else {
+        attacker_name
+            .map(|n| n.0.clone())
+            .unwrap_or("Someone".to_string())
+    };
     let victim_name = name_for(&victim, ecs).0;
 
-    let attacker_entry = ecs.entry_ref(attacker).unwrap();
     let victim_entry = ecs.entry_ref(victim).unwrap();
-
-    let attacker_stats = attacker_entry.get_component::<Pools>().unwrap();
-    let attacker_attrs = attacker_entry.get_component::<Attributes>().unwrap();
-    let attacker_skills = attacker_entry.get_component::<Skills>().unwrap();
 
     let victim_stats = victim_entry.get_component::<Pools>().unwrap();
     let victim_attrs = victim_entry.get_component::<Attributes>().unwrap();
@@ -44,13 +54,28 @@ pub fn melee_combat(
         return;
     }
 
+    let victim_pos = victim_entry.get_component::<Point>().unwrap();
+    add_effect(
+        None,
+        EffectType::ParticleProjectile {
+            glyph: to_cp437('*'),
+            color: ColorPair::new(CYAN, BLACK),
+            lifespan: 300.0,
+            speed: 50.0,
+            path: line2d_bresenham(*attacker_pos, *victim_pos),
+        },
+        Targets::Tile {
+            tile_idx: map.point2d_to_index(*attacker_pos),
+        },
+    );
+
     // Find the attacker's weapon.
     let (mut weapon_info, weapon_entity) = <(&Weapon, &Equipped, Entity)>::query()
         .iter(ecs)
-        .filter(|(_, e, _)| e.owner == attacker)
+        .filter(|(_, e, _)| e.owner == *attacker)
         .find_map(|(wpn, _, e)| Some((wpn.clone(), Some(*e))))
         .unwrap_or_default();
-    if let Ok(nat) = attacker_entry.get_component::<NaturalAttackDefense>() {
+    if let Some(nat) = attacker_natural {
         if !nat.attacks.is_empty() {
             let attack = rng.random_slice_entry(nat.attacks.as_slice()).unwrap();
             weapon_info.hit_bonus = attack.hit_bonus;
@@ -66,7 +91,7 @@ pub fn melee_combat(
     let skill_hit_bonus = skill_bonus(Skill::Melee, attacker_skills);
     let weapon_hit_bonus = weapon_info.hit_bonus;
     let mut status_hit_bonus = 0;
-    if let Ok(hc) = attacker_entry.get_component::<HungerClock>() {
+    if let Some(hc) = hunger_clock {
         if hc.state == HungerState::WellFed {
             status_hit_bonus += 1;
         }
@@ -108,7 +133,7 @@ pub fn melee_combat(
         //     base_damage, attr_damage_bonus, skill_damage_bonus, &weapon_info.damage_die, amount,
         // );
         add_effect(
-            Some(attacker),
+            Some(*attacker),
             EffectType::Damage { amount },
             Targets::Single { target: victim },
         );
@@ -116,12 +141,12 @@ pub fn melee_combat(
         if let Some(chance) = weapon_info.proc_chance {
             if rng.roll_dice(1, 100) <= (chance * 100.0) as i32 && weapon_entity.is_some() {
                 let effect_target = if weapon_info.proc_target.unwrap() == "Self" {
-                    Targets::Single { target: attacker }
+                    Targets::Single { target: *attacker }
                 } else {
                     Targets::Single { target: victim }
                 };
                 add_effect(
-                    Some(attacker),
+                    Some(*attacker),
                     EffectType::ItemUse {
                         item: weapon_entity.unwrap(),
                     },
@@ -161,5 +186,5 @@ pub fn melee_combat(
         );
     }
 
-    commands.remove(*message);
+    commands.remove_component::<WantsToShoot>(*attacker);
 }

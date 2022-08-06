@@ -43,18 +43,48 @@ pub fn adjacent(
             ));
         });
 
+    // Cache available weaponry
+    let weaponry: Vec<_> = <(Entity, &Weapon, &Carried, Option<&Equipped>)>::query()
+        .iter(ecs)
+        .filter_map(|(e, w, c, eq)| {
+            if c.0 == *entity {
+                Some((*e, eq.is_some(), w.range))
+            } else {
+                None
+            }
+        })
+        .collect();
+
     let mut acted = false;
     for reaction in reactions.iter() {
         if let Reaction::Attack = reaction.1 {
-            commands.push((
-                (),
-                WantsToAttack {
-                    attacker: *entity,
-                    victim: reaction.0,
-                },
-            ));
-            acted = true;
-            break;
+            for (wpn_entity, equipped, range) in weaponry.iter() {
+                if *equipped && range.is_some() {
+                    // ranged weapon equipped, need to switch to melee
+                    commands.add_component(
+                        *wpn_entity,
+                        UseItem {
+                            user: *entity,
+                            target: None,
+                        },
+                    );
+                    acted = true;
+                    break;
+                }
+            }
+
+            // attack either with equipped melee weapon or natural weapon
+            if !acted {
+                commands.push((
+                    (),
+                    WantsToAttack {
+                        attacker: *entity,
+                        victim: reaction.0,
+                    },
+                ));
+                acted = true;
+                break;
+            }
         }
     }
 

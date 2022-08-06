@@ -19,6 +19,7 @@ mod menu;
 mod movement;
 mod particles;
 mod player_input;
+mod ranged_combat;
 mod ranged_target;
 mod tooltips;
 mod trigger;
@@ -39,14 +40,16 @@ pub enum SystemCondition {
 
 pub fn build_input_scheduler() -> Schedule {
     Schedule::builder()
-        .add_system(particles::particle_cull_system())
+        .add_system(particles::update_system())
         .add_system(encumbrance::encumbrance_system())
+        .flush()
         .add_system(player_input::player_input_system())
         .add_system(collect::collect_system())
+        .add_system(movement::movement_system())
         .flush()
         .add_system(encumbrance::encumbrance_system())
         .add_system(fov::fov_system())
-        .add_system(particles::particle_spawn_system())
+        .add_system(particles::spawn_system())
         .flush()
         .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
@@ -59,9 +62,15 @@ pub fn build_input_scheduler() -> Schedule {
         .build()
 }
 
+pub fn update_targeting_scheduler() -> Schedule {
+    Schedule::builder()
+        .add_system(player_input::update_targeting_system())
+        .build()
+}
+
 pub fn build_ticking_scheduler() -> Schedule {
     Schedule::builder()
-        .add_system(particles::particle_cull_system())
+        .add_system(particles::update_system())
         .add_system(map_indexing::map_indexing_system())
         .add_system(fov::fov_system())
         .add_system(encumbrance::encumbrance_system())
@@ -85,7 +94,8 @@ pub fn build_ticking_scheduler() -> Schedule {
         .add_system(ai::default::default_movement_system())
         .add_system(use_items::equip_system())
         .flush()
-        .add_system(combat::combat_system())
+        .add_system(combat::melee_combat_system())
+        .add_system(ranged_combat::ranged_combat_system())
         .add_system(use_items::use_items_system())
         .add_system(use_items::spellcasting_system())
         .add_system(hunger::hunger_system())
@@ -101,7 +111,7 @@ pub fn build_ticking_scheduler() -> Schedule {
         .flush()
         .add_system(inventory::identification_system())
         .add_system(effects::effects_system())
-        .add_system(particles::particle_spawn_system())
+        .add_system(particles::spawn_system())
         .flush()
         .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
@@ -114,10 +124,10 @@ pub fn build_ticking_scheduler() -> Schedule {
 
 pub fn build_ranged_scheduler() -> Schedule {
     Schedule::builder()
-        .add_system(particles::particle_cull_system())
+        .add_system(particles::update_system())
         .add_system(ranged_target::ranged_target_system())
         .add_system(fov::fov_system())
-        .add_system(particles::particle_spawn_system())
+        .add_system(particles::spawn_system())
         .flush()
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
@@ -135,7 +145,7 @@ pub fn build_menu_scheduler() -> Schedule {
 
 pub fn build_cheat_menu_scheduler() -> Schedule {
     Schedule::builder()
-        .add_system(particles::particle_cull_system())
+        .add_system(particles::update_system())
         .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())
         .add_system(entity_render::entity_render_system())
@@ -146,8 +156,8 @@ pub fn build_cheat_menu_scheduler() -> Schedule {
 
 pub fn build_popup_scheduler() -> Schedule {
     Schedule::builder()
-        .add_system(particles::particle_cull_system())
-        .add_system(particles::particle_spawn_system())
+        .add_system(particles::update_system())
+        .add_system(particles::spawn_system())
         .flush()
         .add_system(lighting::lighting_system())
         .add_system(map_render::map_render_system())

@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::{prelude::*, KeyState};
 
 #[system]
@@ -7,7 +9,7 @@ use crate::{prelude::*, KeyState};
 #[write_component(Pools)]
 #[read_component(Item)]
 #[read_component(Carried)]
-#[read_component(MeleeWeapon)]
+#[read_component(Weapon)]
 #[read_component(Ranged)]
 #[write_component(FieldOfView)]
 #[read_component(HungerClock)]
@@ -22,6 +24,8 @@ use crate::{prelude::*, KeyState};
 #[read_component(TileSize)]
 #[read_component(StatusEffect)]
 #[read_component(Confusion)]
+#[read_component(Target)]
+#[read_component(Equipped)]
 pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
@@ -49,7 +53,7 @@ pub fn player_input(
             }
         }
 
-        let (player_entity, player_pos, _) = <(Entity, &Point, &FieldOfView)>::query()
+        let (player_entity, player_pos, player_fov) = <(Entity, &Point, &FieldOfView)>::query()
             .filter(component::<Player>())
             .iter(ecs)
             .find_map(|(entity, pos, fov)| Some((*entity, *pos, fov.clone())))
@@ -99,6 +103,24 @@ pub fn player_input(
                 *turn_state = TurnState::Ticking;
             }
             KeyInputResponse::SaveGame => *turn_state = TurnState::SaveGame,
+            KeyInputResponse::CycleTargets => {
+                cycle_targets(ecs, player_entity, &player_pos, &player_fov, map, commands);
+                *turn_state = TurnState::AwaitingInput;
+            }
+            KeyInputResponse::FireRangedWeapon => {
+                // There must be a target somewhere
+                if let Some(target) = <Entity>::query()
+                    .filter(component::<Target>())
+                    .iter(ecs)
+                    .nth(0)
+                    .map(|e| *e)
+                {
+                    commands.add_component(player_entity, WantsToShoot { target });
+                    *turn_state = TurnState::Ticking;
+                } else {
+                    *turn_state = TurnState::AwaitingInput;
+                }
+            }
         }
 
         if delta != Point::zero() {
@@ -129,6 +151,125 @@ pub fn player_input(
             }
         }
         key_state.key = None;
+    }
+}
+
+fn cycle_targets(
+    ecs: &mut SubWorld,
+    player: Entity,
+    player_pos: &Point,
+    player_fov: &FieldOfView,
+    map: &Map,
+    commands: &mut CommandBuffer,
+) {
+    let possible_targets = get_player_target_list(ecs, player, player_pos, player_fov, map);
+    let current_target = <Entity>::query()
+        .filter(component::<Target>())
+        .iter(ecs)
+        .nth(0)
+        .map(|e| *e);
+
+    <Entity>::query()
+        .filter(component::<Target>())
+        .for_each(ecs, |e| commands.remove_component::<Target>(*e));
+
+    if let Some(current_target) = current_target {
+        if possible_targets.len() > 1 {
+            let mut index = 0usize;
+            for (i, target) in possible_targets.iter().enumerate() {
+                if target.1 == current_target {
+                    index = i;
+                }
+            }
+
+            if index > possible_targets.len() - 2 {
+                commands.add_component(possible_targets[0].1, Target);
+            } else {
+                commands.add_component(possible_targets[index + 1].1, Target);
+            }
+        }
+    }
+}
+
+fn get_player_target_list(
+    ecs: &mut SubWorld,
+    player: Entity,
+    player_pos: &Point,
+    player_fov: &FieldOfView,
+    map: &Map,
+) -> Vec<(f32, Entity)> {
+    let maybe_range = <(&Equipped, &Weapon)>::query()
+        .iter(ecs)
+        .filter(|(e, w)| e.owner == player && w.range.is_some())
+        .nth(0)
+        .map(|(_, w)| w.range.unwrap());
+    if maybe_range.is_none() {
+        return Vec::new();
+    }
+    let range = maybe_range.unwrap();
+
+    let mut possible_targets: Vec<(f32, Entity, usize)> = Vec::new();
+
+    <(Entity, &Point)>::query()
+        .filter(component::<Faction>() & !component::<Player>())
+        .for_each(ecs, |(entity, pos)| {
+            if player_fov.visible_tiles.contains(pos) {
+                let map_idx = map.point2d_to_index(*pos);
+                let distance = DistanceAlg::Pythagoras.distance2d(*player_pos, *pos);
+                if distance < range as f32 {
+                    possible_targets.push((distance, *entity, map_idx));
+                }
+            }
+        });
+
+    possible_targets.sort_by(|a, b| {
+        let mut c = a.0.partial_cmp(&b.0).unwrap();
+        if c == Ordering::Equal {
+            c = a.2.partial_cmp(&b.2).unwrap();
+        }
+        c
+    });
+    possible_targets.iter().map(|(a, b, _)| (*a, *b)).collect()
+}
+
+#[system(for_each)]
+#[read_component(Player)]
+#[read_component(Point)]
+#[read_component(FieldOfView)]
+#[read_component(Target)]
+#[read_component(Equipped)]
+#[read_component(Weapon)]
+#[read_component(Faction)]
+#[read_component(Name)]
+#[read_component(EntityMoved)]
+#[read_component(WantsToMove)]
+#[read_component(EquipmentChanged)]
+#[filter(component::<Player>())]
+pub fn update_targeting(
+    entity: &Entity,
+    pos: &Point,
+    fov: &FieldOfView,
+    #[resource] map: &Map,
+    ecs: &mut SubWorld,
+    commands: &mut CommandBuffer,
+) {
+    let possible_targets = get_player_target_list(ecs, *entity, pos, fov, map);
+    if possible_targets.is_empty() {
+        // No targets, or not wielding something that can target stuff
+        <Entity>::query()
+            .filter(component::<Target>())
+            .for_each(ecs, |e| commands.remove_component::<Target>(*e));
+        return;
+    }
+
+    // Clear current targets from all the things
+    <Entity>::query()
+        .filter(component::<Target>())
+        .for_each(ecs, |e| commands.remove_component::<Target>(*e));
+
+    // println!("Targets: {}", possible_targets.len());
+    if !possible_targets.is_empty() {
+        commands.add_component(possible_targets[0].1, Target);
     }
 }
 
@@ -446,6 +587,8 @@ enum KeyInputResponse {
     UpStairs,
     Collect,
     SaveGame,
+    CycleTargets,
+    FireRangedWeapon,
 }
 
 fn process_key_input(key: VirtualKeyCode, key_state: &mut KeyState) -> KeyInputResponse {
@@ -485,6 +628,7 @@ fn process_key_input(key: VirtualKeyCode, key_state: &mut KeyState) -> KeyInputR
         VirtualKeyCode::C => KeyInputResponse::Move {
             delta: Point::new(1, 1),
         },
+        VirtualKeyCode::V => KeyInputResponse::CycleTargets,
         VirtualKeyCode::Backslash => KeyInputResponse::ShowCheatMenu,
         VirtualKeyCode::Period => {
             if key_state.shift {
@@ -503,6 +647,7 @@ fn process_key_input(key: VirtualKeyCode, key_state: &mut KeyState) -> KeyInputR
         VirtualKeyCode::I => KeyInputResponse::ShowInventory,
         VirtualKeyCode::D => KeyInputResponse::ShowDropMenu,
         VirtualKeyCode::Escape => KeyInputResponse::SaveGame,
+        VirtualKeyCode::Space => KeyInputResponse::FireRangedWeapon,
         _ => KeyInputResponse::DoNothing,
     }
 }

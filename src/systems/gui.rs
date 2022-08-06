@@ -18,6 +18,7 @@ use crate::prelude::*;
 #[read_component(Duration)]
 #[read_component(Name)]
 #[read_component(KnownSpells)]
+#[read_component(Weapon)]
 pub fn gui(
     ecs: &SubWorld,
     #[resource] gamelog: &Gamelog,
@@ -135,16 +136,30 @@ pub fn gui(
 
     // Equipped items
     let mut y = 13;
-    <(&Equipped, Entity)>::query()
+    <(&Equipped, Entity, Option<&Weapon>)>::query()
         .iter(ecs)
-        .filter(|(e, _)| e.owner == *player_entity)
-        .for_each(|(_, item)| {
+        .filter(|(e, _, _)| e.owner == *player_entity)
+        .for_each(|(_, item, wpn)| {
+            let name = get_item_display_name(ecs, *item, dm);
             draw_batch.print_color(
                 Point::new(50, y),
-                truncate(get_item_display_name(ecs, *item, dm), 25),
+                truncate(name.clone(), 25),
                 get_item_color(ecs, *item, dm),
             );
             y += 1;
+
+            if let Some(weapon) = wpn {
+                let mut weapon_info = format!("┤ {} ({})", &name, weapon.damage_die);
+                if let Some(range) = weapon.range {
+                    weapon_info += &format!(" (range: {}, F: fire, V: cycle targets)", range);
+                }
+                weapon_info += " ├";
+                draw_batch.print_color(
+                    Point::new(3, 45),
+                    &weapon_info,
+                    ColorPair::new(YELLOW, BLACK),
+                );
+            }
         });
 
     // Consumables

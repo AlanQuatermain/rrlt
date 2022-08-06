@@ -19,3 +19,23 @@ pub fn particle_to_tile(
         }
     }
 }
+
+pub fn projectile(
+    _ecs: &mut SubWorld,
+    tile_idx: usize,
+    effect: &EffectSpawner,
+    map: &Map,
+    particle_builder: &mut ParticleBuilder,
+) {
+    if let EffectType::ParticleProjectile {
+        glyph,
+        color,
+        lifespan: _,
+        speed,
+        path,
+    } = &effect.effect_type
+    {
+        let pos = map.index_to_point2d(tile_idx);
+        particle_builder.request_animated(pos, *color, *glyph, *speed, path.to_vec());
+    }
+}
