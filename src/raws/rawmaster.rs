@@ -217,15 +217,18 @@ impl RawMaster {
             self.item_index
                 .insert(real_name.clone(), self.raws.items.len() - 1);
 
+            let min_depth = 2 + i32::max(nmw.bonus - 1, 0) * 2;
+            let max_depth = if nmw.bonus < 0 { 100 } else { min_depth + 3 };
             self.raws
                 .spawn_table
                 .push(super::spawn_table_structs::SpawnTableEntry {
                     name: real_name.clone(),
-                    weight: 10 - i32::abs(nmw.bonus),
-                    min_depth: i32::abs((nmw.bonus - 1) * 3),
-                    max_depth: 100,
+                    weight: 7 - i32::abs(nmw.bonus),
+                    min_depth,
+                    max_depth,
                     add_map_depth_to_weight: None,
                 });
+            // println!("Magic weapon: {:?}", self.raws.spawn_table.last().unwrap());
         }
     }
 
@@ -252,15 +255,21 @@ impl RawMaster {
                         self.item_index
                             .insert(real_name.clone(), self.raws.items.len() - 1);
 
+                        let min_depth = 3 + i32::max(nmw.bonus - 1, 0) * 2;
+                        let max_depth = if nmw.bonus < 0 { 100 } else { min_depth + 3 };
                         self.raws
                             .spawn_table
                             .push(super::spawn_table_structs::SpawnTableEntry {
                                 name: real_name.clone(),
-                                weight: 10 - i32::abs(nmw.bonus),
-                                min_depth: 1 + i32::abs((nmw.bonus - 1) * 3),
-                                max_depth: 100,
+                                weight: 6 - i32::abs(nmw.bonus),
+                                min_depth,
+                                max_depth,
                                 add_map_depth_to_weight: None,
                             });
+                        // println!(
+                        //     "Traited weapon: {:?}",
+                        //     self.raws.spawn_table.last().unwrap()
+                        // );
                     }
                 }
             })
