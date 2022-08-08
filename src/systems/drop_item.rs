@@ -1,4 +1,3 @@
-use super::name_for;
 use crate::prelude::*;
 
 #[system(for_each)]
@@ -11,7 +10,7 @@ pub fn drop_item(
     entity: &Entity,
     want_drop: &WantsToDrop,
     ecs: &SubWorld,
-    #[resource] gamelog: &mut Gamelog,
+    #[resource] dm: &MasterDungeonMap,
     commands: &mut CommandBuffer,
 ) {
     if let Ok(who) = ecs.entry_ref(want_drop.who) {
@@ -21,11 +20,12 @@ pub fn drop_item(
             commands.add_component(want_drop.who, EquipmentChanged);
         }
 
-        let item_name = name_for(&want_drop.what, ecs).0;
+        let item_name = get_item_display_name(ecs, want_drop.what, dm);
         if who.get_component::<Player>().is_ok() {
-            gamelog
-                .entries
-                .push(format!("You dropped the {}", item_name));
+            crate::gamelog::Logger::new()
+                .append("You dropped the")
+                .item_name(&item_name)
+                .log();
         }
     }
     commands.remove(*entity);

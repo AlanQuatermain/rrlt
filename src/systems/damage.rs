@@ -16,7 +16,6 @@ pub fn damage(
     commands: &mut CommandBuffer,
     #[resource] map: &mut Map,
     #[resource] particle_builder: &mut ParticleBuilder,
-    #[resource] gamelog: &mut Gamelog,
 ) {
     let user_name = name_for(&command.user_entity, ecs);
     let target_name = name_for(&command.target, ecs);
@@ -44,14 +43,13 @@ pub fn damage(
                     crate::spatial::remove_entity(command.target, target_idx);
                 }
 
-                let log_line = if let Some(item_name) = item_name {
+                if let Some(item_name) = item_name {
                     log_for_item_damage(&user_name, &target_name, &item_name, amount)
                 } else if command.user_entity == command.target {
                     log_for_self_damage(&user_name, amount)
                 } else {
                     log_for_damage(&user_name, &target_name, amount)
-                };
-                gamelog.entries.push(log_line);
+                }
             }
 
             if user_name.1 && !target_name.1 && stats.hit_points.current <= 0 {
@@ -62,9 +60,7 @@ pub fn damage(
             // destroy the item outright
             crate::spatial::remove_entity(command.target, target_idx);
             commands.remove(command.target);
-            gamelog
-                .entries
-                .push(log_for_destroyed_item(&user_name, &target_name.0));
+            log_for_destroyed_item(&user_name, &target_name.0);
         }
     };
 
@@ -78,7 +74,6 @@ pub fn damage(
     if xp_gain != 0 || gold_gain != 0.0 {
         award_xp_and_gold(
             ecs,
-            gamelog,
             particle_builder,
             &command.user_entity,
             xp_gain,
@@ -91,7 +86,6 @@ pub fn damage(
 
 fn award_xp_and_gold(
     ecs: &mut SubWorld,
-    gamelog: &mut Gamelog,
     particle_builder: &mut ParticleBuilder,
     entity: &Entity,
     xp_gain: i32,
@@ -108,10 +102,10 @@ fn award_xp_and_gold(
             if stats.xp >= goal {
                 // Gained a level!
                 stats.level += 1;
-                gamelog.entries.push(format!(
-                    "Congratulations, you are now level {}",
-                    stats.level
-                ));
+                crate::gamelog::Logger::new()
+                    .append("Congratulations, you are now level")
+                    .append(format!("{}", stats.level))
+                    .log();
 
                 stats.hit_points.max =
                     player_hp_at_level(attrs.fitness.base + attrs.fitness.modifiers, stats.level);
@@ -136,24 +130,48 @@ fn award_xp_and_gold(
         });
 }
 
-fn log_for_damage(user_name: &(String, bool), target_name: &(String, bool), amount: i32) -> String {
+fn log_for_damage(user_name: &(String, bool), target_name: &(String, bool), amount: i32) {
     if user_name.1 {
-        format!("You hit {}, causing {} damage.", target_name.0, amount)
+        crate::gamelog::Logger::new()
+            .append("You hit")
+            .npc_name(&target_name.0)
+            .append("causing")
+            .damage(amount)
+            .append("hp damage.")
+            .log();
     } else if target_name.1 {
-        format!("{} hits you, causing {} damage.", user_name.0, amount)
+        crate::gamelog::Logger::new()
+            .npc_name(&user_name.0)
+            .append("hits you, causing")
+            .damage(amount)
+            .append("hp damage.")
+            .log();
     } else {
-        format!(
-            "{} hits {}, causing {} damage.",
-            user_name.0, target_name.0, amount
-        )
+        crate::gamelog::Logger::new()
+            .npc_name(&user_name.0)
+            .append("hits")
+            .npc_name(&target_name.0)
+            .append("causing")
+            .damage(amount)
+            .append("hp damage.")
+            .log();
     }
 }
 
-fn log_for_self_damage(user_name: &(String, bool), amount: i32) -> String {
+fn log_for_self_damage(user_name: &(String, bool), amount: i32) {
     if user_name.1 {
-        format!("You take {} damage!", amount)
+        crate::gamelog::Logger::new()
+            .append("You take")
+            .damage(amount)
+            .append("hp damage.")
+            .log();
     } else {
-        format!("{} takes {} damage.", user_name.0, amount)
+        crate::gamelog::Logger::new()
+            .npc_name(&user_name.0)
+            .append("takes")
+            .damage(amount)
+            .append("hp damage.")
+            .log();
     }
 }
 
@@ -162,36 +180,60 @@ fn log_for_item_damage(
     target_name: &(String, bool),
     item_name: &String,
     amount: i32,
-) -> String {
+) {
     if user_name.1 {
         if target_name.1 {
-            format!(
-                "You inflicted {} damage on yourself with {}!",
-                amount, item_name
-            )
+            crate::gamelog::Logger::new()
+                .append("You inflicted")
+                .damage(amount)
+                .append("hp damage on yourself with")
+                .item_name(item_name)
+                .log();
         } else {
-            format!(
-                "You used {} on {}, inflicting {} damage.",
-                item_name, target_name.0, amount
-            )
+            crate::gamelog::Logger::new()
+                .append("You used")
+                .item_name(item_name)
+                .append("on")
+                .npc_name(&target_name.0)
+                .append("inflicting")
+                .damage(amount)
+                .append("hp damage.")
+                .log();
         }
     } else if target_name.1 {
-        format!(
-            "{} used {}, inflicting {} damage on you!",
-            user_name.0, item_name, amount
-        )
+        crate::gamelog::Logger::new()
+            .npc_name(&user_name.0)
+            .append("used")
+            .item_name(item_name)
+            .append("inflicting")
+            .damage(amount)
+            .append("hp damage on you!")
+            .log();
     } else {
-        format!(
-            "{} used {} on {}, inflicting {} damage.",
-            user_name.0, item_name, target_name.0, amount
-        )
+        crate::gamelog::Logger::new()
+            .npc_name(&user_name.0)
+            .append("used")
+            .item_name(item_name)
+            .append("on")
+            .npc_name(&target_name.0)
+            .append("inflicting")
+            .damage(amount)
+            .append("damage.")
+            .log();
     }
 }
 
-fn log_for_destroyed_item(user_name: &(String, bool), item_name: &String) -> String {
+fn log_for_destroyed_item(user_name: &(String, bool), item_name: &String) {
     if user_name.1 {
-        format!("You destroyed {}!", item_name)
+        crate::gamelog::Logger::new()
+            .append("You destroyed")
+            .item_name(item_name)
+            .log();
     } else {
-        format!("{} destroyed {}!", user_name.0, item_name)
+        crate::gamelog::Logger::new()
+            .npc_name(&user_name.0)
+            .append("destroyed")
+            .item_name(item_name)
+            .log();
     }
 }

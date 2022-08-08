@@ -5,7 +5,6 @@ pub fn item_trigger(
     item: Entity,
     targets: &Targets,
     ecs: &mut SubWorld,
-    gamelog: &mut Gamelog,
     particle_builder: &mut ParticleBuilder,
     turn_state: &mut TurnState,
     map: &Map,
@@ -15,9 +14,10 @@ pub fn item_trigger(
     if let Ok(c) = entry.get_component_mut::<Consumable>() {
         if c.charges < 1 {
             let name = entry.get_component::<Name>().unwrap();
-            gamelog
-                .entries
-                .push(format!("{} is out of charges!", &name.0));
+            crate::gamelog::Logger::new()
+                .append(&name.0)
+                .append("is out of charges!")
+                .log();
             return;
         } else {
             c.charges -= 1;
@@ -31,7 +31,6 @@ pub fn item_trigger(
         item,
         targets,
         ecs,
-        gamelog,
         particle_builder,
         turn_state,
         map,
@@ -55,7 +54,6 @@ pub fn spell_trigger(
     spell: Entity,
     targets: &Targets,
     ecs: &mut SubWorld,
-    gamelog: &mut Gamelog,
     particle_builder: &mut ParticleBuilder,
     turn_state: &mut TurnState,
     map: &Map,
@@ -118,7 +116,6 @@ pub fn spell_trigger(
             spell,
             &targeting,
             ecs,
-            gamelog,
             particle_builder,
             turn_state,
             map,
@@ -142,7 +139,6 @@ fn event_trigger(
     item: Entity,
     targets: &Targets,
     ecs: &mut SubWorld,
-    gamelog: &mut Gamelog,
     _particle_builder: &mut ParticleBuilder,
     turn_state: &mut TurnState,
     map: &Map,
@@ -156,7 +152,10 @@ fn event_trigger(
         add_effect(creator, EffectType::WellFed, targets.clone());
         did_something = true;
         if let Ok(name) = entry.get_component::<Name>() {
-            gamelog.entries.push(format!("You eat the {}.", &name.0));
+            crate::gamelog::Logger::new()
+                .append("You eat the")
+                .append(&name.0)
+                .log();
         }
     }
 
@@ -164,21 +163,21 @@ fn event_trigger(
     if entry.get_component::<ProvidesDungeonMap>().is_ok() {
         *turn_state = TurnState::RevealMap { row: 0 };
         did_something = true;
-        gamelog
-            .entries
-            .push("The map is revealed to you!".to_string());
+        crate::gamelog::Logger::new()
+            .append("The map is revealed to you!")
+            .log();
     }
 
     // Town Portal
     if entry.get_component::<TownPortal>().is_ok() {
         if map.depth == 0 {
-            gamelog
-                .entries
-                .push("You are already in town, so the scroll does nothing.".to_string());
+            crate::gamelog::Logger::new()
+                .append("You are already in town, so the scroll does nothing.")
+                .log();
         } else {
-            gamelog
-                .entries
-                .push("You are teleported back to town!".to_string());
+            crate::gamelog::Logger::new()
+                .append("You are teleported back to town!")
+                .log();
             *turn_state = TurnState::TownPortal;
             did_something = true;
         }
@@ -355,7 +354,6 @@ pub fn trigger(
     trigger: Entity,
     targets: &Targets,
     ecs: &mut SubWorld,
-    gamelog: &mut Gamelog,
     particle_builder: &mut ParticleBuilder,
     turn_state: &mut TurnState,
     map: &Map,
@@ -369,7 +367,6 @@ pub fn trigger(
         trigger,
         targets,
         ecs,
-        gamelog,
         particle_builder,
         turn_state,
         map,

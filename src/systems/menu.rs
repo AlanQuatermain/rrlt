@@ -124,48 +124,28 @@ pub fn cheat_menu(
     #[resource] turn_state: &mut TurnState,
     #[resource] key_state: &mut KeyState,
     #[resource] map: &mut Map,
-    #[resource] gamelog: &mut Gamelog,
 ) {
     let mut batch = DrawBatch::new();
     batch.target(2);
 
-    let yellow = ColorPair::new(YELLOW, BLACK);
-    let white = ColorPair::new(WHITE, BLACK);
+    let menu_items = vec![
+        ('T', "Teleport to next level"),
+        ('H', "Heal to max"),
+        ('R', "Reveal the map"),
+        ('G', "God mode (no death)"),
+        ('L', "Level up"),
+    ];
 
-    let count = 5;
-    let mut y = (25 - (count / 2)) as i32;
-    batch.draw_box(Rect::with_size(15, y - 2, 31, count + 3), white);
-    batch.print_color(Point::new(18, y - 2), "Cheating!", yellow);
-    batch.print_color(Point::new(18, y + count + 1), "ESCAPE to cancel", yellow);
-
-    batch.set(Point::new(17, y), white, to_cp437('('));
-    batch.set(Point::new(18, y), yellow, to_cp437('T'));
-    batch.set(Point::new(19, y), white, to_cp437(')'));
-    batch.print(Point::new(21, y), "Teleport to next level");
-
-    y += 1;
-    batch.set(Point::new(17, y), white, to_cp437('('));
-    batch.set(Point::new(18, y), yellow, to_cp437('H'));
-    batch.set(Point::new(19, y), white, to_cp437(')'));
-    batch.print(Point::new(21, y), "Heal to max");
-
-    y += 1;
-    batch.set(Point::new(17, y), white, to_cp437('('));
-    batch.set(Point::new(18, y), yellow, to_cp437('R'));
-    batch.set(Point::new(19, y), white, to_cp437(')'));
-    batch.print(Point::new(21, y), "Reveal the map");
-
-    y += 1;
-    batch.set(Point::new(17, y), white, to_cp437('('));
-    batch.set(Point::new(18, y), yellow, to_cp437('G'));
-    batch.set(Point::new(19, y), white, to_cp437(')'));
-    batch.print(Point::new(21, y), "God Mode (no death)");
-
-    y += 1;
-    batch.set(Point::new(17, y), white, to_cp437('('));
-    batch.set(Point::new(18, y), yellow, to_cp437('L'));
-    batch.set(Point::new(19, y), white, to_cp437(')'));
-    batch.print(Point::new(21, y), "Gain level");
+    let y = (25 - (menu_items.len() / 2)) as i32;
+    render_menu(
+        &mut batch,
+        15,
+        y,
+        31,
+        "Cheating!",
+        Some("ESCAPE to cancel"),
+        &menu_items,
+    );
 
     if let Some(key) = key_state.key {
         match key {
@@ -189,7 +169,7 @@ pub fn cheat_menu(
                 *turn_state = TurnState::AwaitingInput;
             }
             VirtualKeyCode::L => {
-                level_up(ecs, map, gamelog);
+                level_up(ecs, map);
                 *turn_state = TurnState::AwaitingInput;
             }
             VirtualKeyCode::Escape => *turn_state = TurnState::AwaitingInput,
@@ -198,36 +178,49 @@ pub fn cheat_menu(
     }
 }
 
-fn level_up(ecs: &mut SubWorld, map: &Map, gamelog: &mut Gamelog) {
+fn level_up(ecs: &mut SubWorld, map: &Map) {
     <(&Point, &mut Pools, &mut Attributes, &mut Skills)>::query()
         .filter(component::<Player>())
         .for_each_mut(ecs, |(pos, stats, attrs, skills)| {
             // We've gone up a level!
             stats.xp = stats.level * 1000;
             stats.level += 1;
-            gamelog.entries.push(format!(
-                "Congratulations, you are now level {}",
-                stats.level
-            ));
+            crate::gamelog::Logger::new()
+                .color(MAGENTA)
+                .append("Congratulations, you are now level")
+                .append(format!("{}", stats.level))
+                .log();
 
             // Improve a random attribute
             let mut rng = RandomNumberGenerator::new();
             match rng.roll_dice(1, 4) {
                 1 => {
                     attrs.might.base += 1;
-                    gamelog.entries.push("You feel stronger!".to_string());
+                    crate::gamelog::Logger::new()
+                        .color(GREEN)
+                        .append("You feel stronger!")
+                        .log();
                 }
                 2 => {
                     attrs.fitness.base += 1;
-                    gamelog.entries.push("You feel healthier!".to_string());
+                    crate::gamelog::Logger::new()
+                        .color(GREEN)
+                        .append("You feel healthier!")
+                        .log();
                 }
                 3 => {
                     attrs.quickness.base += 1;
-                    gamelog.entries.push("You feel quicker!".to_string());
+                    crate::gamelog::Logger::new()
+                        .color(GREEN)
+                        .append("You feel quicker!")
+                        .log();
                 }
                 _ => {
                     attrs.intelligence.base += 1;
-                    gamelog.entries.push("You feel smarter!".to_string());
+                    crate::gamelog::Logger::new()
+                        .color(GREEN)
+                        .append("You feel smarter!")
+                        .log();
                 }
             }
 

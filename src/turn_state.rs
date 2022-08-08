@@ -2,8 +2,8 @@ use crate::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum VendorMode {
-    Buy,
-    Sell,
+    Buy { page: i32 },
+    Sell { page: i32 },
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

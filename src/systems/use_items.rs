@@ -129,7 +129,6 @@ pub fn equip(
     equipped: Option<&Equipped>,
     magic: Option<&MagicItem>,
     cursed: Option<&CursedItem>,
-    #[resource] log: &mut Gamelog,
     #[resource] dm: &MasterDungeonMap,
     ecs: &SubWorld,
     commands: &mut CommandBuffer,
@@ -147,11 +146,20 @@ pub fn equip(
         // already equipped, so unequip -- if we can
         if cursed.is_none() {
             commands.remove_component::<Equipped>(*entity);
-            log.entries
-                .push(format!("{} unequipped {}.", user_name, &name.0));
+            crate::gamelog::Logger::new()
+                .append(&user_name)
+                .append("unequipped")
+                .color(CYAN)
+                .append(&name.0)
+                .log();
         } else {
-            log.entries
-                .push(format!("You cannot unequip {}, it is cursed", &name.0));
+            crate::gamelog::Logger::new()
+                .append("You cannot unequip")
+                .color(CYAN)
+                .append(&name.0)
+                .color(WHITE)
+                .append(" - it is cursed!")
+                .log();
         }
         return;
     }
@@ -168,11 +176,20 @@ pub fn equip(
         .for_each(|(e, _, n, c)| {
             if c.is_none() {
                 commands.remove_component::<Equipped>(*e);
-                log.entries
-                    .push(format!("{} unequipped {}.", user_name, &n.0));
+                crate::gamelog::Logger::new()
+                    .append(&user_name)
+                    .append("unequipped")
+                    .color(CYAN)
+                    .append(&n.0)
+                    .log();
             } else {
-                log.entries
-                    .push(format!("You cannot unequip {}, it is cursed", &n.0));
+                crate::gamelog::Logger::new()
+                    .append("You cannot unequip")
+                    .color(CYAN)
+                    .append(&name.0)
+                    .color(WHITE)
+                    .append(" - it is cursed!")
+                    .log();
                 equip_blocked = true;
             }
         });
@@ -189,8 +206,12 @@ pub fn equip(
             slot: target_slot,
         },
     );
-    log.entries
-        .push(format!("{} equipped {}.", user_name, &name.0));
+    crate::gamelog::Logger::new()
+        .append(&user_name)
+        .append("equipped")
+        .color(CYAN)
+        .append(&name.0)
+        .log();
     commands.add_component(use_item.user, EquipmentChanged);
 
     // auto-identify if it's magic

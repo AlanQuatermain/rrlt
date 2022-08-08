@@ -100,8 +100,6 @@ pub fn build_ticking_scheduler() -> Schedule {
         .add_system(use_items::spellcasting_system())
         .add_system(hunger::hunger_system())
         .flush()
-        .add_system(damage::damage_system())
-        .flush()
         .add_system(drop_item::drop_item_system())
         .add_system(movement::teleport_system()) // may add WantsToMove
         .flush()

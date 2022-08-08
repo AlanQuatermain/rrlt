@@ -13,6 +13,7 @@ use crate::prelude::*;
 #[read_component(SpellTemplate)]
 #[read_component(Weapon)]
 #[read_component(Equipped)]
+#[read_component(Carried)]
 #[filter(component::<MyTurn>()&!component::<Player>())]
 pub fn visible(
     ecs: &mut SubWorld,

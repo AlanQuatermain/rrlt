@@ -15,7 +15,6 @@ use crate::prelude::*;
 #[read_component(SpellTemplate)]
 pub fn bury_dead(
     ecs: &mut SubWorld,
-    #[resource] gamelog: &mut Gamelog,
     #[resource] turn_state: &mut TurnState,
     #[resource] rng: &mut RandomNumberGenerator,
     #[resource] dm: &MasterDungeonMap,
@@ -38,7 +37,11 @@ pub fn bury_dead(
         .iter(ecs)
         .filter(|(pools, _, _, _)| pools.hit_points.current <= 0)
         .for_each(|(_, name, pos, entity)| {
-            gamelog.entries.push(format!("{} is dead!", name.0));
+            crate::gamelog::Logger::new()
+                .npc_name(&name.0)
+                .color(RED)
+                .append("is dead!")
+                .log();
             dead_list.insert(*entity, *pos);
         });
 

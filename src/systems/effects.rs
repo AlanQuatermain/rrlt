@@ -43,18 +43,9 @@ pub fn effects(
     ecs: &mut SubWorld,
     #[resource] map: &mut Map,
     #[resource] particle_builder: &mut ParticleBuilder,
-    #[resource] gamelog: &mut Gamelog,
     #[resource] turn_state: &mut TurnState,
     #[resource] dm: &mut MasterDungeonMap,
     commands: &mut CommandBuffer,
 ) {
-    run_effects_queue(
-        ecs,
-        map,
-        particle_builder,
-        gamelog,
-        turn_state,
-        dm,
-        commands,
-    );
+    run_effects_queue(ecs, map, particle_builder, turn_state, dm, commands);
 }

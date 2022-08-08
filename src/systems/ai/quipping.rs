@@ -9,7 +9,6 @@ pub fn quipping(
     fov: &FieldOfView,
     name: &Name,
     quips: &mut Quips,
-    #[resource] gamelog: &mut Gamelog,
     #[resource] rng: &mut RandomNumberGenerator,
 ) {
     let player_pos = <&Point>::query()
@@ -19,9 +18,14 @@ pub fn quipping(
         .unwrap();
     if !quips.0.is_empty() && fov.visible_tiles.contains(player_pos) && rng.roll_dice(1, 10) == 1 {
         let quip_idx = rng.random_slice_index(quips.0.as_slice()).unwrap();
-        gamelog
-            .entries
-            .push(format!("{} says \"{}\"", name.0, quips.0[quip_idx]));
+        crate::gamelog::Logger::new()
+            .color(YELLOW)
+            .append(&name.0)
+            .color(WHITE)
+            .append("says")
+            .color(CYAN)
+            .append(&quips.0[quip_idx])
+            .log();
         quips.0.remove(quip_idx);
     }
 }

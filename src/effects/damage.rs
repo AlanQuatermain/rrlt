@@ -1,14 +1,16 @@
 use crate::prelude::*;
 
-pub fn inflict_damage(
-    ecs: &mut SubWorld,
-    damage: &EffectSpawner,
-    _map: &Map,
-    gamelog: &mut Gamelog,
-    target: Entity,
-) {
+pub fn inflict_damage(ecs: &mut SubWorld, damage: &EffectSpawner, _map: &Map, target: Entity) {
     let attacker_name = damage.creator.map(|c| name_for(&c, ecs).0);
     let target_name = name_for(&target, ecs).0;
+    let player_entity = <Entity>::query()
+        .filter(component::<Player>())
+        .iter(ecs)
+        .nth(0)
+        .map(|e| *e)
+        .unwrap();
+    let attacker_is_player = damage.creator.map(|c| c == player_entity).unwrap_or(false);
+    let target_is_player = target == player_entity;
 
     if let Ok(mut entry) = ecs.entry_mut(target) {
         if let Ok(mut stats) = entry.get_component_mut::<Pools>() {
@@ -21,14 +23,21 @@ pub fn inflict_damage(
                 }
                 if let EffectType::Damage { amount } = damage.effect_type {
                     if let Some(attacker_name) = attacker_name {
-                        gamelog.entries.push(format!(
-                            "{} hits {} for {} hp",
-                            attacker_name, target_name, amount
-                        ));
+                        crate::gamelog::Logger::new()
+                            .npc_name(&attacker_name)
+                            .append("hits")
+                            .npc_name(&target_name)
+                            .append("for")
+                            .damage(amount)
+                            .append("hp.")
+                            .log();
                     } else {
-                        gamelog
-                            .entries
-                            .push(format!("{} is hit for {} hp", target_name, amount));
+                        crate::gamelog::Logger::new()
+                            .npc_name(&target_name)
+                            .append("is hit for")
+                            .damage(amount)
+                            .append("hp.")
+                            .log();
                     }
 
                     stats.hit_points.current -= amount;
@@ -48,7 +57,14 @@ pub fn inflict_damage(
                             lifespan: 200.0,
                         },
                         Targets::Single { target },
-                    )
+                    );
+
+                    if target_is_player {
+                        crate::gamelog::record_event("Damage Taken", amount);
+                    }
+                    if attacker_is_player {
+                        crate::gamelog::record_event("Damage Inflicted", amount);
+                    }
                 }
             }
         }
@@ -179,13 +195,7 @@ pub fn damage_over_time(
     }
 }
 
-pub fn death(
-    ecs: &mut SubWorld,
-    effect: &EffectSpawner,
-    target: Entity,
-    map: &Map,
-    gamelog: &mut Gamelog,
-) {
+pub fn death(ecs: &mut SubWorld, effect: &EffectSpawner, target: Entity, map: &Map) {
     let mut xp_gain = 0;
     let mut gold_gain = 0.0f32;
 
@@ -219,29 +229,42 @@ pub fn death(
                             // We've gone up a level!
                             stats.xp -= stats.level * 1000;
                             stats.level += 1;
-                            gamelog.entries.push(format!(
-                                "Congratulations, you are now level {}",
-                                stats.level
-                            ));
+                            crate::gamelog::Logger::new()
+                                .color(MAGENTA)
+                                .append("Congratulations, you are now level")
+                                .append(format!("{}", stats.level))
+                                .log();
 
                             // Improve a random attribute
                             let mut rng = RandomNumberGenerator::new();
                             match rng.roll_dice(1, 4) {
                                 1 => {
                                     attrs.might.base += 1;
-                                    gamelog.entries.push("You feel stronger!".to_string());
+                                    crate::gamelog::Logger::new()
+                                        .color(GREEN)
+                                        .append("You feel stronger!")
+                                        .log();
                                 }
                                 2 => {
                                     attrs.fitness.base += 1;
-                                    gamelog.entries.push("You feel healthier!".to_string());
+                                    crate::gamelog::Logger::new()
+                                        .color(GREEN)
+                                        .append("You feel healthier!")
+                                        .log();
                                 }
                                 3 => {
                                     attrs.quickness.base += 1;
-                                    gamelog.entries.push("You feel quicker!".to_string());
+                                    crate::gamelog::Logger::new()
+                                        .color(GREEN)
+                                        .append("You feel quicker!")
+                                        .log();
                                 }
                                 _ => {
                                     attrs.intelligence.base += 1;
-                                    gamelog.entries.push("You feel smarter!".to_string());
+                                    crate::gamelog::Logger::new()
+                                        .color(GREEN)
+                                        .append("You feel smarter!")
+                                        .log();
                                 }
                             }
 

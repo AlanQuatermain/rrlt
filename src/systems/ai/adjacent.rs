@@ -10,6 +10,9 @@ use crate::raws::Reaction;
 #[write_component(WantsToAttack)]
 #[read_component(Name)]
 #[read_component(TileSize)]
+#[read_component(Weapon)]
+#[read_component(Carried)]
+#[read_component(Equipped)]
 #[filter(component::<MyTurn>()&!component::<Player>())]
 pub fn adjacent(
     ecs: &SubWorld,

@@ -243,6 +243,8 @@ impl RawMaster {
                         }
 
                         weapon.proc_chance = Some(0.25);
+                        weapon.proc_target =
+                            Some(wt.target.clone().unwrap_or("Target".to_string()));
                         weapon.proc_effects = Some(wt.effects.clone());
 
                         let real_name = base_item_copy.name.clone();

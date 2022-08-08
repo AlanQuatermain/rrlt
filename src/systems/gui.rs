@@ -21,7 +21,7 @@ use crate::prelude::*;
 #[read_component(Weapon)]
 pub fn gui(
     ecs: &SubWorld,
-    #[resource] gamelog: &Gamelog,
+    // #[resource] gamelog: &Gamelog,
     #[resource] map: &Map,
     #[resource] dm: &MasterDungeonMap,
 ) {
@@ -233,14 +233,17 @@ pub fn gui(
             y -= 1;
         });
 
-    // Logs
-    let mut y = 46;
-    for s in gamelog.entries.iter().rev() {
-        if y < 59 {
-            draw_batch.print(Point::new(2, y), s);
-            y += 1;
-        }
-    }
+    draw_batch.submit(9998).expect("Batch error");
+
+    // let mut log_batch = DrawBatch::new();
+    // log_batch.target(3);
+
+    // Draw the log
+    let mut block = TextBlock::new(1, 46 / 2, 79, 58 / 2);
+    block
+        .print(&crate::gamelog::log_display())
+        .expect("Failed to get log contents");
+    block.render(&mut BACKEND_INTERNAL.lock().consoles[3].console);
 
     draw_batch.submit(9999).expect("Batch error");
 }
@@ -276,72 +279,4 @@ fn draw_attribute(name: &str, attribute: &Attribute, y: i32, batch: &mut DrawBat
     if attribute.bonus > 0 {
         batch.set(Point::new(72, y), color, to_cp437('+'));
     }
-}
-
-#[system]
-#[read_component(Player)]
-#[read_component(Item)]
-#[read_component(Carried)]
-#[read_component(Name)]
-#[read_component(Pools)]
-#[read_component(HungerClock)]
-fn old_gui(ecs: &SubWorld, #[resource] gamelog: &Gamelog, #[resource] _map: &Map) {
-    let mut draw_batch = DrawBatch::new();
-    draw_batch.target(2);
-
-    draw_batch.draw_box(Rect::with_size(0, 43, 79, 6), ColorPair::new(WHITE, BLACK));
-
-    let player = <&Player>::query().iter(ecs).nth(0).unwrap();
-    let depth = format!("Depth: {}", player.map_level + 1);
-    draw_batch.print_color(Point::new(2, 43), depth, ColorPair::new(YELLOW, BLACK));
-
-    let mut health_query = <(&Pools, &HungerClock)>::query().filter(component::<Player>());
-    let (stats, hunger_clock) = health_query.iter(ecs).nth(0).unwrap();
-    let health = format!(
-        " HP: {} / {}",
-        stats.hit_points.current, stats.hit_points.max
-    );
-    draw_batch.print_color(Point::new(12, 43), health, ColorPair::new(YELLOW, BLACK));
-    draw_batch.bar_horizontal(
-        Point::new(28, 43),
-        51,
-        stats.hit_points.current,
-        stats.hit_points.max,
-        ColorPair::new(RED, BLACK),
-    );
-
-    match hunger_clock.state {
-        HungerState::WellFed => {
-            draw_batch.print_color_right(
-                Point::new(71, 42),
-                "Well Fed",
-                ColorPair::new(GREEN, BLACK),
-            );
-        }
-        HungerState::Normal => {}
-        HungerState::Hungry => {
-            draw_batch.print_color_right(
-                Point::new(71, 42),
-                "Hungry",
-                ColorPair::new(ORANGE, BLACK),
-            );
-        }
-        HungerState::Starving => {
-            draw_batch.print_color_right(
-                Point::new(71, 42),
-                "Starving",
-                ColorPair::new(RED, BLACK),
-            );
-        }
-    }
-
-    let mut y = 44;
-    for s in gamelog.entries.iter().rev() {
-        if y < 49 {
-            draw_batch.print(Point::new(2, y), s);
-        }
-        y += 1;
-    }
-
-    draw_batch.submit(5000).expect("Batch error");
 }

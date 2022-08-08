@@ -11,7 +11,6 @@ pub fn collect(
     wants_collect: &WantsToCollect,
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
-    #[resource] gamelog: &mut Gamelog,
     #[resource] dm: &MasterDungeonMap,
 ) {
     commands.remove_component::<Point>(wants_collect.what);
@@ -35,7 +34,12 @@ pub fn collect(
         "Someone".to_string()
     };
     let what = get_item_display_name(ecs, wants_collect.what, dm);
-    gamelog.entries.push(format!("{} picked up {}", who, what));
+    crate::gamelog::Logger::new()
+        .append(who)
+        .append("picked up")
+        .color(CYAN)
+        .append(what)
+        .log();
 
     commands.remove(*entity);
 }

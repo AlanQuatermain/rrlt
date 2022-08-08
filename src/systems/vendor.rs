@@ -23,11 +23,11 @@ pub fn vendor(
     match *turn_state {
         TurnState::ShowingVendor { vendor, mode } => {
             let new_state = match mode {
-                VendorMode::Buy => {
-                    vendor_buy_menu(ecs, vendor, player_entity, key_state, dm, commands)
+                VendorMode::Buy { page } => {
+                    vendor_buy_menu(ecs, vendor, page, player_entity, key_state, dm, commands)
                 }
-                VendorMode::Sell => {
-                    vendor_sell_menu(ecs, vendor, player_entity, key_state, commands)
+                VendorMode::Sell { page } => {
+                    vendor_sell_menu(ecs, vendor, page, player_entity, key_state, commands)
                 }
             };
             if let Some(updated) = new_state {
@@ -41,6 +41,7 @@ pub fn vendor(
 fn vendor_sell_menu(
     ecs: &mut SubWorld,
     vendor: Entity,
+    page: i32,
     player: Entity,
     key_state: &mut KeyState,
     commands: &mut CommandBuffer,
@@ -57,85 +58,56 @@ fn vendor_sell_menu(
             .filter(|(c, _, _, _, _)| c.0 == *player_entity)
             .map(|(_, n, o, i, e)| (n.clone(), o.map(|v| v.clone()), i.clone(), *e))
             .collect();
-    let count = inventory.len();
 
-    let mut y = (25 - (count / 2)) as i32;
+    // Reduce to an array of (entity, title, cost)
+    let items: Vec<_> = inventory
+        .iter()
+        .map(|(name, oname, item, _)| {
+            if let Some(oname) = oname {
+                (oname.0.clone(), item.base_value * 0.8)
+            } else {
+                (name.0.clone(), item.base_value * 0.8)
+            }
+        })
+        .collect();
+
     let mut batch = DrawBatch::new();
     batch.target(2);
 
-    batch.draw_box(
-        Rect::with_size(15, y - 2, 51, (count + 3) as i32),
-        ColorPair::new(WHITE, BLACK),
-    );
-    batch.print_color(
-        Point::new(18, y - 2),
+    let result = vendor_result_menu(
+        &mut batch,
         "Sell Which Item? (space to switch to buy mode)",
-        ColorPair::new(YELLOW, BLACK),
-    );
-    batch.print_color(
-        Point::new(18, y + count as i32 + 1),
-        "ESCAPE to cancel",
-        ColorPair::new(YELLOW, BLACK),
+        page,
+        &items,
+        key_state.key,
     );
 
-    let mut equippable: Vec<Entity> = Vec::new();
-    let mut j = 0;
-    for (name, oname, item, entity) in inventory {
-        batch.set(
-            Point::new(17, y),
-            ColorPair::new(WHITE, BLACK),
-            to_cp437('('),
-        );
-        batch.set(
-            Point::new(18, y),
-            ColorPair::new(YELLOW, BLACK),
-            97 + j as FontCharType,
-        );
-        batch.set(
-            Point::new(19, y),
-            ColorPair::new(WHITE, BLACK),
-            to_cp437(')'),
-        );
-
-        if let Some(obfuscated) = oname {
-            batch.print(Point::new(21, y), &obfuscated.0.clone());
-        } else {
-            batch.print(Point::new(21, y), &name.0.clone());
+    match result.0 {
+        VendorMenuResult::NoResponse => None,
+        VendorMenuResult::Cancel => Some(TurnState::AwaitingInput),
+        VendorMenuResult::BuySellToggle => Some(TurnState::ShowingVendor {
+            vendor,
+            mode: VendorMode::Buy { page: 0 },
+        }),
+        VendorMenuResult::PreviousPage => Some(TurnState::ShowingVendor {
+            vendor,
+            mode: VendorMode::Sell { page: page - 1 },
+        }),
+        VendorMenuResult::NextPage => Some(TurnState::ShowingVendor {
+            vendor,
+            mode: VendorMode::Sell { page: page + 1 },
+        }),
+        VendorMenuResult::Selected => {
+            sell_item(inventory[result.1.unwrap()].3, player, ecs, commands);
+            None
         }
-        batch.print(
-            Point::new(50, y),
-            &format!("{:.1} gp", item.base_value * 0.8),
-        );
-        equippable.push(entity);
-        y += 1;
-        j += 1;
     }
-
-    batch.submit(12000).expect("Batch error");
-
-    if let Some(key) = key_state.key {
-        return match key {
-            VirtualKeyCode::Space => Some(TurnState::ShowingVendor {
-                vendor,
-                mode: VendorMode::Buy,
-            }),
-            VirtualKeyCode::Escape => Some(TurnState::AwaitingInput),
-            _ => {
-                let selection = letter_to_option(key);
-                if selection > -1 && selection < count as i32 {
-                    sell_item(equippable[selection as usize], player, ecs, commands);
-                }
-                None
-            }
-        };
-    }
-
-    None
 }
 
 fn vendor_buy_menu(
     ecs: &mut SubWorld,
     vendor: Entity,
+    page: i32,
     player: Entity,
     key_state: &mut KeyState,
     dm: &MasterDungeonMap,
@@ -152,77 +124,38 @@ fn vendor_buy_menu(
     let raws = &RAWS.lock().unwrap();
 
     let inventory = get_vendor_items(&categories, raws);
-    let count = inventory.len();
-
-    let mut y = (25 - (count / 2)) as i32;
     let mut batch = DrawBatch::new();
     batch.target(2);
 
-    batch.draw_box(
-        Rect::with_size(15, y - 2, 51, (count + 3) as i32),
-        ColorPair::new(WHITE, BLACK),
-    );
-    batch.print_color(
-        Point::new(18, y - 2),
+    let result = vendor_result_menu(
+        &mut batch,
         "Buy Which Item? (space to switch to sell mode)",
-        ColorPair::new(YELLOW, BLACK),
-    );
-    batch.print_color(
-        Point::new(18, y + count as i32 + 1),
-        "ESCAPE to cancel",
-        ColorPair::new(YELLOW, BLACK),
+        page,
+        &inventory,
+        key_state.key,
     );
 
-    for (j, sale) in inventory.iter().enumerate() {
-        batch.set(
-            Point::new(17, y),
-            ColorPair::new(WHITE, BLACK),
-            to_cp437('('),
-        );
-        batch.set(
-            Point::new(18, y),
-            ColorPair::new(YELLOW, BLACK),
-            97 + j as FontCharType,
-        );
-        batch.set(
-            Point::new(19, y),
-            ColorPair::new(WHITE, BLACK),
-            to_cp437(')'),
-        );
-
-        batch.print(Point::new(21, y), &sale.0.clone());
-        batch.print(Point::new(50, y), &format!("{:.1} gp", sale.1 * 1.2));
-        y += 1;
+    match result.0 {
+        VendorMenuResult::NoResponse => None,
+        VendorMenuResult::Cancel => Some(TurnState::AwaitingInput),
+        VendorMenuResult::BuySellToggle => Some(TurnState::ShowingVendor {
+            vendor,
+            mode: VendorMode::Sell { page: 0 },
+        }),
+        VendorMenuResult::PreviousPage => Some(TurnState::ShowingVendor {
+            vendor,
+            mode: VendorMode::Buy { page: page - 1 },
+        }),
+        VendorMenuResult::NextPage => Some(TurnState::ShowingVendor {
+            vendor,
+            mode: VendorMode::Buy { page: page + 1 },
+        }),
+        VendorMenuResult::Selected => {
+            let item = &inventory[result.1.unwrap()];
+            buy_item(item.0.clone(), item.1, player, ecs, commands, dm, raws);
+            None
+        }
     }
-
-    batch.submit(12000).expect("Batch error");
-
-    if let Some(key) = key_state.key {
-        return match key {
-            VirtualKeyCode::Space => Some(TurnState::ShowingVendor {
-                vendor,
-                mode: VendorMode::Sell,
-            }),
-            VirtualKeyCode::Escape => Some(TurnState::AwaitingInput),
-            _ => {
-                let selection = letter_to_option(key);
-                if selection > -1 && selection < count as i32 {
-                    buy_item(
-                        inventory[selection as usize].0.clone(),
-                        inventory[selection as usize].1,
-                        player,
-                        ecs,
-                        commands,
-                        dm,
-                        raws,
-                    );
-                }
-                None
-            }
-        };
-    }
-
-    None
 }
 
 fn sell_item(entity: Entity, player: Entity, ecs: &mut SubWorld, commands: &mut CommandBuffer) {

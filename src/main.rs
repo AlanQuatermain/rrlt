@@ -5,6 +5,7 @@ mod gamelog;
 mod gamesystem;
 mod map;
 mod map_builder;
+mod menu;
 mod random_table;
 mod raws;
 mod rex_assets;
@@ -39,6 +40,7 @@ mod prelude {
     pub use crate::gamesystem::*;
     pub use crate::map::*;
     pub use crate::map_builder::*;
+    pub use crate::menu::*;
     pub use crate::random_table::*;
     pub use crate::raws::*;
     pub use crate::rex_assets::*;
@@ -49,8 +51,10 @@ mod prelude {
 
 use legion::serialize::UnknownType::Ignore;
 use prelude::*;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
+use std::path::Path;
 
 #[macro_use]
 extern crate lazy_static;
@@ -125,18 +129,26 @@ impl State {
         let mut rng = RandomNumberGenerator::new();
         self.conjure_map(&mut rng, 0, 0);
 
-        let mut gamelog = Gamelog::default();
-        gamelog
-            .entries
-            .push("Welcome to Rusty Roguelike".to_string());
-
         self.resources.insert(rng);
         self.resources.insert(TurnState::AwaitingInput);
-        self.resources.insert(gamelog);
+
+        gamelog::clear_log();
+        gamelog::Logger::new()
+            .append("Welcome to")
+            .color(CYAN)
+            .append("Rusty Roguelike")
+            .log();
+
+        gamelog::clear_events();
 
         if SHOW_MAPGEN_VISUALIZER {
             self.real_map = self.resources.get::<Map>().unwrap().clone();
             self.resources.insert(TurnState::MapBuilding { step: 0 });
+        }
+
+        // Permadeath: DELETE ANY SAVED GAMES!
+        if Path::new("./savegame.json").exists() {
+            fs::remove_file("./savegame.json").expect("Save deletion failed");
         }
     }
 
@@ -189,32 +201,50 @@ impl State {
             self.resources.insert(TurnState::MapBuilding { step: 0 });
         }
 
-        self.resources
-            .get_mut::<Gamelog>()
-            .unwrap()
-            .entries
-            .push("You descend to the next level.".to_string());
+        gamelog::Logger::new()
+            .append("You descend to the next level.")
+            .log();
     }
 
     fn game_over(&mut self, ctx: &mut BTerm) {
-        ctx.set_active_console(2);
+        let mut batch = DrawBatch::new();
+        batch.target(2);
 
-        ctx.print_color_centered(15, YELLOW, BLACK, "Your journey has ended!");
+        let white = ColorPair::new(WHITE, BLACK);
+        let yellow = ColorPair::new(YELLOW, BLACK);
+        let red = ColorPair::new(RED, BLACK);
+        let magenta = ColorPair::new(MAGENTA, BLACK);
 
-        ctx.print_color_centered(
-            17,
-            WHITE,
-            BLACK,
-            "One day, we'll tell you all about how you did.",
+        batch.print_color_centered(15, "Your journey has ended!", yellow);
+
+        batch.print_color_centered(17, "One day, we'll tell you all about how you did.", white);
+        batch.print_color_centered(18, "That day, sadly, is not in this chapter...", white);
+
+        batch.print_color_centered(
+            19,
+            &format!("You lived for {} turns.", gamelog::get_event_count("Turn")),
+            white,
         );
-        ctx.print_color_centered(
-            18,
-            WHITE,
-            BLACK,
-            "That day, sadly, is not in this chapter...",
+        batch.print_color_centered(
+            20,
+            &format!(
+                "You suffered {} points of damage.",
+                gamelog::get_event_count("Damage Taken")
+            ),
+            red,
+        );
+        batch.print_color_centered(
+            21,
+            &format!(
+                "You inflicted {} points of damage.",
+                gamelog::get_event_count("Damage Inflicted")
+            ),
+            red,
         );
 
-        ctx.print_color_centered(20, MAGENTA, BLACK, "Press any key to return to the menu.");
+        batch.print_color_centered(23, "Press any key to return to the menu.", magenta);
+
+        batch.submit(6000).expect("Batch error");
 
         if ctx.key.is_some() {
             ctx.key = None;
@@ -306,6 +336,7 @@ impl State {
         registry.register::<AlwaysTargetsSelf>("targets_self".to_string());
         registry.register::<Target>("target".to_string());
         registry.register::<WantsToShoot>("wants_shoot".to_string());
+        registry.register::<LogFragment>("log_fragment".to_string());
         registry.on_unknown(Ignore);
     }
 
@@ -313,7 +344,7 @@ impl State {
         let mut registry = Registry::<String>::default();
         self.configure_registry(&mut registry);
 
-        // Temporarily add the map & master to get them included
+        // Temporarily add the map etc. to get them included
         let map_entity = self
             .ecs
             .push((self.resources.get::<Map>().unwrap().clone(), SerializeMe));
@@ -321,6 +352,8 @@ impl State {
             self.resources.get::<MasterDungeonMap>().unwrap().clone(),
             SerializeMe,
         ));
+        let log_entity = self.ecs.push((gamelog::clone_log(), SerializeMe));
+        let events_entity = self.ecs.push((gamelog::clone_events(), SerializeMe));
 
         let writer = File::create("./savegame.json").unwrap();
         let entity_serializer = Canon::default();
@@ -332,9 +365,11 @@ impl State {
         )
         .expect("Error saving game");
 
-        // remove the map now
+        // remove the extras now
         self.ecs.remove(map_entity);
         self.ecs.remove(dm_entity);
+        self.ecs.remove(log_entity);
+        self.ecs.remove(events_entity);
 
         // Show the main menu.
         self.resources.insert(TurnState::MainMenu {
@@ -357,7 +392,7 @@ impl State {
             .unwrap();
         self.resources = Resources::default();
 
-        // extract the map and master
+        // extract the map etc.
         let mut to_remove: Vec<Entity> = Vec::new();
         {
             let (map, map_entity) = <(&Map, Entity)>::query()
@@ -374,6 +409,20 @@ impl State {
                 .unwrap();
             self.resources.insert(dm.clone());
             to_remove.push(*dm_entity);
+
+            let (log, log_entity) = <(&Vec<Vec<LogFragment>>, Entity)>::query()
+                .iter(&mut self.ecs)
+                .nth(0)
+                .unwrap();
+            gamelog::restore_log(&mut log.clone());
+            to_remove.push(*log_entity);
+
+            let (events, events_entity) = <(&HashMap<String, i32>, Entity)>::query()
+                .iter(&mut self.ecs)
+                .nth(0)
+                .unwrap();
+            gamelog::load_events(events.clone());
+            to_remove.push(*events_entity);
         }
 
         for entity in to_remove {
@@ -387,15 +436,13 @@ impl State {
             .nth(0)
             .unwrap();
 
-        let mut gamelog = Gamelog::default();
-        gamelog.entries.push("Loaded game.".to_string());
+        gamelog::Logger::new().append("Loaded game.").log();
 
         let rng = RandomNumberGenerator::new();
 
         self.resources.insert(rng);
         self.resources.insert(Camera::new(*player_pos));
         self.resources.insert(TurnState::Ticking);
-        self.resources.insert(gamelog);
         self.resources.insert(RexAssets::new());
 
         // make all FOVs dirty
@@ -468,6 +515,8 @@ impl GameState for State {
         ctx.cls();
         ctx.set_active_console(2);
         ctx.cls();
+        ctx.set_active_console(3);
+        ctx.cls();
 
         ctx.set_active_console(0);
         self.resources.insert(KeyState::new(ctx));
@@ -484,6 +533,8 @@ impl GameState for State {
                 if self.resources.get::<TurnState>().unwrap().clone() != current_state {
                     // if we changed state, clear keyboard input
                     ctx.key = None;
+                    // we also survived another turn
+                    gamelog::record_event("Turn", 1);
                 }
             }
             TurnState::Ticking => {
@@ -558,13 +609,15 @@ fn main() -> BError {
         .with_dimensions(SCREEN_WIDTH, SCREEN_HEIGHT)
         // .with_tile_dimensions(32, 32)
         .with_tile_dimensions(16, 16)
-        .with_resource_path("resources/")
+        // .with_resource_path("resources/")
         // .with_font("dungeonfont.png", 32, 32)
         .with_font("terminal8x8.png", 8, 8)
+        .with_font("vga8x16.png", 8, 16)
         // .with_font("drake_10x10.png", 10, 10)
         .with_simple_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
         .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT, "terminal8x8.png")
+        .with_sparse_console(SCREEN_WIDTH, SCREEN_HEIGHT / 2, "vga8x16.png")
         .build()?;
     // context.with_post_scanlines(true);
 

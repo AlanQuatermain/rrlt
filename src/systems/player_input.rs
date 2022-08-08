@@ -30,9 +30,9 @@ pub fn player_input(
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
     #[resource] map: &mut Map,
-    #[resource] gamelog: &mut Gamelog,
     #[resource] key_state: &mut KeyState,
     #[resource] turn_state: &mut TurnState,
+    #[resource] camera: &mut Camera,
     #[resource] rng: &mut RandomNumberGenerator,
 ) {
     // don't process input here if we're in inventory mode.
@@ -46,7 +46,7 @@ pub fn player_input(
                 if key_state.shift {
                     *turn_state = use_consumable_hotkey(ecs, commands, hotkey);
                 } else if key_state.control {
-                    *turn_state = use_spell_hotkey(ecs, commands, hotkey, gamelog);
+                    *turn_state = use_spell_hotkey(ecs, commands, hotkey);
                 }
                 key_state.key = None;
                 return;
@@ -94,10 +94,8 @@ pub fn player_input(
             KeyInputResponse::ShowCheatMenu => *turn_state = TurnState::ShowCheatMenu,
             KeyInputResponse::ShowDropMenu => *turn_state = TurnState::ShowingDropItems,
             KeyInputResponse::ShowInventory => *turn_state = TurnState::ShowingInventory,
-            KeyInputResponse::UpStairs => try_climb_stairs(map, turn_state, player_pos, gamelog),
-            KeyInputResponse::DownStairs => {
-                try_descend_stairs(map, turn_state, player_pos, gamelog)
-            }
+            KeyInputResponse::UpStairs => try_climb_stairs(map, turn_state, player_pos),
+            KeyInputResponse::DownStairs => try_descend_stairs(map, turn_state, player_pos),
             KeyInputResponse::StandStill => {
                 try_wait_player(ecs, rng);
                 *turn_state = TurnState::Ticking;
@@ -125,7 +123,15 @@ pub fn player_input(
 
         if delta != Point::zero() {
             let destination = player_pos + delta;
-            match try_move_player(player_entity, player_pos, destination, map, ecs, commands) {
+            match try_move_player(
+                player_entity,
+                player_pos,
+                destination,
+                map,
+                camera,
+                ecs,
+                commands,
+            ) {
                 MoveResult::Moved => {
                     *turn_state = TurnState::Ticking;
                 }
@@ -145,7 +151,7 @@ pub fn player_input(
                 MoveResult::OpenShop { entity } => {
                     *turn_state = TurnState::ShowingVendor {
                         vendor: entity,
-                        mode: VendorMode::Buy,
+                        mode: VendorMode::Buy { page: 0 },
                     }
                 }
             }
@@ -332,12 +338,7 @@ fn use_consumable_hotkey(
     TurnState::Ticking
 }
 
-fn use_spell_hotkey(
-    ecs: &mut SubWorld,
-    commands: &mut CommandBuffer,
-    hotkey: i32,
-    gamelog: &mut Gamelog,
-) -> TurnState {
+fn use_spell_hotkey(ecs: &mut SubWorld, commands: &mut CommandBuffer, hotkey: i32) -> TurnState {
     let player_entity = <Entity>::query()
         .filter(component::<Player>())
         .iter(ecs)
@@ -373,10 +374,10 @@ fn use_spell_hotkey(
                     );
                 }
             } else {
-                gamelog.entries.push(format!(
-                    "You don't have enough mana to cast {}",
-                    spell.display_name
-                ));
+                crate::gamelog::Logger::new()
+                    .append("You don't have enough mana to cast")
+                    .append(&spell.display_name)
+                    .log();
             }
         }
     }
@@ -391,10 +392,13 @@ fn swap_entity(
     from: Point,
     to: Point,
     map: &Map,
+    camera: &mut Camera,
     commands: &mut CommandBuffer,
 ) {
     // Swap positions.
     commands.add_component(player_entity, to);
+    camera.on_player_move(to);
+
     <(Entity, &mut Point, &mut FieldOfView)>::query()
         .filter(component::<Player>())
         .iter_mut(ecs)
@@ -451,6 +455,7 @@ fn try_move_player(
     player_pos: Point,
     destination: Point,
     map: &mut Map,
+    camera: &mut Camera,
     ecs: &mut SubWorld,
     commands: &mut CommandBuffer,
 ) -> MoveResult {
@@ -474,6 +479,7 @@ fn try_move_player(
                     player_pos,
                     destination,
                     map,
+                    camera,
                     commands,
                 );
                 return MoveResult::Moved;
@@ -652,38 +658,28 @@ fn process_key_input(key: VirtualKeyCode, key_state: &mut KeyState) -> KeyInputR
     }
 }
 
-fn try_climb_stairs(
-    map: &Map,
-    turn_state: &mut TurnState,
-    player_pos: Point,
-    gamelog: &mut Gamelog,
-) {
+fn try_climb_stairs(map: &Map, turn_state: &mut TurnState, player_pos: Point) {
     let player_idx = map.point2d_to_index(player_pos);
     if map.tiles[player_idx] == TileType::UpStairs {
         *turn_state = TurnState::PreviousLevel;
         return;
     }
 
-    gamelog
-        .entries
-        .push("There is no way up from here.".to_string());
+    crate::gamelog::Logger::new()
+        .append("There is no way up from here.")
+        .log();
 }
 
-fn try_descend_stairs(
-    map: &Map,
-    turn_state: &mut TurnState,
-    player_pos: Point,
-    gamelog: &mut Gamelog,
-) {
+fn try_descend_stairs(map: &Map, turn_state: &mut TurnState, player_pos: Point) {
     let player_idx = map.point2d_to_index(player_pos);
     if map.tiles[player_idx] == TileType::DownStairs {
         *turn_state = TurnState::NextLevel;
         return;
     }
 
-    gamelog
-        .entries
-        .push("There is no way down from here.".to_string());
+    crate::gamelog::Logger::new()
+        .append("There is no way down from here.")
+        .log();
 }
 
 fn try_collect_items(

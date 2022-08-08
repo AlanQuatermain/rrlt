@@ -10,12 +10,7 @@ use crate::prelude::*;
 #[read_component(TeleportTo)]
 #[read_component(SingleActivation)]
 #[read_component(Player)]
-pub fn trigger(
-    ecs: &SubWorld,
-    commands: &mut CommandBuffer,
-    #[resource] gamelog: &mut Gamelog,
-    #[resource] map: &Map,
-) {
+pub fn trigger(ecs: &SubWorld, commands: &mut CommandBuffer, #[resource] map: &Map) {
     let moved_entities: Vec<(Entity, Point)> = <(Entity, &Point)>::query()
         .filter(component::<EntityMoved>())
         .iter(ecs)
@@ -31,9 +26,12 @@ pub fn trigger(
             .iter(ecs)
             .filter(|(_, p, _)| pos == **p)
             .for_each(|(trigger_entity, _, trigger_name)| {
-                gamelog
-                    .entries
-                    .push(format!("{} triggers!", trigger_name.0));
+                crate::gamelog::Logger::new()
+                    .color(RED)
+                    .append(&trigger_name.0)
+                    .color(WHITE)
+                    .append("triggers!")
+                    .log();
 
                 // add into the effects system
                 let tile_idx = map.point2d_to_index(pos);

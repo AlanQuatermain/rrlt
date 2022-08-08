@@ -16,7 +16,6 @@ pub fn encumbrance(
     entity: &Entity,
     stats: &mut Pools,
     attrs: &mut Attributes,
-    #[resource] gamelog: &mut Gamelog,
     commands: &mut CommandBuffer,
 ) {
     commands.remove_component::<EquipmentChanged>(*entity);
@@ -81,9 +80,10 @@ pub fn encumbrance(
             .get_component::<Player>()
             .is_ok()
         {
-            gamelog
-                .entries
-                .push("You are overburdened, and suffering from fatigue.".to_string());
+            crate::gamelog::Logger::new()
+                .color(ORANGE)
+                .append("You are overburdened, and suffering from fatigue.")
+                .log();
         }
     }
 }

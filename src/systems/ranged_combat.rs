@@ -28,7 +28,6 @@ pub fn ranged_combat(
     attacker_natural: Option<&NaturalAttackDefense>,
     hunger_clock: Option<&HungerClock>,
     ecs: &mut SubWorld,
-    #[resource] log: &mut Gamelog,
     #[resource] rng: &mut RandomNumberGenerator,
     #[resource] map: &Map,
     commands: &mut CommandBuffer,
@@ -156,10 +155,12 @@ pub fn ranged_combat(
         }
     } else if natural_roll == 1 {
         // Natural 1 miss
-        log.entries.push(format!(
-            "{} considers attacking {}, but misjudges the timing.",
-            attacker_name, victim_name
-        ));
+        crate::gamelog::Logger::new()
+            .npc_name(&attacker_name)
+            .append("considers attacking")
+            .npc_name(&victim_name)
+            .append("but misjudges the timing!")
+            .log();
         add_effect(
             None,
             EffectType::Particle {
@@ -171,10 +172,12 @@ pub fn ranged_combat(
         );
     } else {
         // Miss
-        log.entries.push(format!(
-            "{} attacks {}, but can't connect.",
-            attacker_name, victim_name
-        ));
+        crate::gamelog::Logger::new()
+            .npc_name(&attacker_name)
+            .append("attacks")
+            .npc_name(&victim_name)
+            .append("but can't connect.")
+            .log();
         add_effect(
             None,
             EffectType::Particle {
