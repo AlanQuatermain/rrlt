@@ -7,7 +7,7 @@ use self::{
     bsp_interior::BSPInteriorBuilder,
     caverns::*,
     cull_unreachable::CullUnreachable,
-    dark_elves::dark_elf_city,
+    dark_elves::{dark_elf_city, dark_elf_plaza},
     distant_exit::DistantExit,
     dla::DLABuilder,
     door_placement::DoorPlacement,
@@ -345,6 +345,7 @@ pub fn level_builder(
         7 => mushroom_builder(new_depth, rng, width, height),
         8 => mushroom_exit(new_depth, rng, width, height),
         9 => dark_elf_city(new_depth, rng, width, height),
+        10 => dark_elf_plaza(new_depth, rng, width, height),
         _ => random_builder(new_depth, width, height, rng),
     }
 }

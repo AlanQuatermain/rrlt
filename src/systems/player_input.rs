@@ -625,7 +625,7 @@ fn process_key_input(key: VirtualKeyCode, key_state: &mut KeyState) -> KeyInputR
         VirtualKeyCode::Q => KeyInputResponse::Move {
             delta: Point::new(-1, -1),
         },
-        VirtualKeyCode::F => KeyInputResponse::Move {
+        VirtualKeyCode::E => KeyInputResponse::Move {
             delta: Point::new(1, -1),
         },
         VirtualKeyCode::Z => KeyInputResponse::Move {
